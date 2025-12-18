@@ -311,7 +311,8 @@ document.addEventListener('livewire:init', function () {
 <code-snippet name="Volt Functional Component Example" lang="php">
 @volt
 <?php
-use function Livewire\Volt\{state, computed};
+use function Livewire\Volt\computed;
+use function Livewire\Volt\state;
 
 state(['count' => 0]);
 
@@ -398,16 +399,18 @@ test('product form creates product', function () {
 <?php
 
 use App\Models\Product;
-use function Livewire\Volt\{state, computed};
+
+use function Livewire\Volt\computed;
+use function Livewire\Volt\state;
 
 state(['editing' => null, 'search' => '']);
 
-$products = computed(fn() => Product::when($this->search,
-    fn($q) => $q->where('name', 'like', "%{$this->search}%")
+$products = computed(fn () => Product::when($this->search,
+    fn ($q) => $q->where('name', 'like', "%{$this->search}%")
 )->get());
 
-$edit = fn(Product $product) => $this->editing = $product->id;
-$delete = fn(Product $product) => $product->delete();
+$edit = fn (Product $product) => $this->editing = $product->id;
+$delete = fn (Product $product) => $product->delete();
 
 ?>
 
