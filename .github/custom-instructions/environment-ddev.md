@@ -62,6 +62,25 @@ Select-String -Pattern "search" -Path file.txt
 
 ## Development Workflow
 
+### Quick Start
+```powershell
+# Start DDEV (auto-starts queue worker + Vite dev server)
+ddev start
+
+# Install dependencies (first time setup)
+ddev composer install
+ddev npm install
+
+# Run migrations
+ddev artisan migrate
+
+# Run tests
+ddev artisan test
+
+# Build frontend assets
+ddev npm run build
+```
+
 ### Start DDEV
 ```powershell
 ddev start
@@ -75,6 +94,17 @@ This auto-starts (via `web_extra_daemons`):
 ### Stop DDEV
 ```powershell
 ddev stop
+```
+
+### After Code Changes
+```powershell
+# Queue/Job changes - fast restart (1-3 seconds)
+ddev artisan queue:restart
+
+# Frontend changes - auto-reload via Vite (already running)
+# No action needed!
+
+# ❌ NEVER restart entire DDEV for queue changes (too slow - 30+ seconds)
 ```
 
 ### Check Running Services
@@ -185,9 +215,28 @@ ddev npm run build
 
 ### Database
 ```powershell
-ddev mysql
+# PostgreSQL CLI
+ddev psql
+
+# Or use pgAdmin/other GUI tools with:
+# Host: 127.0.0.1
+# Port: (run `ddev describe` to get port)
+# User: db
+# Password: db
+# Database: db
+
+# Export database
 ddev export-db --file=backup.sql.gz
+
+# Import database
 ddev import-db --file=backup.sql.gz
+
+# Check PostGIS extensions
+ddev exec psql -c '\dx'
+
+# Enable PostGIS (if not already enabled)
+ddev exec psql -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+ddev exec psql -c "CREATE EXTENSION IF NOT EXISTS postgis_topology;"
 ```
 
 ---
@@ -208,10 +257,19 @@ ddev logs -f
 
 ### Access Database
 ```powershell
-# MySQL CLI
-ddev mysql
+# PostgreSQL CLI
+ddev psql
 
-# Or use GUI tools with:
+# List databases
+ddev exec psql -c '\l'
+
+# List tables
+ddev exec psql -c '\dt'
+
+# Check PostGIS extensions
+ddev exec psql -c '\dx'
+
+# Or use GUI tools (pgAdmin, DBeaver, etc.) with:
 # Host: 127.0.0.1
 # Port: (run `ddev describe` to get port)
 # User: db
@@ -285,9 +343,88 @@ export default defineConfig({
 
 ---
 
+## PostgreSQL with PostGIS
+
+This project uses PostgreSQL 16 with PostGIS extension for spatial/GIS data.
+
+### PostGIS Features Available
+- **Geometry types:** POINT, LINESTRING, POLYGON, MULTIPOINT, MULTILINESTRING, MULTIPOLYGON
+- **Geography types:** For earth-surface calculations
+- **Spatial functions:** ST_Contains, ST_Within, ST_Distance, ST_Buffer, etc.
+- **Spatial indexing:** GIST indexes for performance
+
+### Common PostGIS Queries
+```sql
+-- Check PostGIS version
+SELECT PostGIS_version();
+
+-- Create a point (latitude, longitude)
+INSERT INTO locations (name, coordinates) 
+VALUES ('Sample Location', ST_SetSRID(ST_MakePoint(-122.4194, 37.7749), 4326));
+
+-- Find locations within 1000 meters
+SELECT * FROM locations 
+WHERE ST_DWithin(
+    coordinates::geography,
+    ST_SetSRID(ST_MakePoint(-122.4194, 37.7749), 4326)::geography,
+    1000
+);
+
+-- Calculate distance between two points (in meters)
+SELECT ST_Distance(
+    ST_SetSRID(ST_MakePoint(-122.4194, 37.7749), 4326)::geography,
+    ST_SetSRID(ST_MakePoint(-122.4189, 37.7750), 4326)::geography
+);
+```
+
+### Migration Examples with PostGIS
+```php
+// In migration file
+Schema::create('locations', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');
+    $table->geography('coordinates', 'point', 4326); // POINT with SRID 4326 (WGS84)
+    $table->timestamps();
+    
+    // Spatial index for performance
+    $table->spatialIndex('coordinates');
+});
+
+// For polygons (areas)
+Schema::create('survey_areas', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');
+    $table->geography('area', 'polygon', 4326);
+    $table->timestamps();
+    
+    $table->spatialIndex('area');
+});
+```
+
+### Working with PostGIS in Laravel
+```php
+// Using raw queries
+$locations = DB::select("
+    SELECT *, ST_AsText(coordinates) as coords_text
+    FROM locations 
+    WHERE ST_DWithin(
+        coordinates::geography,
+        ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
+        ?
+    )
+", [$longitude, $latitude, $radiusInMeters]);
+
+// Or use Laravel-PostGIS package (if installed)
+$location = Location::whereWithin('coordinates', $polygon)->get();
+```
+
+---
+
 ## DDEV Configuration Files
 
-- `.ddev/config.yaml` - Main DDEV configuration
+- `.ddev/config.yaml` - Main DDEV configuration (database: postgres:16)
+- `.ddev/postgres/Dockerfile.postgres` - Custom PostgreSQL build (PostGIS installation)
+- `.ddev/postgres/enable-postgis.sql` - PostGIS extension initialization
 - `.ddev/web_extra_daemons/` - Auto-start services (queue, vite)
 - `.ddev/php/` - PHP configuration overrides
 
@@ -300,4 +437,6 @@ export default defineConfig({
 - ⚠️ **Tests must run through DDEV** - database connection requires it
 - ⚠️ **Use `ddev artisan queue:restart`** not `ddev restart` for queue changes
 - ✅ **Queue worker and Vite auto-start** when you run `ddev start`
+- ✅ **PostGIS is enabled** - use spatial queries and geometry types
+- ✅ **Database is PostgreSQL 16** - use `ddev psql` (not `ddev mysql`)
 

@@ -1,7 +1,7 @@
 # Project Configuration
 
-**Project:** Laravel Listening Party  
-**Last updated:** 2025-12-11
+**Project:** Laravel EcoSurvey
+**Last updated:** 2025-12-18
 
 ---
 
@@ -9,7 +9,7 @@
 
 This project uses the following instruction modules:
 
-1. **Environment:** `environment-native.md` (Native PHP/Composer, no DDEV)
+1. **Environment:** `environment-ddev.md` (DDEV with PostgreSQL 16 + PostGIS)
 2. **Stack:** `stack-livewire-volt.md` (Livewire v3 + Volt)
 3. **Frontend:** `frontend-tailwind-v4.md` (Tailwind CSS v4)
 4. **Editor:** `editor-phpstorm.md` (PhpStorm on Windows 11)
@@ -19,41 +19,13 @@ This project uses the following instruction modules:
 ## Project Summary
 
 - **Framework:** Laravel 12
-- **Runtime:** Native PHP 8.3 (not DDEV/Sail)
+- **Runtime:** DDEV (Docker-based development environment)
+- **Database:** PostgreSQL 16 with PostGIS extension
 - **Frontend Stack:** Livewire v3 + Volt + Flux UI
 - **Styling:** Tailwind CSS v4
 - **Build Tool:** Vite
 - **Testing:** Pest v4
-
----
-
-## Development Workflow
-
-### Starting Development
-```powershell
-# Start all services (server, queue, vite) in one command:
-composer run dev
-
-# Or manually:
-php artisan serve
-php artisan queue:listen --tries=1
-npm run dev
-```
-
-### After Code Changes
-- **Queue/Job changes:** `php artisan queue:restart` (fast!)
-- **Never restart entire server** for queue changes
-
----
-
-## Key Differences from DDEV Projects
-
-- ✅ Use `php artisan` (not `ddev artisan`)
-- ✅ Use `composer` (not `ddev composer`)
-- ✅ Use `npm` (not `ddev npm`)
-- ✅ Use `vendor/bin/pest` (not `ddev exec`)
-- ✅ PowerShell commands work normally
-- ✅ Can chain with `;` in PowerShell
+- **GIS Features:** PostGIS for spatial data (coordinates, polygons, etc.)
 
 ---
 
