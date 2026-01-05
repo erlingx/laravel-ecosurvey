@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Campaign;
+use App\Models\DataPoint;
 use App\Models\EnvironmentalMetric;
 
 use function Livewire\Volt\computed;
@@ -41,12 +42,6 @@ $metrics = computed(fn () => EnvironmentalMetric::query()
     ->get()
 );
 
-$captureGPS = function () {
-    $this->gpsStatus = 'requesting';
-    $this->gpsError = null;
-    // GPS will be captured via JavaScript
-};
-
 $save = function () {
     $validated = $this->validate([
         'campaignId' => 'required|exists:campaigns,id',
@@ -57,8 +52,17 @@ $save = function () {
         'notes' => 'nullable|string|max:1000',
     ]);
 
-    // TODO: Create DataPoint record
-    // For now, just show success message
+    // Create DataPoint with PostGIS location
+    DataPoint::query()->create([
+        'campaign_id' => $validated['campaignId'],
+        'environmental_metric_id' => $validated['metricId'],
+        'user_id' => auth()->id(),
+        'value' => $validated['value'],
+        'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$validated['longitude']}, {$validated['latitude']}), 4326)"),
+        'accuracy' => $this->accuracy,
+        'notes' => $validated['notes'],
+        'collected_at' => now(),
+    ]);
 
     session()->flash('success', 'Reading submitted successfully!');
 
@@ -68,8 +72,49 @@ $save = function () {
 
 ?>
 
-<div class="max-w-2xl mx-auto">
-    <flux:card>
+<div class="max-w-2xl mx-auto" x-data="{
+    captureLocation() {
+        if (!navigator.geolocation) {
+            @this.set('gpsError', 'Geolocation is not supported by your browser');
+            @this.set('gpsStatus', 'error');
+            return;
+        }
+
+        @this.set('gpsStatus', 'requesting');
+        @this.set('gpsError', null);
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                @this.set('latitude', position.coords.latitude);
+                @this.set('longitude', position.coords.longitude);
+                @this.set('accuracy', position.coords.accuracy);
+                @this.set('gpsStatus', 'success');
+            },
+            (error) => {
+                let errorMessage = 'Unable to retrieve location';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Location permission denied. Please enable location access.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'Location information unavailable.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = 'Location request timed out.';
+                        break;
+                }
+                @this.set('gpsError', errorMessage);
+                @this.set('gpsStatus', 'error');
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    }
+}">
+    <x-card>
         <flux:heading size="lg">Submit Environmental Reading</flux:heading>
         <flux:subheading>Capture GPS-tagged environmental data</flux:subheading>
 
@@ -77,7 +122,7 @@ $save = function () {
             {{-- Campaign Selection --}}
             <flux:field>
                 <flux:label>Campaign</flux:label>
-                <flux:select wire:model="campaignId" placeholder="Select campaign...">
+                <flux:select wire:model.live="campaignId" placeholder="Select campaign...">
                     @foreach($this->campaigns as $campaign)
                         <option value="{{ $campaign->id }}">{{ $campaign->name }}</option>
                     @endforeach
@@ -88,7 +133,7 @@ $save = function () {
             {{-- Metric Type Selection --}}
             <flux:field>
                 <flux:label>Metric Type</flux:label>
-                <flux:select wire:model="metricId" placeholder="Select metric...">
+                <flux:select wire:model.live="metricId" placeholder="Select metric...">
                     @foreach($this->metrics as $metric)
                         <option value="{{ $metric->id }}">
                             {{ $metric->name }} ({{ $metric->unit }})
@@ -105,17 +150,12 @@ $save = function () {
                 <div class="flex gap-2">
                     <flux:button
                         type="button"
-                        wire:click="captureGPS"
                         x-on:click="captureLocation()"
-                        variant="secondary"
-                        {{ $gpsStatus === 'requesting' ? 'disabled' : '' }}
+                        variant="outline"
+                        x-bind:disabled="$wire.gpsStatus === 'requesting'"
                     >
-                        <span wire:loading.remove wire:target="captureGPS">
-                            📍 Capture GPS
-                        </span>
-                        <span wire:loading wire:target="captureGPS">
-                            🔄 Getting location...
-                        </span>
+                        <span x-show="$wire.gpsStatus !== 'requesting'">📍 Capture GPS</span>
+                        <span x-show="$wire.gpsStatus === 'requesting'" x-cloak>🔄 Getting location...</span>
                     </flux:button>
 
                     @if($gpsStatus === 'success')
@@ -173,65 +213,20 @@ $save = function () {
             {{-- Submit Button --}}
             <div class="flex gap-2">
                 <flux:button type="submit" variant="primary">
-                    Submit Reading
+                    <span wire:loading.remove wire:target="save">Submit Reading</span>
+                    <span wire:loading wire:target="save">Submitting...</span>
                 </flux:button>
             </div>
         </form>
-    </flux:card>
+    </x-card>
 
     {{-- Success Message --}}
     @if (session('success'))
-        <flux:card class="mt-4 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+        <x-card variant="success" class="mt-4">
             <flux:text class="text-green-800 dark:text-green-200">
                 ✓ {{ session('success') }}
             </flux:text>
-        </flux:card>
+        </x-card>
     @endif
-
-    {{-- JavaScript for GPS Capture --}}
-    <script>
-        function captureLocation() {
-            if (!navigator.geolocation) {
-                @this.set('gpsError', 'Geolocation is not supported by your browser');
-                @this.set('gpsStatus', 'error');
-                return;
-            }
-
-            @this.set('gpsStatus', 'requesting');
-            @this.set('gpsError', null);
-
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    @this.set('latitude', position.coords.latitude);
-                    @this.set('longitude', position.coords.longitude);
-                    @this.set('accuracy', position.coords.accuracy);
-                    @this.set('gpsStatus', 'success');
-                },
-                (error) => {
-                    let errorMessage = 'Unable to retrieve location';
-
-                    switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMessage = 'Location permission denied. Please enable location access.';
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            errorMessage = 'Location information unavailable.';
-                            break;
-                        case error.TIMEOUT:
-                            errorMessage = 'Location request timed out.';
-                            break;
-                    }
-
-                    @this.set('gpsError', errorMessage);
-                    @this.set('gpsStatus', 'error');
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                }
-            );
-        }
-    </script>
 </div>
 

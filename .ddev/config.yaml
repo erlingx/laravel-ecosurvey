@@ -28,7 +28,7 @@ web_extra_daemons:
 
 hooks:
   post-start:
-    - exec: "psql -h db -U db -d postgres -c \"SELECT 'CREATE DATABASE testing' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'testing')\\gexec\""
+    - exec: "psql -h db -U db -d postgres -c \"CREATE DATABASE testing\" || true"
     - exec: "php artisan migrate --env=testing --force"
 
 

@@ -17,6 +17,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Data Collection
     Volt::route('readings/submit', 'data-collection.reading-form')->name('readings.submit');
+    Volt::route('data-points/capture', 'datapointcapture')->name('data-points.capture');
 
     // Settings
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit');

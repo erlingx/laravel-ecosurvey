@@ -1,0 +1,9 @@
+name: pgadmin
+repository: MurzNN/ddev-pgadmin
+version: v0.1.1
+install_date: "2025-12-19T13:30:38+01:00"
+project_files:
+    - docker-compose.pgadmin.yaml
+    - commands/host/pgadmin
+global_files: []
+removal_actions: []

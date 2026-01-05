@@ -15,12 +15,11 @@ return new class extends Migration
         Schema::create('data_points', function (Blueprint $table) {
             $table->id();
             $table->foreignId('campaign_id')->constrained('campaigns')->cascadeOnDelete();
+            $table->foreignId('environmental_metric_id')->constrained('environmental_metrics')->cascadeOnDelete();
             $table->foreignId('survey_zone_id')->nullable()->constrained('survey_zones')->nullOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
 
-            $table->decimal('latitude', 10, 7);
-            $table->decimal('longitude', 11, 7);
-            $table->decimal('altitude', 8, 2)->nullable();
+            $table->decimal('value', 10, 2);
             $table->decimal('accuracy', 8, 2)->nullable();
 
             $table->timestamp('collected_at');
@@ -40,8 +39,8 @@ return new class extends Migration
             $table->index('status');
         });
 
-        // Add PostGIS geography column for point location (SRID 4326 = WGS84)
-        DB::statement('ALTER TABLE data_points ADD COLUMN location geography(POINT, 4326)');
+        // Add PostGIS geometry column for point location (SRID 4326 = WGS84)
+        DB::statement('ALTER TABLE data_points ADD COLUMN location geometry(POINT, 4326)');
 
         // Add spatial index for location queries
         DB::statement('CREATE INDEX data_points_location_idx ON data_points USING GIST (location)');

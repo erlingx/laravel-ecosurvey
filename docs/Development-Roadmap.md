@@ -42,6 +42,8 @@ GITHUB quota 33%
 - ✅ `resources/views/livewire/data-collection/reading-form.php`
   - ✅ GPS auto-capture via browser geolocation
   - ✅ Real-time validation
+  - ✅ Flux UI components published (replaced Pro `card` component with free alternatives)
+  - ⏳ Fix remaining test failures (Blade component parsing issues)
   - ⏳ Photo upload with geotag (next task)
   - ⏳ Offline draft storage (localStorage) (future enhancement)
 
