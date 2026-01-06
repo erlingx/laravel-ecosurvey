@@ -30,4 +30,3 @@ foreach ($campaigns as $campaign) {
         echo "   NO DATA POINTS\n\n";
     }
 }
-

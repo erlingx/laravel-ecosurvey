@@ -46,7 +46,6 @@ $metrics = computed(fn () => EnvironmentalMetric::query()
     ->get()
 );
 
-
 $save = function () {
     $validated = $this->validate([
         'campaignId' => 'required|exists:campaigns,id',

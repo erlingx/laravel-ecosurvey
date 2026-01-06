@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
-    $this->service = new SatelliteService();
+    $this->service = new SatelliteService;
 });
 
 test('get satellite imagery from NASA Earth API', function () {
@@ -27,8 +27,7 @@ test('get satellite imagery from NASA Earth API', function () {
         ->and($result['longitude'])->toBe(12.5683)
         ->and($result['source'])->toBe('NASA Earth');
 
-    Http::assertSent(fn ($request) =>
-        str_contains($request->url(), 'planetary/earth/imagery') &&
+    Http::assertSent(fn ($request) => str_contains($request->url(), 'planetary/earth/imagery') &&
         str_contains($request->url(), 'lat=55.6761') &&
         str_contains($request->url(), 'date=2024-01-01')
     );
@@ -93,8 +92,7 @@ test('get NDVI data from NASA assets API', function () {
         ->and($result['cloud_score'])->toBe(0.15)
         ->and($result['source'])->toBe('NASA Landsat');
 
-    Http::assertSent(fn ($request) =>
-        str_contains($request->url(), 'planetary/earth/assets')
+    Http::assertSent(fn ($request) => str_contains($request->url(), 'planetary/earth/assets')
     );
 });
 
@@ -247,14 +245,12 @@ test('uses DEMO_KEY as default NASA API key', function () {
     config(['services.nasa_earth.api_key' => 'DEMO_KEY']);
 
     // Create new service instance to pick up config
-    $service = new SatelliteService();
+    $service = new SatelliteService;
 
     $result = $service->getSatelliteImagery(55.6761, 12.5683);
 
     expect($result)->not->toBeNull();
 
-    Http::assertSent(fn ($request) =>
-        str_contains($request->url(), 'api_key=DEMO_KEY')
+    Http::assertSent(fn ($request) => str_contains($request->url(), 'api_key=DEMO_KEY')
     );
 });
-

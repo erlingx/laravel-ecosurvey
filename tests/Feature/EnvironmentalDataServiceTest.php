@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
-    $this->service = new EnvironmentalDataService();
+    $this->service = new EnvironmentalDataService;
 });
 
 test('get current AQI from OpenWeatherMap API', function () {
@@ -36,8 +36,7 @@ test('get current AQI from OpenWeatherMap API', function () {
         ->and($result['source'])->toBe('OpenWeatherMap')
         ->and($result['components'])->toHaveKey('pm2_5');
 
-    Http::assertSent(fn ($request) =>
-        str_contains($request->url(), 'air_pollution') &&
+    Http::assertSent(fn ($request) => str_contains($request->url(), 'air_pollution') &&
         str_contains($request->url(), 'lat=55.6761')
     );
 });
@@ -120,8 +119,7 @@ test('find nearest WAQI station', function () {
         ->and($result['latitude'])->toBe(55.6761)
         ->and($result['longitude'])->toBe(12.5683);
 
-    Http::assertSent(fn ($request) =>
-        str_contains($request->url(), 'waqi.info') &&
+    Http::assertSent(fn ($request) => str_contains($request->url(), 'waqi.info') &&
         str_contains($request->url(), 'geo:55.6761;12.5683')
     );
 });
@@ -244,7 +242,6 @@ test('cache keys include time buckets for TTL rotation', function () {
     expect($result)->not->toBeNull();
 
     // Verify cache was used
-    $cacheHit = Cache::has("env_data:aqi:55.676:12.568:" . floor(time() / 3600));
+    $cacheHit = Cache::has('env_data:aqi:55.676:12.568:'.floor(time() / 3600));
     expect($cacheHit)->toBeTrue();
 });
-

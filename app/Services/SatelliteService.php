@@ -11,8 +11,11 @@ use Illuminate\Support\Facades\Log;
 class SatelliteService
 {
     private string $nasaApiKey;
+
     private string $nasaBaseUrl;
+
     private int $cacheTtl;
+
     private bool $useMock;
 
     public function __construct()
@@ -40,6 +43,7 @@ class SatelliteService
             // Skip API call if mock mode is enabled
             if ($this->useMock) {
                 Log::info('NASA_USE_MOCK enabled - using fallback imagery data');
+
                 return $this->getMockImageryData($latitude, $longitude, $date, $dim);
             }
 
@@ -83,6 +87,7 @@ class SatelliteService
 
             // Fallback: Return mock data for local development
             Log::info('Using fallback imagery data for local development');
+
             return $this->getMockImageryData($latitude, $longitude, $date, $dim);
         });
     }
@@ -119,6 +124,7 @@ class SatelliteService
             // Skip API call if mock mode is enabled
             if ($this->useMock) {
                 Log::info('NASA_USE_MOCK enabled - using fallback NDVI data');
+
                 return $this->getMockNDVIData($latitude, $longitude, $date);
             }
 
@@ -166,6 +172,7 @@ class SatelliteService
 
             // Fallback: Return mock data for local development
             Log::info('Using fallback NDVI data for local development');
+
             return $this->getMockNDVIData($latitude, $longitude, $date);
         });
     }
@@ -176,7 +183,7 @@ class SatelliteService
     private function getMockNDVIData(float $latitude, float $longitude, string $date): array
     {
         return [
-            'scene_id' => 'LC8_MOCK_' . date('Ymd', strtotime($date)),
+            'scene_id' => 'LC8_MOCK_'.date('Ymd', strtotime($date)),
             'date' => $date,
             'cloud_score' => 15, // Low cloud coverage
             'url' => null,
@@ -270,4 +277,3 @@ class SatelliteService
         return "satellite:{$type}:{$roundedLat}:{$roundedLon}:{$dateKey}";
     }
 }
-

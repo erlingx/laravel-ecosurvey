@@ -112,7 +112,7 @@ class EcoSurveySeeder extends Seeder
             $this->command->info('✓ Created sample data points in Fælledparken');
         }
 
-        $this->command->info('✓ Created ' . count($metrics) . ' environmental metrics');
-        $this->command->info('✓ Created ' . count($campaigns) . ' campaigns');
+        $this->command->info('✓ Created '.count($metrics).' environmental metrics');
+        $this->command->info('✓ Created '.count($campaigns).' campaigns');
     }
 }

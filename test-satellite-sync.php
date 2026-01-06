@@ -51,7 +51,7 @@ echo "   Testing location: $testLat, $testLon\n";
 echo "   Date: $testDate\n";
 
 // Test NDVI overlay
-echo "   Fetching NDVI overlay... ";
+echo '   Fetching NDVI overlay... ';
 $ndviData = $service->getOverlayVisualization($testLat, $testLon, $testDate, 'ndvi', 100, 100);
 if ($ndviData) {
     echo "✓ Success\n";
@@ -66,7 +66,7 @@ if ($ndviData) {
 }
 
 // Test NDVI analysis
-echo "   Fetching NDVI analysis... ";
+echo '   Fetching NDVI analysis... ';
 $ndviAnalysis = $service->getNDVIData($testLat, $testLon, $testDate);
 if ($ndviAnalysis) {
     echo "✓ Success\n";
@@ -80,7 +80,7 @@ if ($ndviAnalysis) {
 }
 
 // Test Moisture overlay
-echo "   Fetching Moisture overlay... ";
+echo '   Fetching Moisture overlay... ';
 $moistureData = $service->getOverlayVisualization($testLat, $testLon, $testDate, 'moisture', 100, 100);
 if ($moistureData) {
     echo "✓ Success\n";
@@ -99,11 +99,11 @@ echo "\n3. Testing Cache Consistency:\n";
 Cache::flush();
 echo "   Cache cleared\n";
 
-echo "   First fetch (should hit API)... ";
+echo '   First fetch (should hit API)... ';
 $first = $service->getOverlayVisualization($testLat, $testLon, $testDate, 'ndvi', 100, 100);
 echo $first ? "✓\n" : "✗\n";
 
-echo "   Second fetch (should hit cache)... ";
+echo '   Second fetch (should hit cache)... ';
 $second = $service->getOverlayVisualization($testLat, $testLon, $testDate, 'ndvi', 100, 100);
 echo $second ? "✓\n" : "✗\n";
 
@@ -115,4 +115,3 @@ if ($first && $second) {
 }
 
 echo "\n✅ Data sync test complete!\n";
-

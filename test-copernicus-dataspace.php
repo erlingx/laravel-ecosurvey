@@ -10,10 +10,10 @@ echo "=========================================\n\n";
 
 // Check config
 echo "Copernicus Data Space Config:\n";
-echo "  Client ID: " . (config('services.copernicus_dataspace.client_id') ? substr(config('services.copernicus_dataspace.client_id'), 0, 10) . "..." : 'NOT SET') . "\n";
-echo "  Client Secret: " . (config('services.copernicus_dataspace.client_secret') ? substr(config('services.copernicus_dataspace.client_secret'), 0, 10) . "..." : 'NOT SET') . "\n\n";
+echo '  Client ID: '.(config('services.copernicus_dataspace.client_id') ? substr(config('services.copernicus_dataspace.client_id'), 0, 10).'...' : 'NOT SET')."\n";
+echo '  Client Secret: '.(config('services.copernicus_dataspace.client_secret') ? substr(config('services.copernicus_dataspace.client_secret'), 0, 10).'...' : 'NOT SET')."\n\n";
 
-if (!config('services.copernicus_dataspace.client_id') || !config('services.copernicus_dataspace.client_secret')) {
+if (! config('services.copernicus_dataspace.client_id') || ! config('services.copernicus_dataspace.client_secret')) {
     echo "⚠️  WARNING: Copernicus Data Space credentials not configured!\n\n";
     echo "To get credentials:\n";
     echo "1. Visit: https://dataspace.copernicus.eu/\n";
@@ -45,16 +45,16 @@ echo "=========================================\n\n";
 
 if ($data) {
     echo "✅ SUCCESS! Copernicus Data Space is working!\n\n";
-    echo "Date: " . $data['date'] . "\n";
-    echo "Location: " . $data['latitude'] . ", " . $data['longitude'] . "\n";
-    echo "Source: " . $data['source'] . "\n";
-    echo "Resolution: " . $data['resolution'] . "\n";
-    echo "Provider: " . $data['provider'] . "\n";
-    echo "URL type: " . (strpos($data['url'], 'data:image') === 0 ? 'Base64 data URL (real imagery)' : 'External URL') . "\n";
-    echo "Image size: " . strlen($data['url']) . " chars\n\n";
+    echo 'Date: '.$data['date']."\n";
+    echo 'Location: '.$data['latitude'].', '.$data['longitude']."\n";
+    echo 'Source: '.$data['source']."\n";
+    echo 'Resolution: '.$data['resolution']."\n";
+    echo 'Provider: '.$data['provider']."\n";
+    echo 'URL type: '.(strpos($data['url'], 'data:image') === 0 ? 'Base64 data URL (real imagery)' : 'External URL')."\n";
+    echo 'Image size: '.strlen($data['url'])." chars\n\n";
 
     echo "🎉 Real Sentinel-2 satellite imagery loaded from ESA Copernicus!\n";
-    echo "Image preview: " . substr($data['url'], 0, 100) . "...\n\n";
+    echo 'Image preview: '.substr($data['url'], 0, 100)."...\n\n";
 
     // Test NDVI
     echo "\nTesting NDVI data...\n";
@@ -65,8 +65,8 @@ if ($data) {
 
     if ($ndviData) {
         echo "✅ NDVI data received in {$ndviElapsed} seconds\n";
-        echo "NDVI Value: " . ($ndviData['ndvi_value'] ?? 'N/A') . "\n";
-        echo "Interpretation: " . ($ndviData['interpretation'] ?? 'N/A') . "\n\n";
+        echo 'NDVI Value: '.($ndviData['ndvi_value'] ?? 'N/A')."\n";
+        echo 'Interpretation: '.($ndviData['interpretation'] ?? 'N/A')."\n\n";
     } else {
         echo "⚠️ NDVI data not available (may require different date or location)\n\n";
     }
@@ -83,4 +83,3 @@ if ($data) {
 }
 
 echo "\n";
-

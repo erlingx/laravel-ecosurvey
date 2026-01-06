@@ -4,7 +4,8 @@ use App\Models\Campaign;
 use App\Models\EnvironmentalMetric;
 use App\Services\GeospatialService;
 
-use function Livewire\Volt\{computed, state};
+use function Livewire\Volt\computed;
+use function Livewire\Volt\state;
 
 state([
     'campaignId' => null,
@@ -27,8 +28,6 @@ $filterChanged = function () {
     );
 };
 
-
-
 $campaigns = computed(fn () => Campaign::query()
     ->select('id', 'name', 'status')
     ->where('status', 'active')
@@ -48,6 +47,7 @@ $dataPoints = computed(function () {
     // Cast to int or null to avoid type errors with empty strings
     $campaignId = $this->campaignId ? (int) $this->campaignId : null;
     $metricId = $this->metricId ? (int) $this->metricId : null;
+
     return $service->getDataPointsAsGeoJSON($campaignId, $metricId);
 });
 
@@ -55,6 +55,7 @@ $boundingBox = computed(function () {
     $service = app(GeospatialService::class);
     // Cast to int or null to avoid type errors with empty strings
     $campaignId = $this->campaignId ? (int) $this->campaignId : null;
+
     return $service->getBoundingBox($campaignId);
 });
 

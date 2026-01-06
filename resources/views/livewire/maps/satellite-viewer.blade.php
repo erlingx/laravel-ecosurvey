@@ -1,10 +1,11 @@
 <?php
 
 use App\Models\Campaign;
-use App\Services\SatelliteService;
 use App\Services\CopernicusDataSpaceService;
+use App\Services\SatelliteService;
 
-use function Livewire\Volt\{computed, state};
+use function Livewire\Volt\computed;
+use function Livewire\Volt\state;
 
 state([
     'campaignId' => null,
@@ -68,7 +69,6 @@ $updatedSelectedDate = function (): void {
     $this->updateRevision = (int) $this->updateRevision + 1;
 };
 
-
 $campaigns = computed(function () {
     return Campaign::query()
         ->select('campaigns.id', 'campaigns.name', 'campaigns.status')
@@ -128,6 +128,7 @@ $satelliteData = computed(function () {
             'returned_lon' => $data['longitude'] ?? 'N/A',
             'overlay_type' => $data['overlay_type'] ?? 'N/A',
         ]);
+
         return $data;
     }
 
@@ -135,6 +136,7 @@ $satelliteData = computed(function () {
     $nasaService = app(SatelliteService::class);
     $fallbackData = $nasaService->getSatelliteImagery($lat, $lon, $date);
     \Log::warning('⚠️ Using NASA fallback data');
+
     return $fallbackData;
 });
 
@@ -164,7 +166,7 @@ $analysisData = computed(function () {
     $copernicusService = app(CopernicusDataSpaceService::class);
 
     // Only fetch the specific data type needed
-    return match($overlay) {
+    return match ($overlay) {
         'ndvi' => $copernicusService->getNDVIData($lat, $lon, $date),
         'moisture' => $copernicusService->getMoistureData($lat, $lon, $date),
         default => null,

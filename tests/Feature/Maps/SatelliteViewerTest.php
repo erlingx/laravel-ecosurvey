@@ -6,7 +6,6 @@ use App\Models\Campaign;
 use App\Models\DataPoint;
 use App\Models\EnvironmentalMetric;
 use App\Models\User;
-use App\Services\SatelliteService;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 
@@ -261,4 +260,3 @@ test('satellite viewer updates when campaign is selected', function () {
     expect($component->get('selectedLat'))->toBeFloat()
         ->and($component->get('selectedLon'))->toBeFloat();
 });
-

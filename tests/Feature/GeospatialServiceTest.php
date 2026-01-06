@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->service = new GeospatialService();
+    $this->service = new GeospatialService;
     $this->user = User::factory()->create();
     $this->campaign = Campaign::factory()->create(['status' => 'active', 'user_id' => $this->user->id]);
     $this->metric = EnvironmentalMetric::factory()->create(['is_active' => true]);
@@ -23,7 +23,7 @@ test('get data points as GeoJSON', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 42.5,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -32,7 +32,7 @@ test('get data points as GeoJSON', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 35.0,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5700, 55.6800), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5700, 55.6800), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -56,7 +56,7 @@ test('filter data points by campaign', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 42.5,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -65,7 +65,7 @@ test('filter data points by campaign', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 35.0,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5700, 55.6800), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5700, 55.6800), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -82,7 +82,7 @@ test('find points within radius', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 42.5,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -92,7 +92,7 @@ test('find points within radius', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 35.0,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.6500, 55.7000), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.6500, 55.7000), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -125,7 +125,7 @@ test('get bounding box for data points', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 42.5,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -134,7 +134,7 @@ test('get bounding box for data points', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 35.0,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.6500, 55.7000), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.6500, 55.7000), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -151,4 +151,3 @@ test('create buffer zone around point', function () {
     expect($geojson)->toBeString()
         ->and(json_decode($geojson))->toBeObject();
 });
-

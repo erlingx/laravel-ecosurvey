@@ -57,7 +57,7 @@ test('map data includes all data points by default', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 42.5,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)'),
         'notes' => 'Test reading 1',
         'collected_at' => now(),
     ]);
@@ -67,7 +67,7 @@ test('map data includes all data points by default', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 35.0,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5700, 55.6800), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5700, 55.6800), 4326)'),
         'notes' => 'Test reading 2',
         'collected_at' => now(),
     ]);
@@ -92,7 +92,7 @@ test('map filters data by campaign', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 42.5,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -101,7 +101,7 @@ test('map filters data by campaign', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 35.0,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5700, 55.6800), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5700, 55.6800), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -124,7 +124,7 @@ test('map filters data by metric', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 42.5,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -133,7 +133,7 @@ test('map filters data by metric', function () {
         'environmental_metric_id' => $metric2->id,
         'user_id' => $this->user->id,
         'value' => 35.0,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5700, 55.6800), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5700, 55.6800), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -157,7 +157,7 @@ test('map filters data by both campaign and metric', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 42.5,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -166,7 +166,7 @@ test('map filters data by both campaign and metric', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 35.0,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5700, 55.6800), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5700, 55.6800), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -175,7 +175,7 @@ test('map filters data by both campaign and metric', function () {
         'environmental_metric_id' => $metric2->id,
         'user_id' => $this->user->id,
         'value' => 28.0,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5800, 55.6900), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5800, 55.6900), 4326)'),
         'collected_at' => now(),
     ]);
 
@@ -196,7 +196,7 @@ test('map geojson includes all required properties', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 42.5,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)"),
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)'),
         'accuracy' => 10.5,
         'notes' => 'Test observation',
         'collected_at' => now(),
@@ -226,7 +226,7 @@ test('map bounding box is calculated correctly', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 42.5,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)"), // Southwest
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)'), // Southwest
         'collected_at' => now(),
     ]);
 
@@ -235,7 +235,7 @@ test('map bounding box is calculated correctly', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 35.0,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.6500, 55.7000), 4326)"), // Northeast
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.6500, 55.7000), 4326)'), // Northeast
         'collected_at' => now(),
     ]);
 
@@ -281,7 +281,7 @@ test('map geojson coordinates are in correct order', function () {
         'environmental_metric_id' => $this->metric->id,
         'user_id' => $this->user->id,
         'value' => 42.5,
-        'location' => DB::raw("ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)"), // lon, lat
+        'location' => DB::raw('ST_SetSRID(ST_MakePoint(12.5683, 55.6761), 4326)'), // lon, lat
         'collected_at' => now(),
     ]);
 
@@ -296,4 +296,3 @@ test('map geojson coordinates are in correct order', function () {
         ->and($coords[0])->toBeLessThan(15)
         ->and($coords[1])->toBeLessThan(60);
 });
-
