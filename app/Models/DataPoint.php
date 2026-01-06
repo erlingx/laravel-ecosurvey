@@ -19,7 +19,14 @@ class DataPoint extends Model
         'location',
         'accuracy',
         'notes',
+        'photo_path',
         'collected_at',
+        'official_value',
+        'official_station_name',
+        'official_station_distance',
+        'variance_percentage',
+        'satellite_image_url',
+        'ndvi_value',
     ];
 
     protected function casts(): array
@@ -27,6 +34,10 @@ class DataPoint extends Model
         return [
             'value' => 'decimal:2',
             'accuracy' => 'decimal:2',
+            'official_value' => 'decimal:2',
+            'official_station_distance' => 'decimal:2',
+            'variance_percentage' => 'decimal:2',
+            'ndvi_value' => 'decimal:4',
             'collected_at' => 'datetime',
         ];
     }

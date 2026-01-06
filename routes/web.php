@@ -19,6 +19,10 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('readings/submit', 'data-collection.reading-form')->name('readings.submit');
     Volt::route('data-points/capture', 'datapointcapture')->name('data-points.capture');
 
+    // Maps
+    Volt::route('maps/survey', 'maps.survey-map-viewer')->name('maps.survey');
+    Volt::route('maps/satellite', 'maps.satellite-viewer')->name('maps.satellite');
+
     // Settings
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit');
     Volt::route('settings/password', 'settings.password')->name('user-password.edit');

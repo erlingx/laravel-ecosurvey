@@ -35,4 +35,37 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Environmental Data APIs
+    |--------------------------------------------------------------------------
+    */
+
+    'openweathermap' => [
+        'api_key' => env('OPENWEATHERMAP_API_KEY'),
+        'base_url' => 'https://api.openweathermap.org/data/2.5',
+        'cache_ttl' => 3600, // 60 minutes
+    ],
+
+    'waqi' => [
+        'api_key' => env('WAQI_API_KEY'),
+        'base_url' => 'https://api.waqi.info',
+        'cache_ttl' => 3600, // 60 minutes
+    ],
+
+    'nasa_earth' => [
+        'api_key' => env('NASA_API_KEY', 'DEMO_KEY'),
+        'base_url' => env('NASA_BASE_URL', 'https://api.nasa.gov'),
+        'cache_ttl' => env('NASA_CACHE_TTL', 3600), // 1 hour
+        'use_mock' => env('NASA_USE_MOCK', false), // Use mock data when API is unreliable
+    ],
+
+    'copernicus_dataspace' => [
+        'client_id' => env('COPERNICUS_CLIENT_ID'),
+        'client_secret' => env('COPERNICUS_CLIENT_SECRET'),
+        'token_url' => 'https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token',
+        'process_url' => 'https://sh.dataspace.copernicus.eu/api/v1/process',
+        'cache_ttl' => env('COPERNICUS_CACHE_TTL', 3600),
+    ],
+
 ];

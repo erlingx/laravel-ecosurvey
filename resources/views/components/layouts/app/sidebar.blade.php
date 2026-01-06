@@ -50,9 +50,16 @@
             >{{ __('Submit Reading') }}</flux:navlist.item>
             <flux:navlist.item
                 icon="map"
-                href="#"
+                :href="route('maps.survey')"
+                :current="request()->routeIs('maps.survey')"
                 wire:navigate
             >{{ __('Survey Map') }}</flux:navlist.item>
+            <flux:navlist.item
+                icon="globe-alt"
+                :href="route('maps.satellite')"
+                :current="request()->routeIs('maps.satellite')"
+                wire:navigate
+            >{{ __('Satellite Data') }}</flux:navlist.item>
         </flux:navlist.group>
 
         <flux:navlist.group

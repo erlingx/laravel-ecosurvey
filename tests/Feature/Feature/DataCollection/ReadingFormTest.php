@@ -5,6 +5,8 @@ use App\Models\DataPoint;
 use App\Models\EnvironmentalMetric;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -146,6 +148,76 @@ test('notes field is optional but has max length', function () {
         ->set('notes', $longNotes)
         ->call('save')
         ->assertHasErrors(['notes']);
+});
+
+test('photo upload is optional', function () {
+    Livewire::actingAs($this->user)
+        ->test('data-collection.reading-form')
+        ->set('campaignId', $this->campaign->id)
+        ->set('metricId', $this->metric->id)
+        ->set('value', 42.5)
+        ->set('latitude', 39.7392)
+        ->set('longitude', -104.9903)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $dataPoint = DataPoint::query()->latest()->first();
+    expect($dataPoint->photo_path)->toBeNull();
+});
+
+test('can upload photo with reading', function () {
+    Storage::fake('public');
+
+    $photo = UploadedFile::fake()->image('test-photo.jpg', 800, 600);
+
+    Livewire::actingAs($this->user)
+        ->test('data-collection.reading-form')
+        ->set('campaignId', $this->campaign->id)
+        ->set('metricId', $this->metric->id)
+        ->set('value', 42.5)
+        ->set('latitude', 39.7392)
+        ->set('longitude', -104.9903)
+        ->set('photo', $photo)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $dataPoint = DataPoint::query()->latest()->first();
+    expect($dataPoint->photo_path)->not->toBeNull();
+    Storage::disk('public')->assertExists($dataPoint->photo_path);
+});
+
+test('photo must be valid image file', function () {
+    Storage::fake('public');
+
+    $invalidFile = UploadedFile::fake()->create('document.pdf', 1000);
+
+    Livewire::actingAs($this->user)
+        ->test('data-collection.reading-form')
+        ->set('campaignId', $this->campaign->id)
+        ->set('metricId', $this->metric->id)
+        ->set('value', 42.5)
+        ->set('latitude', 39.7392)
+        ->set('longitude', -104.9903)
+        ->set('photo', $invalidFile)
+        ->call('save')
+        ->assertHasErrors(['photo']);
+});
+
+test('photo size must not exceed 5MB', function () {
+    Storage::fake('public');
+
+    $largePhoto = UploadedFile::fake()->image('large.jpg')->size(6000); // 6MB
+
+    Livewire::actingAs($this->user)
+        ->test('data-collection.reading-form')
+        ->set('campaignId', $this->campaign->id)
+        ->set('metricId', $this->metric->id)
+        ->set('value', 42.5)
+        ->set('latitude', 39.7392)
+        ->set('longitude', -104.9903)
+        ->set('photo', $largePhoto)
+        ->call('save')
+        ->assertHasErrors(['photo']);
 });
 
 test('form auto-selects campaign if only one exists', function () {

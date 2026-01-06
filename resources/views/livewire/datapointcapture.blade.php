@@ -3,10 +3,14 @@
 use App\Models\Campaign;
 use App\Models\DataPoint;
 use App\Models\EnvironmentalMetric;
+use Livewire\WithFileUploads;
 
 use function Livewire\Volt\computed;
 use function Livewire\Volt\mount;
 use function Livewire\Volt\state;
+use function Livewire\Volt\uses;
+
+uses([WithFileUploads::class]);
 
 state([
     'campaignId' => null,
@@ -18,6 +22,7 @@ state([
     'accuracy' => null,
     'gpsStatus' => 'idle',
     'gpsError' => null,
+    'photo' => null,
 ]);
 
 mount(function () {
@@ -50,7 +55,14 @@ $save = function () {
         'latitude' => 'required|numeric|between:-90,90',
         'longitude' => 'required|numeric|between:-180,180',
         'notes' => 'nullable|string|max:1000',
+        'photo' => 'nullable|image|max:5120', // 5MB max
     ]);
+
+    // Store photo if uploaded
+    $photoPath = null;
+    if ($this->photo) {
+        $photoPath = $this->photo->store('data-points', 'public');
+    }
 
     DataPoint::query()->create([
         'campaign_id' => $validated['campaignId'],
@@ -60,11 +72,12 @@ $save = function () {
         'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$validated['longitude']}, {$validated['latitude']}), 4326)"),
         'accuracy' => $this->accuracy,
         'notes' => $validated['notes'],
+        'photo_path' => $photoPath,
         'collected_at' => now(),
     ]);
 
     session()->flash('success', 'Data point submitted successfully!');
-    $this->reset(['value', 'notes', 'latitude', 'longitude', 'accuracy', 'gpsStatus']);
+    $this->reset(['value', 'notes', 'latitude', 'longitude', 'accuracy', 'gpsStatus', 'photo']);
 };
 
 ?>
@@ -118,23 +131,31 @@ $save = function () {
         <form wire:submit="save" class="mt-6 space-y-6">
             <flux:field>
                 <flux:label>Campaign</flux:label>
-                <flux:select wire:model.live="campaignId" placeholder="Select campaign...">
+                <select
+                    wire:model.live="campaignId"
+                    class="w-full rounded-lg border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                >
+                    <option value="">Select campaign...</option>
                     @foreach($this->campaigns as $campaign)
                         <option value="{{ $campaign->id }}">{{ $campaign->name }}</option>
                     @endforeach
-                </flux:select>
+                </select>
                 <flux:error name="campaignId" />
             </flux:field>
 
             <flux:field>
                 <flux:label>Environmental Metric</flux:label>
-                <flux:select wire:model.live="metricId" placeholder="Select metric...">
+                <select
+                    wire:model.live="metricId"
+                    class="w-full rounded-lg border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                >
+                    <option value="">Select metric...</option>
                     @foreach($this->metrics as $metric)
                         <option value="{{ $metric->id }}">
                             {{ $metric->name }} ({{ $metric->unit }})
                         </option>
                     @endforeach
-                </flux:select>
+                </select>
                 <flux:error name="metricId" />
             </flux:field>
 
@@ -200,6 +221,28 @@ $save = function () {
                     {{ strlen($notes ?? '') }}/1000 characters
                 </flux:text>
                 <flux:error name="notes" />
+            </flux:field>
+
+            {{-- Photo Upload (Optional) --}}
+            <flux:field>
+                <flux:label>Photo (Optional)</flux:label>
+                <flux:input
+                    type="file"
+                    wire:model="photo"
+                    accept="image/*"
+                />
+                <flux:text class="text-sm">
+                    Maximum file size: 5MB. Accepted formats: JPG, PNG, WebP
+                </flux:text>
+                <flux:error name="photo" />
+
+                @if ($photo)
+                    <div class="mt-2">
+                        <flux:text class="text-sm text-green-600 dark:text-green-400">
+                            ✓ Photo selected: {{ $photo->getClientOriginalName() }}
+                        </flux:text>
+                    </div>
+                @endif
             </flux:field>
 
             <div class="flex gap-2">

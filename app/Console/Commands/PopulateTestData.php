@@ -1,19 +1,22 @@
 <?php
 
-namespace Database\Seeders;
+namespace App\Console\Commands;
 
 use App\Models\Campaign;
 use App\Models\EnvironmentalMetric;
 use App\Models\User;
-use Illuminate\Database\Seeder;
+use Illuminate\Console\Command;
 
-class EcoSurveySeeder extends Seeder
+class PopulateTestData extends Command
 {
-    /**
-     * Run the database seeds.
-     */
-    public function run(): void
+    protected $signature = 'ecosurvey:populate';
+
+    protected $description = 'Populate campaigns and environmental metrics for testing';
+
+    public function handle()
     {
+        $this->info('Populating test data...');
+
         // Create Environmental Metrics
         $metrics = [
             ['name' => 'Air Quality Index', 'unit' => 'AQI', 'description' => 'Air quality measurement (0-500)', 'is_active' => true],
@@ -27,14 +30,24 @@ class EcoSurveySeeder extends Seeder
         ];
 
         foreach ($metrics as $metric) {
-            EnvironmentalMetric::firstOrCreate(
+            EnvironmentalMetric::updateOrCreate(
                 ['name' => $metric['name']],
                 $metric
             );
         }
 
-        // Get the first user (created by UserSeeder)
+        $this->info('✓ Created '.count($metrics).' environmental metrics');
+
+        // Get or create a user for the campaigns
         $user = User::first();
+        if (! $user) {
+            $user = User::factory()->create([
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+                'password' => bcrypt('password'),
+            ]);
+            $this->info('✓ Created test user (test@example.com / password)');
+        }
 
         // Create Sample Campaigns
         $campaigns = [
@@ -62,57 +75,20 @@ class EcoSurveySeeder extends Seeder
                 'start_date' => now()->subDays(7),
                 'end_date' => now()->addDays(120),
             ],
-            [
-                'name' => 'Fælledparken Green Space Study',
-                'description' => 'Vegetation and air quality monitoring in Copenhagen\'s largest park',
-                'status' => 'active',
-                'user_id' => $user->id,
-                'start_date' => now()->subDays(15),
-                'end_date' => now()->addDays(75),
-            ],
         ];
 
         foreach ($campaigns as $campaign) {
-            Campaign::firstOrCreate(
+            Campaign::updateOrCreate(
                 ['name' => $campaign['name']],
                 $campaign
             );
         }
 
-        // Add sample data points to Fælledparken campaign
-        $parkCampaign = Campaign::where('name', 'Fælledparken Green Space Study')->first();
-        if ($parkCampaign) {
-            $temperatureMetric = EnvironmentalMetric::where('name', 'Temperature')->first();
+        $this->info('✓ Created '.count($campaigns).' campaigns');
+        $this->info('');
+        $this->info('Total Campaigns: '.Campaign::count());
+        $this->info('Total Metrics: '.EnvironmentalMetric::count());
 
-            // Sample points across Fælledparken (Copenhagen's park with actual vegetation)
-            // Location: 55.7072° N, 12.5704° E (center of Fælledparken)
-            $dataPoints = [
-                ['lat' => 55.7072, 'lon' => 12.5704, 'value' => 22.5], // Park center
-                ['lat' => 55.7085, 'lon' => 12.5680, 'value' => 21.8], // North section
-                ['lat' => 55.7060, 'lon' => 12.5720, 'value' => 23.1], // South section
-                ['lat' => 55.7078, 'lon' => 12.5650, 'value' => 22.0], // West edge
-            ];
-
-            foreach ($dataPoints as $point) {
-                \App\Models\DataPoint::firstOrCreate(
-                    [
-                        'campaign_id' => $parkCampaign->id,
-                        'environmental_metric_id' => $temperatureMetric->id,
-                    ],
-                    [
-                        'user_id' => $user->id,
-                        'value' => $point['value'],
-                        'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$point['lon']}, {$point['lat']}), 4326)"),
-                        'accuracy' => 10.0,
-                        'collected_at' => now()->subDays(rand(1, 10)),
-                    ]
-                );
-            }
-
-            $this->command->info('✓ Created sample data points in Fælledparken');
-        }
-
-        $this->command->info('✓ Created ' . count($metrics) . ' environmental metrics');
-        $this->command->info('✓ Created ' . count($campaigns) . ' campaigns');
+        return 0;
     }
 }

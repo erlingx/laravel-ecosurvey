@@ -217,23 +217,59 @@ public function compareWithOfficialStations($latitude, $longitude)
     ];
 }
 ```
+### **3. Satellite Imagery APIs:**
 
-### **3. NASA Earth API (Satellite Imagery)**
+**Implementation Decision:** After evaluating NASA, Sentinel Hub, and Copernicus Data Space, **Copernicus Data Space Ecosystem** was selected as the primary provider.
+
+**Why Copernicus Data Space?**
+- ✅ **100% FREE UNLIMITED** (EU taxpayer funded)
+- ✅ **Works from Docker/DDEV** (NASA API has network blocking issues)
+- ✅ **Fast response times** (2-5s vs NASA's 60-120s)
+- ✅ **European servers** (better for EU-based projects)
+- ✅ **Same Sentinel-2 data** as commercial Sentinel Hub
+- ✅ **Production-ready** infrastructure
+
+**Quick Comparison:**
+
+| API | Free Tier | NDVI | Docker-Friendly | Response Time | EU Servers | Sustainability |
+|-----|-----------|------|-----------------|---------------|------------|----------------|
+| NASA Earth | ✅ Unlimited | ✅ Yes | ❌ No | 60-120s | ❌ No | ⚠️ Unreliable |
+| **Copernicus Data Space** ⭐ | ✅ **UNLIMITED** | ✅ Yes | ✅ Yes | 2-5s | ✅ Yes | ✅ **EU Funded** |
+| Sentinel Hub | ⚠️ 30 days only | ✅ Yes | ✅ Yes | 2-5s | ✅ Yes | ❌ Paid after trial |
+| Mapbox Satellite | ✅ 200K/mo | ❌ No | ✅ Yes | 1-2s | Partial | ✅ Commercial |
+| Google Earth Engine | ✅ Research | ✅ Yes | ✅ Yes | 5-10s | Global | ⚠️ Educational |
+
+**Implementation:**
 ```php
-// Services/SatelliteService.php
-public function getCropImagery($latitude, $longitude, $date)
+// Services/CopernicusDataSpaceService.php
+public function getSatelliteImagery($latitude, $longitude, $date)
 {
-    $response = Http::get('https://api.nasa.gov/planetary/earth/imagery', [
-        'lon' => $longitude,
-        'lat' => $latitude,
-        'dim' => 0.2,
-        'date' => $date->format('Y-m-d'),
-        'api_key' => config('services.nasa.key'),
-    ]);
+    $token = $this->getOAuthToken();
+    $bbox = $this->calculateBBox($latitude, $longitude, 0.025);
     
-    return $response->json();
+    $response = Http::withToken($token)
+        ->post('https://sh.dataspace.copernicus.eu/api/v1/process', [
+            'input' => [
+                'bounds' => ['bbox' => $bbox],
+                'data' => [['type' => 'sentinel-2-l2a']],
+            ],
+            'output' => [
+                'width' => 512,
+                'height' => 512,
+                'responses' => [['format' => ['type' => 'image/png']]]
+            ],
+            'evalscript' => $this->getTrueColorScript(),
+        ]);
+    
+    return [
+        'url' => 'data:image/png;base64,' . base64_encode($response->body()),
+        'source' => 'Sentinel-2 (Copernicus Data Space)',
+        'resolution' => '10m',
+    ];
 }
 ```
+
+**Fallback Strategy:** NASA API with mock data when Copernicus is unavailable (ensures app always works).
 
 ---
 
