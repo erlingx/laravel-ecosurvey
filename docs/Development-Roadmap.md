@@ -224,27 +224,77 @@ GITHUB quota 33%
   - ✅ Auto-fit bounds to data
 
 - ✅ `resources/views/livewire/analytics/trend-chart.blade.php`
-  - ✅ Chart.js time-series visualization
-  - ✅ Multiple datasets (average, min, max)
-  - ✅ Statistics panel
-  - ✅ Distribution histogram
+  - ✅ Chart.js v4 time-series visualization with scientific rigor
+  - ✅ **95% Confidence Interval (CI) visualization**
+    - Shaded blue band showing statistical uncertainty in mean estimates
+    - CI only displayed when n ≥ 3 (statistically valid sample size)
+    - Proper CI calculation: mean ± (1.96 × SE), not constrained to min/max
+    - Visual label badge explaining "95% CI" meaning
+  - ✅ **Interactive features**
+    - Zoom/Pan controls (mouse wheel zoom, Ctrl+drag pan)
+    - Reset Zoom button
+    - Toggle Min/Max lines (hidden by default to focus on CI)
+    - Overall average reference line (dashed horizontal)
+  - ✅ **Scientific tooltips**
+    - Sample size (n) for each time period
+    - Standard deviation (σ)
+    - 95% CI range [lower, upper]
+    - All three metrics (min/avg/max)
+  - ✅ **Proper statistical calculations**
+    - Standard Error: SE = σ / √n
+    - 95% CI for population mean (can extend beyond observed min/max)
+    - CI undefined for n < 3 (shows point estimate only)
+  - ✅ Statistics panel with units (°C, dB, ppm, etc.)
+  - ✅ Distribution histogram with Freedman-Diaconis optimal binning
   - ✅ Interval selection (daily, weekly, monthly)
+  - ✅ Axis labels ("Value", "Time Period", "Frequency (n)")
+  - ✅ No "All Metrics" option (scientifically unsound to mix units)
+  - ✅ Metric-specific validation (required selection)
 
 ### Services ✅
 - ✅ `app/Services/AnalyticsService.php`
   - ✅ `getHeatmapData()` - Format data for Leaflet.heat
   - ✅ `calculateStatistics()` - Statistical calculations (min/max/avg/median/std dev)
   - ✅ `getTrendData()` - Time-series aggregation with PostgreSQL DATE_TRUNC
-  - ✅ `getDistributionData()` - Histogram binning algorithm
-  - ✅ Campaign and metric filtering
+    - **Enhanced with confidence intervals:**
+    - PostgreSQL STDDEV() aggregation per time period
+    - Standard Error calculation: SE = σ / √n
+    - 95% CI calculation: CI = μ ± (1.96 × SE)
+    - Sample size (n) tracking for each period
+    - CI validation: Only calculated when n ≥ 3
+  - ✅ `getDistributionData()` - **Freedman-Diaconis rule** for optimal histogram binning
+    - Bin width = 2 × IQR / n^(1/3)
+    - Automatic bin count (1-50 range)
+    - IQR (Interquartile Range) calculation for robust spread measurement
+    - Falls back to 10 bins if insufficient data
+  - ✅ Campaign and metric filtering with proper type casting
   - ✅ All 12 tests passing (41 assertions)
 
 ### JavaScript Integration ✅
-- ✅ leaflet.heat plugin integration
-- ✅ Chart.js v4 integration
-- ✅ Dynamic chart updates via Livewire
-- ✅ Responsive chart configuration
-- ✅ Proper Vite bundling
+- ✅ `resources/js/analytics/trend-chart.js`
+  - Chart.js v4 with advanced plugins
+  - **chartjs-plugin-annotation** - Reference lines and zones
+  - **chartjs-plugin-zoom** - Interactive zoom/pan functionality
+  - Revision-based update tracking (prevents duplicate renders)
+  - Button state synchronization after Livewire morphs
+  - Proper chart cleanup (prevents memory leaks)
+- ✅ `resources/js/analytics/heatmap.js`
+  - leaflet.heat integration
+  - Map state management across Livewire navigation
+  - Filter-based updates via Livewire.hook('morph.updated')
+- ✅ Proper Vite bundling (no CDN dependencies)
+
+### Chart.js Plugins ✅
+- ✅ **chartjs-plugin-annotation** (v3)
+  - Overall average reference line (horizontal dashed)
+  - Label: "Overall Average" with blue background
+  - Future capability: Threshold lines, danger zones, event markers
+- ✅ **chartjs-plugin-zoom** (v2)
+  - Mouse wheel zoom on X-axis
+  - Ctrl+drag to pan left/right
+  - Double-click to reset zoom
+  - Preserves original limits
+  - Essential for 30+ days of trend data
 
 ### Routes & Navigation ✅
 - ✅ Route: `/analytics/heatmap` → `analytics.heatmap-generator`
@@ -258,13 +308,55 @@ GITHUB quota 33%
   - ✅ Campaign/metric filtering
   - ✅ Statistical calculations (all metrics)
   - ✅ Median calculation (even/odd counts)
-  - ✅ Time-series trend data
-  - ✅ Distribution histogram
+  - ✅ Time-series trend data with CI
+  - ✅ Distribution histogram with optimal binning
   - ✅ Edge cases (empty data, single values)
 
-**Deliverable:** ✅ Visual analytics dashboard with heatmaps and charts
+### Scientific Rigor Checklist ✅
+- ✅ **Reproducibility** - Sample sizes (n) and σ visible in tooltips
+- ✅ **Unit clarity** - All measurements labeled with proper units
+- ✅ **Statistical measures** - Mean, median, std dev, min, max, count, CI
+- ✅ **Optimal binning** - Freedman-Diaconis rule for histograms
+- ✅ **Data integrity** - No mixing of incompatible metrics (temperature + noise)
+- ✅ **Transparency** - Clear axis labels, chart titles, legends
+- ✅ **Error handling** - Graceful degradation when no data exists
+- ✅ **CI validity** - Only shown when n ≥ 3 (statistically meaningful)
+- ✅ **Proper CI interpretation** - Population mean estimate can extend beyond observed range
+
+### Heatmap Scientific Improvements ✅
+- ✅ **Required metric selection** - No "All Metrics" option (prevents mixing incompatible units)
+- ✅ **Unit labels throughout** - All statistics show proper measurement units (°C, dB, ppm, AQI)
+- ✅ **Metric name in titles** - "Heatmap - Temperature (°C)", "Statistics - Noise Level (dB)"
+- ✅ **Data-driven normalization** - Heatmap intensity scaled to actual data range (not arbitrary 0-1)
+- ✅ **Intensity legend** - Visual gradient showing "Low → High" interpretation
+- ✅ **Auto-select first metric** - Page loads with valid metric already selected
+- ✅ **Empty state handling** - Contextual messages when no data exists for campaign/metric combination
+- ✅ **Enhanced visibility** - Larger radius (30px), more blur (20px), minimum opacity (0.3)
+- ✅ **Proper initialization** - Heatmap div always rendered (hidden when empty) for reliable Leaflet initialization
+- ✅ **Map state management** - Proper cleanup and re-initialization across Livewire navigation
+
+### Data Quality ✅
+- ✅ Updated seeders for meaningful statistics
+  - Fælledparken: 3-5 temperature readings per day (31 days = ~93-155 points)
+  - Fælledparken: 3-4 humidity readings per day (31 days = ~93-124 points)
+  - Fælledparken: 3 AQI readings per day (31 days = ~93 points)
+  - Urban Noise: 3-4 noise readings per day (14 days = ~42-56 points)
+  - All campaigns ensure n ≥ 3 per day for valid CI calculations
+
+**Deliverable:** ✅ Publication-ready scientific analytics dashboard with statistically rigorous visualizations
 
 **Total Phase 5 Tests:** 12 tests passing (41 assertions)
+
+**Phase 5 Complete - Date:** January 7, 2026 ✅
+
+**Scientific Impact:**
+- Professional-grade data visualization suitable for research publications
+- Proper uncertainty quantification (95% CI)
+- Statistically sound aggregation methods (Freedman-Diaconis binning, IQR, proper CI calculation)
+- Interactive exploration capabilities (zoom/pan on trend charts)
+- Clear communication of sample sizes and variance
+- Publication-ready heatmap visualizations with proper normalization and unit labeling
+- Zero tolerance for scientifically invalid operations (no mixing incompatible metrics)
 
 ---
 

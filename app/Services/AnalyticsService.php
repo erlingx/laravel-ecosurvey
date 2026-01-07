@@ -96,6 +96,7 @@ class AnalyticsService
                 DB::raw('AVG(value) as average'),
                 DB::raw('MIN(value) as minimum'),
                 DB::raw('MAX(value) as maximum'),
+                DB::raw('STDDEV(value) as std_dev'),
                 DB::raw('COUNT(*) as count'),
             ])
             ->groupBy('period')
@@ -110,20 +111,53 @@ class AnalyticsService
         }
 
         return $query->get()->map(function ($row) {
+            $n = (int) $row->count;
+            $avg = (float) $row->average;
+            $min = (float) $row->minimum;
+            $max = (float) $row->maximum;
+            $stdDev = $row->std_dev ? (float) $row->std_dev : 0.0;
+
+            // Calculate 95% confidence interval: CI = mean ± (1.96 * SE)
+            // Standard Error (SE) = std_dev / sqrt(n)
+            // IMPORTANT: CI is only meaningful with sufficient sample size (n >= 3)
+
+            if ($n < 3) {
+                // With n=1 or n=2, CI is unreliable/undefined
+                // Don't display CI band - just show the point estimate
+                // Users can toggle min/max lines to see the actual range
+                $ciLower = $avg;
+                $ciUpper = $avg;
+                $standardError = 0.0;
+            } else {
+                // Standard CI calculation for n >= 3
+                $standardError = $stdDev / sqrt($n);
+                $marginOfError = 1.96 * $standardError; // 95% CI
+
+                // Calculate CI for the mean
+                // Note: CI can extend beyond min/max because it estimates the population mean,
+                // not the range of individual observations
+                $ciLower = $avg - $marginOfError;
+                $ciUpper = $avg + $marginOfError;
+            }
+
             return [
                 'period' => $row->period,
-                'average' => (float) $row->average,
-                'minimum' => (float) $row->minimum,
-                'maximum' => (float) $row->maximum,
-                'count' => (int) $row->count,
+                'average' => $avg,
+                'minimum' => $min,
+                'maximum' => $max,
+                'std_dev' => $stdDev,
+                'count' => $n,
+                'ci_lower' => $ciLower,
+                'ci_upper' => $ciUpper,
+                'standard_error' => $standardError,
             ];
         })->toArray();
     }
 
     /**
-     * Get distribution histogram data
+     * Get distribution histogram data with scientifically optimal bin width
      */
-    public function getDistributionData(?int $campaignId = null, ?int $metricId = null, int $bins = 10): array
+    public function getDistributionData(?int $campaignId = null, ?int $metricId = null, ?int $bins = null): array
     {
         $query = DataPoint::query();
 
@@ -143,6 +177,24 @@ class AnalyticsService
 
         $min = min($values);
         $max = max($values);
+
+        // Use Freedman-Diaconis rule if bins not specified
+        if ($bins === null) {
+            sort($values);
+            $iqr = $this->calculateIQR($values);
+            $n = count($values);
+            // Freedman-Diaconis: bin width = 2 * IQR / n^(1/3)
+            $binWidth = (2 * $iqr) / pow($n, 1 / 3);
+
+            if ($binWidth > 0) {
+                $bins = max(1, (int) ceil(($max - $min) / $binWidth));
+                // Cap at reasonable maximum
+                $bins = min($bins, 50);
+            } else {
+                $bins = 10; // Fallback
+            }
+        }
+
         $binWidth = ($max - $min) / $bins;
 
         // Handle case where all values are the same
@@ -192,6 +244,28 @@ class AnalyticsService
         }
 
         return (float) $sortedValues[$middle];
+    }
+
+    /**
+     * Calculate Interquartile Range (IQR) for Freedman-Diaconis rule
+     */
+    private function calculateIQR(array $sortedValues): float
+    {
+        $count = count($sortedValues);
+
+        if ($count < 4) {
+            return max($sortedValues) - min($sortedValues);
+        }
+
+        // Q1 (25th percentile)
+        $q1Index = (int) floor($count * 0.25);
+        $q1 = $sortedValues[$q1Index];
+
+        // Q3 (75th percentile)
+        $q3Index = (int) floor($count * 0.75);
+        $q3 = $sortedValues[$q3Index];
+
+        return (float) ($q3 - $q1);
     }
 
     /**

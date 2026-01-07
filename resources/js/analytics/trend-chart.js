@@ -14,6 +14,10 @@ function normalizeTrendData(trendData) {
             average: Number(d.average),
             minimum: Number(d.minimum),
             maximum: Number(d.maximum),
+            std_dev: Number(d.std_dev) || 0,
+            count: Number(d.count) || 0,
+            ci_lower: Number(d.ci_lower) || Number(d.average),
+            ci_upper: Number(d.ci_upper) || Number(d.average),
         }))
         .filter((d) => Number.isFinite(d.average) && Number.isFinite(d.minimum) && Number.isFinite(d.maximum));
 }
@@ -53,7 +57,8 @@ export function initCharts() {
     const avg = trendData.map((d) => d.average);
     const max = trendData.map((d) => d.maximum);
     const min = trendData.map((d) => d.minimum);
-
+    const ciUpper = trendData.map((d) => d.ci_upper);
+    const ciLower = trendData.map((d) => d.ci_lower);
 
     // Trend chart
     if (trendElement && trendData.length > 0) {
@@ -78,10 +83,35 @@ export function initCharts() {
                         label: 'Average',
                         data: avg,
                         borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        tension: 0.2,
+                        order: 1,
+                    },
+                    {
+                        label: '95% CI Upper',
+                        data: ciUpper,
+                        borderColor: 'rgba(59, 130, 246, 0.3)',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true,
-                        tension: 0,
-                        spanGaps: false,
+                        borderWidth: 1,
+                        borderDash: [2, 2],
+                        pointRadius: 0,
+                        fill: '+1',
+                        tension: 0.2,
+                        order: 2,
+                    },
+                    {
+                        label: '95% CI Lower',
+                        data: ciLower,
+                        borderColor: 'rgba(59, 130, 246, 0.3)',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1,
+                        borderDash: [2, 2],
+                        pointRadius: 0,
+                        tension: 0.2,
+                        order: 2,
                     },
                     {
                         label: 'Maximum',
@@ -89,8 +119,10 @@ export function initCharts() {
                         borderColor: 'rgb(239, 68, 68)',
                         backgroundColor: 'transparent',
                         borderDash: [5, 5],
-                        tension: 0,
-                        spanGaps: false,
+                        borderWidth: 1.5,
+                        pointRadius: 2,
+                        tension: 0.2,
+                        hidden: true,
                     },
                     {
                         label: 'Minimum',
@@ -98,8 +130,10 @@ export function initCharts() {
                         borderColor: 'rgb(34, 197, 94)',
                         backgroundColor: 'transparent',
                         borderDash: [5, 5],
-                        tension: 0,
-                        spanGaps: false,
+                        borderWidth: 1.5,
+                        pointRadius: 2,
+                        tension: 0.2,
+                        hidden: true,
                     },
                 ],
             },
@@ -107,16 +141,107 @@ export function initCharts() {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 plugins: {
-                    legend: { position: 'top' },
-                    tooltip: { mode: 'index', intersect: false },
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            filter: function(item) {
+                                // Hide CI lines from legend
+                                return !item.text.includes('95% CI');
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            footer: function(tooltipItems) {
+                                if (tooltipItems.length > 0) {
+                                    const index = tooltipItems[0].dataIndex;
+                                    const n = trendData[index]?.count || 0;
+                                    const stdDev = trendData[index]?.std_dev || 0;
+                                    const ciLower = trendData[index]?.ci_lower || 0;
+                                    const ciUpper = trendData[index]?.ci_upper || 0;
+                                    return `n = ${n} | σ = ${stdDev.toFixed(2)}\n95% CI: [${ciLower.toFixed(2)}, ${ciUpper.toFixed(2)}]`;
+                                }
+                                return '';
+                            }
+                        }
+                    },
+                    zoom: {
+                        pan: {
+                            enabled: true,
+                            mode: 'x',
+                            modifierKey: 'ctrl',
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                                speed: 0.1,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'x',
+                            onZoomComplete({chart}) {
+                                // Optional callback for zoom complete
+                            }
+                        },
+                        limits: {
+                            x: {min: 'original', max: 'original'},
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            // Average line across all data
+                            averageLine: {
+                                type: 'line',
+                                yMin: trendData.reduce((sum, d) => sum + d.average, 0) / trendData.length,
+                                yMax: trendData.reduce((sum, d) => sum + d.average, 0) / trendData.length,
+                                borderColor: 'rgba(59, 130, 246, 0.3)',
+                                borderWidth: 2,
+                                borderDash: [10, 5],
+                                label: {
+                                    content: 'Overall Average',
+                                    enabled: true,
+                                    position: 'end',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                                    color: 'white',
+                                    font: {
+                                        size: 10
+                                    }
+                                }
+                            }
+                        }
+                    }
                 },
                 scales: {
                     y: {
                         beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Value'
+                        }
                     },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time Period (Double-click chart to reset zoom)'
+                        }
+                    }
                 },
             },
+        });
+
+        // Add double-click to reset zoom
+        trendElement.addEventListener('dblclick', () => {
+            if (trendChart) {
+                trendChart.resetZoom();
+            }
         });
     }
 
@@ -160,7 +285,17 @@ export function initCharts() {
                     y: {
                         beginAtZero: true,
                         ticks: { stepSize: 1 },
+                        title: {
+                            display: true,
+                            text: 'Frequency (n)'
+                        }
                     },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Value Range'
+                        }
+                    }
                 },
             },
         });
@@ -168,6 +303,123 @@ export function initCharts() {
 
     lastRevision = revision;
     initialized = true;
+
+    // Expose chart globally for toggle buttons
+    window.trendChartInstance = trendChart;
+
+    // Sync button text with actual dataset state
+    syncToggleButtons();
+}
+
+// Sync toggle button text with actual chart state
+function syncToggleButtons() {
+    if (!window.trendChartInstance) return;
+
+    const chart = window.trendChartInstance;
+
+    // Sync Maximum button
+    const maxIndex = chart.data.datasets.findIndex(ds => ds.label === 'Maximum');
+    if (maxIndex !== -1) {
+        const maxBtn = document.getElementById('toggle-max-btn');
+        if (maxBtn) {
+            const isVisible = chart.isDatasetVisible(maxIndex);
+            const span = maxBtn.querySelector('span');
+            if (span) {
+                span.innerHTML = isVisible
+                    ? '<span class="h-2 w-2 rounded-full bg-red-500"></span> Hide Maximum'
+                    : '<span class="h-2 w-2 rounded-full bg-red-500"></span> Show Maximum';
+            }
+        }
+    }
+
+    // Sync Minimum button
+    const minIndex = chart.data.datasets.findIndex(ds => ds.label === 'Minimum');
+    if (minIndex !== -1) {
+        const minBtn = document.getElementById('toggle-min-btn');
+        if (minBtn) {
+            const isVisible = chart.isDatasetVisible(minIndex);
+            const span = minBtn.querySelector('span');
+            if (span) {
+                span.innerHTML = isVisible
+                    ? '<span class="h-2 w-2 rounded-full bg-green-500"></span> Hide Minimum'
+                    : '<span class="h-2 w-2 rounded-full bg-green-500"></span> Show Minimum';
+            }
+        }
+    }
+}
+
+// Toggle function for Max/Min lines
+window.toggleTrendLine = function(label) {
+    if (!window.trendChartInstance) {
+        console.error('[Toggle] No chart instance available');
+        return;
+    }
+
+    const chart = window.trendChartInstance;
+    const datasetIndex = chart.data.datasets.findIndex(ds => ds.label === label);
+
+    if (datasetIndex === -1) {
+        console.error('[Toggle] Dataset not found:', label);
+        return;
+    }
+
+    // Show loading overlay on chart
+    const chartContainer = document.getElementById('trend-chart')?.parentElement;
+    if (chartContainer) {
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'chart-loading-overlay';
+        overlay.className = 'absolute inset-0 bg-white/80 dark:bg-gray-800/80 flex items-center justify-center z-50 rounded-lg';
+        overlay.innerHTML = `
+            <div class="flex flex-col items-center gap-2">
+                <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-sm text-gray-600 dark:text-gray-400">Updating chart...</span>
+            </div>
+        `;
+        chartContainer.style.position = 'relative';
+        chartContainer.appendChild(overlay);
+    }
+
+    // Use setTimeout to allow overlay to render
+    setTimeout(() => {
+        // Chart.js: isDatasetVisible returns true if visible, false if hidden
+        const isCurrentlyVisible = chart.isDatasetVisible(datasetIndex);
+
+        // Toggle: if visible now, hide it; if hidden now, show it
+        chart.setDatasetVisibility(datasetIndex, !isCurrentlyVisible);
+        chart.update();
+
+        // Update button text
+        const btnId = label === 'Maximum' ? 'toggle-max-btn' : 'toggle-min-btn';
+        const btn = document.getElementById(btnId);
+        const color = label === 'Maximum' ? 'red' : 'green';
+
+        if (btn) {
+            const innerSpan = btn.querySelector('span');
+            if (innerSpan) {
+                // After toggle: if it WAS visible, it's now hidden (show "Show")
+                // if it WAS hidden, it's now visible (show "Hide")
+                if (isCurrentlyVisible) {
+                    // Just hid it, show "Show" button
+                    innerSpan.innerHTML = `<span class="h-2 w-2 rounded-full bg-${color}-500"></span> Show ${label}`;
+                } else {
+                    // Just showed it, show "Hide" button
+                    innerSpan.innerHTML = `<span class="h-2 w-2 rounded-full bg-${color}-500"></span> Hide ${label}`;
+                }
+            }
+        }
+
+        // Remove overlay after a short delay to show completion
+        setTimeout(() => {
+            const overlay = document.getElementById('chart-loading-overlay');
+            if (overlay) {
+                overlay.remove();
+            }
+        }, 200);
+    }, 50);
 }
 
 export function setupTrendChartListeners() {
@@ -206,9 +458,8 @@ export function setupTrendChartListeners() {
         setTimeout(tryInit, 100);
     });
 
-    // Listen for Livewire component updates (filter changes)
-    document.addEventListener('livewire:morph', () => {
-        // Don't reset initialized - just allow revision check
+    // Listen for Livewire component updates (filter changes) - same as heatmap
+    Livewire.hook('morph.updated', () => {
         setTimeout(tryInit, 50);
     });
 }

@@ -4,7 +4,13 @@ let lastRevision = null;
 
 export function initHeatmap() {
     const element = document.getElementById('heatmap');
-    if (!element || window.heatmapMap) return;
+    if (!element) return;
+
+    // If map already exists, don't recreate it
+    if (window.heatmapMap) {
+        updateHeatmap();
+        return;
+    }
 
     const map = L.map('heatmap').setView([55.6761, 12.5683], 11);
     window.heatmapMap = map;
@@ -22,7 +28,7 @@ export function updateHeatmap() {
 
     const dataContainer = document.getElementById('heatmap-data-container');
     if (!dataContainer) {
-        console.error('Heatmap data container not found');
+        console.error('[Heatmap] Data container not found');
         return;
     }
 
@@ -30,7 +36,6 @@ export function updateHeatmap() {
 
     // Only update if revision has changed
     if (revision === lastRevision) {
-        console.log('Heatmap already up to date - revision:', revision);
         return;
     }
 
@@ -41,7 +46,7 @@ export function updateHeatmap() {
 
     const data = heatmapDataAttr ? JSON.parse(heatmapDataAttr) : [];
 
-    console.log('Updating heatmap - revision:', revision, 'points:', data.length, 'mapType:', mapType);
+    console.log('[Heatmap] Update: revision=' + revision + ', points=' + data.length + ', type=' + mapType);
 
     // Update base layer
     if (baseLayer) {
@@ -61,25 +66,38 @@ export function updateHeatmap() {
     // Remove existing heatmap layer
     if (heatmapLayer) {
         window.heatmapMap.removeLayer(heatmapLayer);
+        heatmapLayer = null;
     }
 
     // Add new heatmap layer
     if (data.length > 0) {
+        // Calculate max value for proper intensity normalization
+        const maxValue = Math.max(...data.map(point => point[2]));
+
+        console.log('[Heatmap] Creating layer: min=' + Math.min(...data.map(point => point[2])) + ', max=' + maxValue);
+
         heatmapLayer = L.heatLayer(data, {
-            radius: 25,
-            blur: 15,
+            radius: 30,      // Increased from 25 for better visibility
+            blur: 20,        // Increased from 15 for smoother gradient
             maxZoom: 17,
-            max: 1.0,
+            minOpacity: 0.3, // Added minimum opacity
+            max: maxValue,   // Use actual data max for normalization
             gradient: {
-                0.0: 'blue',
-                0.5: 'lime',
-                1.0: 'red'
+                0.0: 'blue',    // Low values
+                0.5: 'lime',    // Medium values
+                1.0: 'red'      // High values
             }
         }).addTo(window.heatmapMap);
 
         // Fit bounds to data
         const bounds = L.latLngBounds(data.map(point => [point[0], point[1]]));
         window.heatmapMap.fitBounds(bounds, { padding: [50, 50] });
+
+        console.log('[Heatmap] Layer created and map fitted to bounds');
+    } else {
+        console.log('[Heatmap] No data - resetting to default view');
+        // Reset map view to default Copenhagen center when no data
+        window.heatmapMap.setView([55.6761, 12.5683], 11);
     }
 }
 
@@ -97,6 +115,17 @@ export function setupHeatmapListeners() {
     // Re-initialize on Livewire navigation (SPA navigation)
     document.addEventListener('livewire:navigated', () => {
         lastRevision = null; // Reset revision tracking
+
+        // Reset map state if navigating away from heatmap page
+        if (!document.getElementById('heatmap')) {
+            if (window.heatmapMap) {
+                window.heatmapMap.remove();
+                window.heatmapMap = null;
+            }
+            heatmapLayer = null;
+            baseLayer = null;
+        }
+
         setTimeout(initHeatmap, 600);
     });
 

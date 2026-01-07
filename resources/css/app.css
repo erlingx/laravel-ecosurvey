@@ -45,6 +45,28 @@
     ::file-selector-button {
         border-color: var(--color-gray-200, currentColor);
     }
+
+    /* Cursor pointer for all interactive elements */
+    button,
+    a,
+    [role="button"],
+    [type="button"],
+    [type="submit"],
+    [type="reset"],
+    label,
+    select,
+    input[type="checkbox"],
+    input[type="radio"],
+    summary {
+        cursor: pointer;
+    }
+
+    /* Disabled elements should show not-allowed cursor */
+    button:disabled,
+    [disabled],
+    [aria-disabled="true"] {
+        cursor: not-allowed;
+    }
 }
 
 [data-flux-field]:not(ui-radio, ui-checkbox) {

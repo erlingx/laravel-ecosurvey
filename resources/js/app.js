@@ -6,6 +6,14 @@ import L from 'leaflet';
 import 'leaflet.markercluster';
 import 'leaflet.heat';
 import Chart from 'chart.js/auto';
+import {BarWithErrorBarsController, PointWithErrorBar} from 'chartjs-chart-error-bars';
+import annotationPlugin from 'chartjs-plugin-annotation';
+import zoomPlugin from 'chartjs-plugin-zoom';
+
+// Register Chart.js plugins
+Chart.register(BarWithErrorBarsController, PointWithErrorBar);
+Chart.register(annotationPlugin);
+Chart.register(zoomPlugin);
 
 // Fix Leaflet's default icon path issue with Vite
 delete L.Icon.Default.prototype._getIconUrl;

@@ -57,18 +57,51 @@ Let me cut down to the most **impressive portfolio features** that showcase adva
     - Display NDVI (vegetation index) overlay
     - Show terrain/elevation context
 
-### **4. Heatmap & Visualization (D3.js / Chart.js)**
+### **4. Heatmap & Visualization (Chart.js + Advanced Plugins)**
 - **Real-time Heatmap:**
     - Display pollution/contamination distribution
-    - Color-coded intensity map
+    - Color-coded intensity map (blue → green → red)
     - Update as new data is collected
     - Toggle between satellite/street view
+    - Auto-fit bounds to data coverage
 
-- **Analytics Dashboard:**
-    - Time-series chart (trend over time)
-    - Statistics (min, max, avg, median)
-    - Distribution histogram
-    - Comparison chart (official vs. user data)
+- **Scientific Analytics Dashboard:**
+    - **Publication-Ready Time-Series Charts:**
+      - 95% Confidence Interval (CI) visualization with shaded bands
+      - Statistical validity checks (CI only shown when n ≥ 3)
+      - Proper CI calculation: μ ± (1.96 × SE), unconstrained to observed range
+      - Interactive zoom/pan for detailed exploration (chartjs-plugin-zoom)
+      - Overall average reference line with annotation
+      - Toggle min/max lines (hidden by default for clarity)
+    
+    - **Enhanced Tooltips:**
+      - Sample size (n) for reproducibility
+      - Standard deviation (σ) for variance understanding
+      - 95% CI range [lower, upper]
+      - All three metrics (min/avg/max) with proper units
+    
+    - **Statistical Rigor:**
+      - No mixing of incompatible metrics (prevents "apples to oranges")
+      - Metric-specific filtering with unit labels (°C, dB, ppm, AQI)
+      - Freedman-Diaconis rule for optimal histogram binning
+      - IQR-based bin width calculation (2 × IQR / n^(1/3))
+      - Automatic bin count optimization (1-50 range)
+    
+    - **Distribution Analysis:**
+      - Histogram with frequency (n) labels
+      - Value range display on X-axis
+      - Scientifically optimal binning (not arbitrary)
+    
+    - **Comprehensive Statistics Panel:**
+      - Count, Min, Max, Average, Median, Std Dev
+      - All values displayed with proper measurement units
+      - Empty state handling with contextual messages
+    
+    - **Chart.js v4 Ecosystem:**
+      - chartjs-plugin-annotation (reference lines, zones, labels)
+      - chartjs-plugin-zoom (mouse wheel zoom, pan controls)
+      - Professional chart configuration with axis labels
+      - Responsive design with proper canvas sizing
 
 ### **5. Automated Report Generation (PDF)**
 - **One-click Report Export:**
@@ -105,16 +138,54 @@ Let me cut down to the most **impressive portfolio features** that showcase adva
 | Component | Tech | Why It Matters |
 |-----------|------|-----------------|
 | **Backend** | Laravel 12 | Latest framework, modern features |
-| **Real-time UI** | Livewire 3 | Impressive interactivity without JS |
-| **Admin Panel** | Filament 3 | Professional dashboard (minimal code) |
+| **Real-time UI** | Livewire 3 + Volt | Impressive interactivity without JS |
+| **Admin Panel** | Filament 4 | Professional dashboard (minimal code) |
 | **Database** | PostgreSQL + PostGIS | Show geospatial expertise |
 | **Mapping** | Leaflet.js + OpenStreetMap | Open-source, performant |
-| **Charts** | Chart.js | Simple, effective data viz |
+| **Charts** | Chart.js v4 + Plugins | Scientific-grade data visualization |
+| **Chart Plugins** | chartjs-plugin-annotation, chartjs-plugin-zoom | Interactive zoom/pan, reference lines |
+| **Statistics** | PostgreSQL aggregations | Server-side statistical calculations |
+| **Satellite Data** | Copernicus Data Space (Sentinel-2) | FREE unlimited satellite imagery + NDVI |
 | **PDF Export** | DomPDF | Professional reports |
 | **Payment** | Stripe | Real SaaS model |
-| **APIs** | OpenWeatherMap, WAQI, NASA Earth | 3 solid integrations |
-| **Authentication** | Laravel Breeze | Clean, modern auth |
-| **Deployment** | Docker + Railway/Render | DevOps credentials |
+| **Authentication** | Laravel Fortify | Clean, modern auth |
+| **Deployment** | DDEV + Docker | DevOps credentials |
+
+---
+
+## **Portfolio Highlights - Scientific Rigor:**
+
+### **Advanced Statistical Analysis:**
+- **95% Confidence Intervals:**
+  - Proper CI calculation: μ ± (1.96 × SE)
+  - Sample size validation (n ≥ 3 for statistical validity)
+  - CI can extend beyond observed min/max (estimates population mean, not individual values)
+  - Visual representation with shaded bands
+
+- **Optimal Histogram Binning:**
+  - Freedman-Diaconis rule: bin width = 2 × IQR / n^(1/3)
+  - Automatic bin count optimization (1-50 range)
+  - IQR (Interquartile Range) calculation for robust spread measurement
+
+- **PostgreSQL Statistical Functions:**
+  - `DATE_TRUNC()` for time-series aggregation
+  - `STDDEV()` for variance calculation per time period
+  - `AVG()`, `MIN()`, `MAX()`, `COUNT()` aggregations
+  - Spatial aggregations with PostGIS
+
+### **Interactive Data Exploration:**
+- Mouse wheel zoom on time axis
+- Ctrl+drag to pan left/right
+- Reset zoom to original view
+- Toggle min/max lines for clarity
+- Overall average reference line
+
+### **Data Quality & Integrity:**
+- No mixing of incompatible metrics (temperature + noise = scientifically invalid)
+- Required metric selection with unit labels
+- Proper measurement units throughout (°C, dB, ppm, AQI)
+- Empty state handling with contextual messages
+- Sample size (n) and standard deviation (σ) always visible
 
 ---
 
