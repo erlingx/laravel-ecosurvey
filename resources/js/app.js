@@ -4,6 +4,8 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 import L from 'leaflet';
 import 'leaflet.markercluster';
+import 'leaflet.heat';
+import Chart from 'chart.js/auto';
 
 // Fix Leaflet's default icon path issue with Vite
 delete L.Icon.Default.prototype._getIconUrl;
@@ -13,8 +15,9 @@ L.Icon.Default.mergeOptions({
     shadowUrl: new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href,
 });
 
-// Make Leaflet globally available
+// Make Leaflet and Chart globally available
 window.L = L;
+window.Chart = Chart;
 
 // Import modular map functions
 import {
@@ -33,6 +36,17 @@ import {
     setupSatelliteNavigation
 } from './maps/satellite-map.js';
 
+import {
+    initCharts,
+    setupTrendChartListeners
+} from './analytics/trend-chart.js';
+
+import {
+    initHeatmap,
+    updateHeatmap,
+    setupHeatmapListeners
+} from './analytics/heatmap.js';
+
 // Expose functions globally for backward compatibility
 window.initSurveyMap = initSurveyMap;
 window.createPopupContent = createPopupContent;
@@ -43,11 +57,17 @@ window.updateMapMarkers = updateMapMarkers;
 window.initSatelliteMap = initSatelliteMap;
 window.updateSatelliteImagery = updateSatelliteImagery;
 
+window.initCharts = initCharts;
+window.initHeatmap = initHeatmap;
+window.updateHeatmap = updateHeatmap;
+
 
 // Set up event listeners
 setupSurveyMapListeners();
 setupSatelliteMapListeners();
 setupSatelliteNavigation();
+setupTrendChartListeners();
+setupHeatmapListeners();
 
 // Initialize maps when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {

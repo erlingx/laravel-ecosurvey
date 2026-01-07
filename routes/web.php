@@ -23,6 +23,10 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('maps/survey', 'maps.survey-map-viewer')->name('maps.survey');
     Volt::route('maps/satellite', 'maps.satellite-viewer')->name('maps.satellite');
 
+    // Analytics
+    Volt::route('analytics/heatmap', 'analytics.heatmap-generator')->name('analytics.heatmap');
+    Volt::route('analytics/trends', 'analytics.trend-chart')->name('analytics.trends');
+
     // Settings
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit');
     Volt::route('settings/password', 'settings.password')->name('user-password.edit');

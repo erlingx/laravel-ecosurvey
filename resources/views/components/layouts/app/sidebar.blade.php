@@ -63,6 +63,24 @@
         </flux:navlist.group>
 
         <flux:navlist.group
+            :heading="__('Analytics')"
+            class="grid"
+        >
+            <flux:navlist.item
+                icon="chart-bar"
+                :href="route('analytics.heatmap')"
+                :current="request()->routeIs('analytics.heatmap')"
+                wire:navigate
+            >{{ __('Heatmap') }}</flux:navlist.item>
+            <flux:navlist.item
+                icon="presentation-chart-line"
+                :href="route('analytics.trends')"
+                :current="request()->routeIs('analytics.trends')"
+                wire:navigate
+            >{{ __('Trends') }}</flux:navlist.item>
+        </flux:navlist.group>
+
+        <flux:navlist.group
             :heading="__('Campaigns')"
             class="grid"
         >
@@ -76,22 +94,6 @@
                 href="#"
                 wire:navigate
             >{{ __('New Campaign') }}</flux:navlist.item>
-        </flux:navlist.group>
-
-        <flux:navlist.group
-            :heading="__('Analytics')"
-            class="grid"
-        >
-            <flux:navlist.item
-                icon="chart-bar"
-                href="#"
-                wire:navigate
-            >{{ __('Heatmaps') }}</flux:navlist.item>
-            <flux:navlist.item
-                icon="arrow-trending-up"
-                href="#"
-                wire:navigate
-            >{{ __('Trends') }}</flux:navlist.item>
         </flux:navlist.group>
     </flux:navlist>
 
