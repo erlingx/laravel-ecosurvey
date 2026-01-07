@@ -168,11 +168,12 @@ $statistics = computed(function () {
             <div class="overflow-hidden bg-white shadow-sm dark:bg-gray-800 sm:rounded-lg">
                 <div class="p-6">
                     <h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-gray-100">Time Series Trend</h3>
-                    <canvas
-                        id="trend-chart"
-                        wire:ignore
-                        class="h-[400px]"
-                    ></canvas>
+                    <div class="relative h-[400px] w-full">
+                        <canvas
+                            id="trend-chart"
+                            wire:ignore
+                        ></canvas>
+                    </div>
                 </div>
             </div>
 
@@ -180,11 +181,12 @@ $statistics = computed(function () {
             <div class="overflow-hidden bg-white shadow-sm dark:bg-gray-800 sm:rounded-lg">
                 <div class="p-6">
                     <h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-gray-100">Value Distribution</h3>
-                    <canvas
-                        id="distribution-chart"
-                        wire:ignore
-                        class="h-[400px]"
-                    ></canvas>
+                    <div class="relative h-[400px] w-full">
+                        <canvas
+                            id="distribution-chart"
+                            wire:ignore
+                        ></canvas>
+                    </div>
                 </div>
             </div>
         </div>
