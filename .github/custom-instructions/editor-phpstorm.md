@@ -177,6 +177,18 @@ php artisan view:clear
 - **`database-query` tool** - Read from database directly
 - **`browser-logs` tool** - Read browser console errors (only recent logs useful)
 
+### Terminal Output Visibility Workaround (CRITICAL)
+**Issue:** GitHub Copilot plugin in PhpStorm may not show buffered terminal output from commands run via `run_in_terminal` tool.
+
+**Affected Commands:**
+- Test runs (`php artisan test`)
+- Artisan commands with output (`php artisan migrate`, `php artisan tinker`)
+- Any command with buffered output
+
+**Workaround:** Open a new terminal session for each command execution to ensure output is visible.
+
+**Alternative:** If output still not visible after running a command, explicitly ask user to paste the terminal results from their console.
+
 ---
 
 ## Error Handling

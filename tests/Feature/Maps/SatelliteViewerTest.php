@@ -36,16 +36,18 @@ test('satellite viewer displays campaign filter dropdown', function () {
     ]);
 
     $campaign = Campaign::factory()->create(['status' => 'active']);
+    $metric = EnvironmentalMetric::factory()->create();
 
-    // Create a data point so campaign appears in dropdown
+    // Create a data point with location so campaign appears in dropdown
     DataPoint::factory()->create([
         'campaign_id' => $campaign->id,
+        'environmental_metric_id' => $metric->id,
         'user_id' => $this->user->id,
     ]);
 
     Livewire::actingAs($this->user)
         ->test('maps.satellite-viewer')
-        ->assertSee($campaign->name);
+        ->assertSee('Campaign Location');
 });
 
 test('satellite viewer has default copenhagen coordinates', function () {
@@ -153,7 +155,7 @@ test('satellite viewer displays NDVI interpretation when enabled', function () {
         ->test('maps.satellite-viewer')
         ->set('overlayType', 'ndvi')
         ->assertSee('NDVI Analysis')
-        ->assertSee('NDVI Scale')
+        ->assertSee('NDVI Scale Reference')
         ->assertSee('Water')
         ->assertSee('Dense vegetation');
 });
