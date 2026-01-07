@@ -6,6 +6,25 @@
 
 ---
 
+## ⚠️ CRITICAL: Terminal Output Visibility Workaround
+
+### Terminal Output Visibility Workaround (CRITICAL)
+**Issue:** GitHub Copilot plugin in PhpStorm may not show buffered terminal output from commands run via `run_in_terminal` tool.
+
+**Affected Commands:**
+- Test runs (`php artisan test`)
+- Artisan commands with output (`php artisan migrate`, `php artisan tinker`)
+- Any command with buffered output
+
+**Workaround:** Open a new terminal session for each command execution to ensure output is visible.
+
+**🚩 FLAG REQUIREMENT:** When you run a command and don't see any output (empty response), you MUST raise a flag to the user:
+> "🚩 **FLAG RAISED**: I don't see any terminal output. Please close the terminal window so I can open a fresh one on the next command, then I'll be able to see the results."
+
+This allows the next command to run in a new terminal session where output will be visible.
+
+---
+
 ## Behavior Rules
 
 ### Response Style
@@ -177,17 +196,6 @@ php artisan view:clear
 - **`database-query` tool** - Read from database directly
 - **`browser-logs` tool** - Read browser console errors (only recent logs useful)
 
-### Terminal Output Visibility Workaround (CRITICAL)
-**Issue:** GitHub Copilot plugin in PhpStorm may not show buffered terminal output from commands run via `run_in_terminal` tool.
-
-**Affected Commands:**
-- Test runs (`php artisan test`)
-- Artisan commands with output (`php artisan migrate`, `php artisan tinker`)
-- Any command with buffered output
-
-**Workaround:** Open a new terminal session for each command execution to ensure output is visible.
-
-**Alternative:** If output still not visible after running a command, explicitly ask user to paste the terminal results from their console.
 
 ---
 

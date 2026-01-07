@@ -114,7 +114,7 @@ class CopernicusDataSpaceService
                                 ],
                             ],
                         ],
-                        'evalscript' => $this->getTrueColorScript(),
+                        'evalscript' => $this->getTrueColorRGBScript(),
                     ]);
 
                 if ($response->successful()) {

@@ -2,7 +2,8 @@
 
 use App\Models\Campaign;
 use App\Services\CopernicusDataSpaceService;
-use App\Services\SatelliteService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 use function Livewire\Volt\computed;
 use function Livewire\Volt\state;
@@ -18,7 +19,7 @@ state([
 
 // Update location when campaign changes
 $updatedCampaignId = function (): void {
-    \Log::info('🎯 Campaign changed', ['id' => $this->campaignId]);
+    Log::info('🎯 Campaign changed', ['id' => $this->campaignId]);
 
     $defaultLat = 55.7072;
     $defaultLon = 12.5704;
@@ -33,8 +34,8 @@ $updatedCampaignId = function (): void {
             $dataPoint = $campaign->dataPoints()
                 ->select([
                     'data_points.*',
-                    \DB::raw('ST_X(location::geometry) as longitude'),
-                    \DB::raw('ST_Y(location::geometry) as latitude'),
+                    DB::raw('ST_X(location::geometry) as longitude'),
+                    DB::raw('ST_Y(location::geometry) as latitude'),
                 ])
                 ->first();
 
@@ -50,7 +51,7 @@ $updatedCampaignId = function (): void {
 
     $this->updateRevision = (int) $this->updateRevision + 1;
 
-    \Log::info('✅ Coordinates updated', [
+    Log::info('✅ Coordinates updated', [
         'lat' => $this->selectedLat,
         'lon' => $this->selectedLon,
         'revision' => $this->updateRevision,
@@ -59,13 +60,13 @@ $updatedCampaignId = function (): void {
 
 // Update revision when overlay changes
 $updatedOverlayType = function (): void {
-    \Log::info('🎨 Overlay changed', ['type' => $this->overlayType]);
+    Log::info('🎨 Overlay changed', ['type' => $this->overlayType]);
     $this->updateRevision = (int) $this->updateRevision + 1;
 };
 
 // Update revision when date changes
 $updatedSelectedDate = function (): void {
-    \Log::info('📅 Date changed', ['date' => $this->selectedDate]);
+    Log::info('📅 Date changed', ['date' => $this->selectedDate]);
     $this->updateRevision = (int) $this->updateRevision + 1;
 };
 
@@ -82,8 +83,8 @@ $campaigns = computed(function () {
             $dataPoint = $campaign->dataPoints()
                 ->select([
                     'data_points.*',
-                    \DB::raw('ST_X(location::geometry) as longitude'),
-                    \DB::raw('ST_Y(location::geometry) as latitude'),
+                    DB::raw('ST_X(location::geometry) as longitude'),
+                    DB::raw('ST_Y(location::geometry) as latitude'),
                 ])
                 ->first();
 
@@ -103,7 +104,7 @@ $satelliteData = computed(function () {
     $overlay = $this->overlayType;
     $revision = $this->updateRevision; // Force recomputation when revision changes
 
-    \Log::info('🛰️ Computing satelliteData', [
+    Log::info('🛰️ Computing satelliteData', [
         'lat' => $lat,
         'lon' => $lon,
         'date' => $date,
@@ -122,7 +123,7 @@ $satelliteData = computed(function () {
     );
 
     if ($data) {
-        \Log::info('✅ Copernicus data loaded', [
+        Log::info('✅ Copernicus data loaded', [
             'provider' => $data['provider'] ?? 'unknown',
             'returned_lat' => $data['latitude'] ?? 'N/A',
             'returned_lon' => $data['longitude'] ?? 'N/A',
@@ -132,12 +133,13 @@ $satelliteData = computed(function () {
         return $data;
     }
 
-    // Fallback to NASA (with mock data if needed)
-    $nasaService = app(SatelliteService::class);
-    $fallbackData = $nasaService->getSatelliteImagery($lat, $lon, $date);
-    \Log::warning('⚠️ Using NASA fallback data');
+    Log::warning('⚠️ No Copernicus data available for location/date', [
+        'lat' => $lat,
+        'lon' => $lon,
+        'date' => $date,
+    ]);
 
-    return $fallbackData;
+    return null;
 });
 
 // Load analysis data based on current overlay type
@@ -156,7 +158,7 @@ $analysisData = computed(function () {
     $date = $this->selectedDate;
     $revision = $this->updateRevision; // Force recomputation when revision changes
 
-    \Log::info('📊 Computing analysisData', [
+    Log::info('📊 Computing analysisData', [
         'lat' => $lat,
         'lon' => $lon,
         'overlay' => $overlay,
@@ -251,7 +253,7 @@ $analysisData = computed(function () {
                 @if(isset($this->satelliteData['provider']) && $this->satelliteData['provider'] === 'copernicus_dataspace')
                     <div class="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                         <div class="flex items-start gap-2">
-                            <svg class="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <div class="text-sm text-green-800 dark:text-green-200">
@@ -263,7 +265,7 @@ $analysisData = computed(function () {
                 @elseif(isset($this->satelliteData['mock']))
                     <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                         <div class="flex items-start gap-2">
-                            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <div class="text-sm text-blue-800 dark:text-blue-200">
@@ -296,7 +298,7 @@ $analysisData = computed(function () {
             </div>
 
             {{-- Map Container --}}
-            <div class="flex-1 relative min-h-[500px]" wire:ignore>
+            <div class="flex-1 relative min-h-125" wire:ignore>
                 <div id="satellite-map" class="absolute inset-0 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700"></div>
             </div>
 
