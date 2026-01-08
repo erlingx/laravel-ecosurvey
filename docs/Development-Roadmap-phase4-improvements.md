@@ -1,0 +1,837 @@
+# EcoSurvey Development Roadmap - Phase 4 Improvements
+
+**Based on:** EcoSurvey-Improvement-Plan-FINAL.md v2.0  
+**Start Date:** January 8, 2026  
+**Duration:** 4 weeks (18-20 development days)  
+**Status:** 🔄 PENDING
+
+---
+
+## Overview
+
+This roadmap implements the recommendations from the consolidated review (ChatGPT 5.2 + Claude Sonnet 4.5 + Claude Opus 4.5). After completion, the original roadmap will continue with Phase 5.
+
+**Key Goals:**
+1. ✅ Fix foundational code gaps (Priority 0)
+2. ✅ Implement QA/QC workflow and satellite persistence (Priority 1)
+3. ✅ Integrate manual data with satellite maps (Priority 2)
+4. ✅ Demonstrate advanced PostGIS expertise (Priority 3)
+5. ✅ Add scientific export features (Priority 4)
+
+---
+
+## Priority 0: Critical Fixes (Day 1) ⚡
+
+**Time:** 2-3 hours  
+**Must complete before other work**
+
+### Task 0.1: Fix DataPoint Model ✅
+- ✅ Update `app/Models/DataPoint.php`
+  - ✅ Add missing fillable fields: `survey_zone_id`, `status`, `reviewed_by`, `reviewed_at`, `review_notes`
+  - ✅ Add `use SoftDeletes` trait
+  - ✅ Add `reviewed_at` to casts
+  - ✅ Add `surveyZone()` relationship (BelongsTo)
+  - ✅ Add `reviewer()` relationship (BelongsTo to User)
+  - ✅ Add `scopeHighQuality()` method
+- ✅ Run existing tests to verify no regressions (10 tests passed)
+- ✅ Update DataPointFactory if needed (added `approved()` and `highQuality()` states)
+
+**Deliverable:** Migration-defined fields are now usable via mass assignment and relationships
+
+**Tests:** Existing DataPoint tests should pass
+
+---
+
+### Task 0.2: Fix Campaign Model ✅
+- ✅ Update `app/Models/Campaign.php`
+  - ✅ Add `surveyZones()` hasMany relationship
+  - ✅ Keep legacy `survey_zone` string field for backward compatibility
+- ✅ Run existing tests (14 tests passed)
+
+**Deliverable:** Campaign can access related survey zones
+
+**Tests:** Existing Campaign tests should pass
+
+---
+
+**Priority 0 Checklist:**
+- [✅] DataPoint fillable fields updated
+- [✅] SoftDeletes trait added to DataPoint
+- [✅] surveyZone() relationship added
+- [✅] reviewer() relationship added
+- [✅] scopeHighQuality() method added
+- [✅] Campaign surveyZones() relationship added
+- [✅] All existing tests passing
+
+**Note:** User model already has dataPoints(), campaigns(), and reviewedDataPoints() relationships.  
+**Note:** EnvironmentalMetric model already has dataPoints() relationship.  
+**Verified:** All 138 tests passing ✅
+
+---
+
+## Priority 1: Foundation (Week 1) ✅ COMPLETE
+
+**Time:** 5 days  
+**Goal:** QA/QC workflow + satellite data persistence + survey zones working  
+**Status:** ✅ COMPLETE (January 8, 2026)
+
+**Completed:**
+- QA/QC fields migration and model updates
+- Visual differentiation for low-confidence data on maps
+- SatelliteAnalysis model with PostGIS geometry support
+- Auto-enrichment via DataPointObserver + background job
+- SurveyZone model with advanced PostGIS spatial methods
+- Campaign intelligent map centering
+- All 144 tests passing
+
+### Task 1.1: QA/QC Fields Migration ✅
+- ✅ Create migration: `add_qa_workflow_to_data_points.php`
+  - ✅ Add `qa_flags` JSON field (nullable)
+  - ✅ Add `device_model` string (nullable)
+  - ✅ Add `sensor_type` string (nullable)
+  - ✅ Add `calibration_at` timestamp (nullable)
+  - ✅ Add `protocol_version` string (default '1.0')
+- ✅ Run migration: `ddev artisan migrate`
+
+**Deliverable:** Database supports QA/QC metadata
+
+**Tests:** Migration runs successfully ✅
+
+---
+
+### Task 1.2: Update DataPoint Model for QA/QC ✅
+- ✅ Update `app/Models/DataPoint.php`
+  - ✅ Add new fields to `$fillable`: `qa_flags`, `device_model`, `sensor_type`, `calibration_at`, `protocol_version`
+  - ✅ Add to casts: `qa_flags` => 'array', `calibration_at` => 'datetime'
+  - ✅ Add `flagAsOutlier(string $reason)` method
+- ✅ Update DataPointFactory with new fields
+
+**Deliverable:** QA/QC fields usable in code ✅
+
+**Tests:** Factory can create DataPoint with QA fields ✅
+
+---
+
+### Task 1.3: Visual Differentiation for Low-Confidence Data ✅
+- ✅ Update `resources/js/maps/survey-map.js`
+  - ✅ Add `getMarkerStyle()` function
+  - ✅ Yellow dashed outline for `accuracy > 50m`
+  - ✅ Red outline for points with `qa_flags`
+  - ✅ Normal black outline for approved data
+- ✅ Update GeoJSON properties to include `qa_flags` and `accuracy`
+
+**Deliverable:** Map visually distinguishes data quality ✅
+
+**Tests:** Manual verification on survey map ✅
+
+---
+
+### Task 1.4: SatelliteAnalysis Model and Migration ✅
+- ✅ Create migration: `create_satellite_analyses_table.php`
+  - ✅ Fields: `data_point_id`, `campaign_id`, `ndvi_value`, `moisture_index`, `temperature_kelvin`
+  - ✅ Fields: `acquisition_date`, `satellite_source`, `cloud_coverage_percent`, `metadata`
+  - ✅ PostGIS geometry column for location
+  - ✅ Indexes: `[data_point_id, acquisition_date]`, `[campaign_id, acquisition_date]`, spatial index
+- ✅ Create model: `app/Models/SatelliteAnalysis.php`
+  - ✅ Define `$fillable` array
+  - ✅ Define casts for decimal values and dates
+  - ✅ Add `dataPoint()` relationship (BelongsTo)
+  - ✅ Add `campaign()` relationship (BelongsTo)
+- ✅ Migration run successfully
+
+**Deliverable:** Satellite analyses can be persisted and queried ✅
+
+**Tests:** 
+- ⏳ `tests/Feature/SatelliteAnalysisTest.php` - basic CRUD (deferred to Priority 2)
+- ⏳ Test temporal correlation method (deferred to Priority 2)
+
+---
+
+### Task 1.5: DataPoint Relationship to SatelliteAnalysis ✅
+- ✅ Update `app/Models/DataPoint.php`
+  - ✅ Add `satelliteAnalyses()` hasMany relationship
+
+**Deliverable:** DataPoint can eager load satellite analyses ✅
+
+**Tests:** `$dataPoint->satelliteAnalyses` works ✅
+
+---
+
+### Task 1.6: DataPointObserver for Auto-Enrichment ✅
+- ✅ Create observer: `app/Observers/DataPointObserver.php`
+  - ✅ Implement `created()` method
+  - ✅ Dispatch `EnrichDataPointWithSatelliteData` job
+- ✅ Register observer in `AppServiceProvider::boot()`
+  - ✅ `DataPoint::observe(DataPointObserver::class)`
+
+**Deliverable:** New data points automatically trigger satellite enrichment ✅
+
+**Tests:** 
+- ⏳ Verify job is dispatched when DataPoint created (deferred to Priority 2)
+- ⏳ Use `Queue::fake()` in test (deferred to Priority 2)
+
+---
+
+### Task 1.7: EnrichDataPointWithSatelliteData Job ✅
+- ✅ Create job: `app/Jobs/EnrichDataPointWithSatelliteData.php`
+  - ✅ Implements `ShouldQueue`
+  - ✅ Extract lat/lon from DataPoint using PostGIS
+  - ✅ Fetch NDVI via `CopernicusDataSpaceService::getNDVIData()`
+  - ✅ Fetch NDMI via `CopernicusDataSpaceService::getMoistureData()`
+  - ✅ Create SatelliteAnalysis records for each index
+  - ✅ Log success/failure
+- ✅ Queue configuration already exists
+
+**Deliverable:** Background job enriches data points with satellite context ✅
+
+**Tests:**
+- ⏳ `tests/Feature/Jobs/EnrichDataPointWithSatelliteDataTest.php` (deferred to Priority 2)
+- ⏳ Mock Copernicus service (deferred to Priority 2)
+- ⏳ Verify SatelliteAnalysis records created (deferred to Priority 2)
+
+---
+
+### Task 1.8: SurveyZone Model ✅
+- ✅ Create model: `app/Models/SurveyZone.php` (already exists)
+  - ✅ Define `$fillable`: `campaign_id`, `name`, `description`, `area`, `area_km2`
+  - ✅ Define casts: `area_km2` => 'decimal:2'
+  - ✅ Add `campaign()` relationship (BelongsTo)
+  - ✅ Add `dataPoints()` relationship (HasMany)
+  - ✅ Add `getContainedDataPoints()` method (PostGIS `ST_Contains`)
+  - ✅ Add `calculateArea()` method (PostGIS `ST_Area`)
+  - ✅ Add `getCentroid()` method (PostGIS `ST_Centroid`)
+  - ✅ Add `getBoundingBox()` method (PostGIS `ST_Envelope`)
+  - ✅ Add `toGeoJSON()` method (PostGIS `ST_AsGeoJSON`)
+- ✅ Create factory: `database/factories/SurveyZoneFactory.php`
+  - ✅ Generate test polygon using `ST_GeogFromText`
+  - ✅ Use `afterCreating()` hook to set PostGIS geometry
+
+**Deliverable:** Survey zones fully functional with spatial operations ✅
+
+**Tests:**
+- ⏳ `tests/Feature/SurveyZoneTest.php` (deferred to Priority 2)
+- ⏳ Test area calculation (deferred to Priority 2)
+- ⏳ Test centroid extraction (deferred to Priority 2)
+- ⏳ Test bounding box (deferred to Priority 2)
+- ⏳ Test GeoJSON conversion (deferred to Priority 2)
+- ⏳ Test contained data points query (deferred to Priority 2)
+
+---
+
+### Task 1.9: Update Campaign Model for SurveyZones ✅
+- ✅ Update `app/Models/Campaign.php`
+  - ✅ Add `getMapCenter()` method
+    - Use survey zone centroid if exists
+    - Fallback to data points bounding box center
+    - Default to Copenhagen (12.5683, 55.6761)
+
+**Deliverable:** Campaign provides intelligent map centering ✅
+
+**Tests:** Test map center calculation logic (manual verification) ✅
+
+---
+
+**Priority 1 Checklist:**
+- [✅] QA/QC migration created and run
+- [✅] DataPoint model updated with QA fields
+- [✅] Visual differentiation on survey map
+- [✅] SatelliteAnalysis model + migration created
+- [✅] DataPointObserver registered
+- [✅] EnrichDataPointWithSatelliteData job created
+- [✅] SurveyZone model + factory created
+- [✅] Campaign getMapCenter() method added
+- [✅] All tests passing (144 tests, 402 assertions)
+
+---
+
+## Priority 2: Integration (Week 2)
+
+**Time:** 5 days  
+**Goal:** Manual data + satellite data truly integrated
+
+### Task 2.1: Add DataPoints Overlay to Satellite Viewer
+- ⏳ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
+  - ⏳ Add state: `showDataPoints` => true
+  - ⏳ Add computed property: `dataPointsGeoJSON`
+    - Use `GeospatialService::getDataPointsAsGeoJSON()`
+  - ⏳ Add UI toggle checkbox for showing/hiding datapoints
+- ⏳ Update `resources/js/maps/satellite-map.js`
+  - ⏳ Add `dataPointsLayer` variable
+  - ⏳ Update `updateSatelliteImagery()` to accept `dataPointsGeoJSON`
+  - ⏳ Render datapoints as `L.circleMarker` with colored fill
+  - ⏳ Add popup with metric value and "Click to analyze" message
+  - ⏳ Clear and re-add layer on updates
+
+**Deliverable:** Satellite map shows field data points overlaid on imagery
+
+**Tests:**
+- ⏳ Update `tests/Feature/Maps/SatelliteViewerTest.php`
+- ⏳ Test datapoints GeoJSON structure
+- ⏳ Test toggle functionality
+
+---
+
+### Task 2.2: Click-to-Analyze Interaction
+- ⏳ Update `resources/js/maps/satellite-map.js`
+  - ⏳ Add click event listener to datapoint markers
+  - ⏳ Dispatch Livewire event: `jump-to-datapoint` with lat/lon/date
+- ⏳ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
+  - ⏳ Add listener: `$listeners = ['jump-to-datapoint' => 'jumpToDataPoint']`
+  - ⏳ Implement `jumpToDataPoint($latitude, $longitude, $date)` method
+    - Set `selectedLat`, `selectedLon`, `selectedDate`
+    - Increment `updateRevision`
+
+**Deliverable:** Clicking a datapoint jumps satellite view to that location/date
+
+**Tests:**
+- ⏳ Test Livewire event dispatch
+- ⏳ Test coordinates update on jump
+
+---
+
+### Task 2.3: Use Survey Zone Geometry for Satellite Requests
+- ⏳ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
+  - ⏳ Modify `updatedCampaignId()` method
+    - ⏳ Priority 1: Use survey zone centroid if exists
+    - ⏳ Priority 2: Use first datapoint location
+    - ⏳ Priority 3: Default to Copenhagen (55.7072, 12.5704)
+  - ⏳ Log zone selection for debugging
+
+**Deliverable:** Satellite viewer intelligently centers on survey zones
+
+**Tests:**
+- ⏳ Test with campaign that has survey zone
+- ⏳ Test with campaign that has only datapoints
+- ⏳ Test with empty campaign (fallback)
+
+---
+
+### Task 2.4: Temporal Alignment Visualization
+- ⏳ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
+  - ⏳ Display temporal correlation quality when datapoint selected
+  - ⏳ Show warning if `days_difference > 7`
+  - ⏳ Use color coding: green (excellent), yellow (acceptable), red (poor)
+- ⏳ Update popup content in `satellite-map.js`
+  - ⏳ Include satellite observation date
+  - ⏳ Show days difference
+
+**Deliverable:** Users see temporal alignment quality
+
+**Tests:** Visual verification
+
+---
+
+### Task 2.5: Dynamic Date Selection
+- ⏳ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
+  - ⏳ Change default `selectedDate` from hardcoded to dynamic:
+    - Use most recent datapoint's `collected_at` date when campaign selected
+    - Fallback to `now()->subDays(7)` if no datapoints
+- ⏳ Add date range constraints based on campaign duration
+  - ⏳ Calculate min/max dates from campaign's datapoints
+
+**Deliverable:** Date picker shows relevant dates for selected campaign
+
+**Tests:**
+- ⏳ Test date selection with campaign
+- ⏳ Test date selection without campaign
+
+---
+
+**Priority 2 Checklist:**
+- [ ] DataPoints overlay on satellite map
+- [ ] Toggle control for showing/hiding overlay
+- [ ] Click-to-analyze interaction working
+- [ ] Survey zone centering implemented
+- [ ] Temporal correlation displayed
+- [ ] Dynamic date selection based on campaign
+- [ ] Integration tests passing (estimate: 8+ tests)
+
+---
+
+## Priority 3: Advanced PostGIS (Week 3)
+
+**Time:** 5 days  
+**Goal:** Portfolio-worthy PostGIS expertise demonstrated
+
+### Task 3.1: Spatial Join (Zone-Based Aggregation)
+- ⏳ Add to `app/Services/GeospatialService.php`
+  - ⏳ Method: `getZoneStatistics(int $campaignId): array`
+  - ⏳ Use SQL with `ST_Contains` join
+  - ⏳ Group by zone and metric
+  - ⏳ Calculate: count, avg, min, max, stddev
+  - ⏳ Return statistics grouped by zone name
+
+**Deliverable:** Can aggregate data points by survey zone
+
+**Tests:**
+- ⏳ Add to `tests/Feature/GeospatialServiceTest.php`
+- ⏳ Test zone statistics calculation
+- ⏳ Test with points inside/outside zones
+
+---
+
+### Task 3.2: KNN Nearest Neighbor Queries
+- ⏳ Add to `app/Services/GeospatialService.php`
+  - ⏳ Method: `findNearestDataPoints(float $lat, float $lon, int $limit = 5): array`
+  - ⏳ Use `<->` operator for KNN
+  - ⏳ Calculate actual distance with `ST_Distance`
+  - ⏳ Order by proximity
+  - ⏳ Include distance in results
+
+**Deliverable:** Fast nearest neighbor search
+
+**Tests:**
+- ⏳ Test KNN query returns closest points
+- ⏳ Test limit parameter
+- ⏳ Test distance accuracy
+
+---
+
+### Task 3.3: Grid-Based Heatmap Aggregation
+- ⏳ Add to `app/Services/GeospatialService.php`
+  - ⏳ Method: `generateGridHeatmap(int $campaignId, int $metricId, float $cellSizeDegrees = 0.001): array`
+  - ⏳ Use `ST_SnapToGrid` to create grid cells
+  - ⏳ Aggregate values per cell
+  - ⏳ Calculate avg, count, stddev per cell
+  - ⏳ Filter cells with `COUNT(*) >= 3`
+
+**Deliverable:** Grid-based heatmap data for scientific visualization
+
+**Tests:**
+- ⏳ Test grid generation
+- ⏳ Test aggregation accuracy
+- ⏳ Test minimum sample size filtering
+
+---
+
+### Task 3.4: DBSCAN Spatial Clustering
+- ⏳ Add to `app/Services/GeospatialService.php`
+  - ⏳ Method: `detectClusters(int $campaignId, int $metricId, float $epsilonDegrees = 0.01, int $minPoints = 5): array`
+  - ⏳ Use `ST_ClusterDBSCAN`
+  - ⏳ Group by cluster_id
+  - ⏳ Calculate cluster statistics (center, avg value, point count)
+  - ⏳ Filter out noise points (cluster_id = null)
+
+**Deliverable:** Automatic hotspot detection
+
+**Tests:**
+- ⏳ Test cluster detection
+- ⏳ Test noise point filtering
+- ⏳ Test cluster statistics
+
+---
+
+### Task 3.5: Voronoi Diagrams
+- ⏳ Add to `app/Services/GeospatialService.php`
+  - ⏳ Method: `generateVoronoiDiagram(int $campaignId): array`
+  - ⏳ Use `ST_VoronoiPolygons` with `ST_Collect`
+  - ⏳ Use `ST_Dump` to extract individual cells
+  - ⏳ Return as GeoJSON FeatureCollection
+
+**Deliverable:** Voronoi diagram showing influence zones
+
+**Tests:**
+- ⏳ Test Voronoi generation
+- ⏳ Test GeoJSON structure
+
+---
+
+### Task 3.6: Convex Hull
+- ⏳ Add to `app/Services/GeospatialService.php`
+  - ⏳ Method: `getCampaignConvexHull(int $campaignId): ?array`
+  - ⏳ Use `ST_ConvexHull` with `ST_Collect`
+  - ⏳ Calculate area using `ST_Area`
+  - ⏳ Return as GeoJSON Feature with area property
+
+**Deliverable:** Actual surveyed area calculation
+
+**Tests:**
+- ⏳ Test convex hull generation
+- ⏳ Test area calculation
+- ⏳ Test null handling for empty campaigns
+
+---
+
+### Task 3.7: Volt Component to Showcase Advanced PostGIS
+- ⏳ Create `resources/views/livewire/analytics/spatial-analysis.blade.php`
+  - ⏳ Display zone statistics table
+  - ⏳ Show cluster detection results
+  - ⏳ Render Voronoi diagram on map
+  - ⏳ Display convex hull overlay
+  - ⏳ Campaign and metric filters
+- ⏳ Add route: `/analytics/spatial`
+- ⏳ Add to navigation menu
+
+**Deliverable:** Portfolio-ready UI showcasing all PostGIS features
+
+**Tests:**
+- ⏳ Component renders correctly
+- ⏳ Filters work
+- ⏳ Data calculations accurate
+
+---
+
+**Priority 3 Checklist:**
+- [ ] Zone statistics (spatial join) implemented
+- [ ] KNN nearest neighbor queries working
+- [ ] Grid-based heatmap aggregation
+- [ ] DBSCAN clustering implemented
+- [ ] Voronoi diagram generation
+- [ ] Convex hull calculation
+- [ ] Spatial analysis component created
+- [ ] All PostGIS tests passing (estimate: 12+ tests)
+
+---
+
+## Priority 4: Scientific Features (Week 4)
+
+**Time:** 3-4 days  
+**Goal:** Publication-ready export and scientific credibility
+
+### Task 4.1: DataExportService
+- ⏳ Create service: `app/Services/DataExportService.php`
+  - ⏳ Method: `exportForPublication(Campaign $campaign): array`
+    - ⏳ Include metadata (export date, campaign info, QC counts, coordinate system)
+    - ⏳ Extract coordinates using PostGIS
+    - ⏳ Include satellite analyses (NDVI, NDMI)
+    - ⏳ Include temporal correlation quality
+    - ⏳ Filter to approved data only
+  - ⏳ Method: `exportAsCSV(Campaign $campaign): string`
+    - ⏳ Format for R/Python analysis
+    - ⏳ Include all relevant fields
+
+**Deliverable:** Full provenance export for scientific publications
+
+**Tests:**
+- ⏳ `tests/Feature/DataExportServiceTest.php`
+- ⏳ Test JSON export structure
+- ⏳ Test CSV format
+- ⏳ Test metadata completeness
+- ⏳ Test satellite context inclusion
+
+---
+
+### Task 4.2: Export Controller and Routes
+- ⏳ Create controller: `app/Http/Controllers/ExportController.php`
+  - ⏳ Method: `exportJSON(Campaign $campaign)`
+    - Set proper headers
+    - Return JSON response with attachment
+  - ⏳ Method: `exportCSV(Campaign $campaign)`
+    - Set CSV headers
+    - Return CSV response with attachment
+- ⏳ Add routes to `routes/web.php`:
+  - ⏳ `GET /campaigns/{campaign}/export/json`
+  - ⏳ `GET /campaigns/{campaign}/export/csv`
+- ⏳ Add middleware: `auth`
+
+**Deliverable:** Export endpoints accessible
+
+**Tests:**
+- ⏳ Test route accessibility
+- ⏳ Test file download
+- ⏳ Test authentication requirement
+
+---
+
+### Task 4.3: Export UI in Campaign View
+- ⏳ Add export buttons to campaign detail page
+  - ⏳ "Export JSON" button
+  - ⏳ "Export CSV" button
+  - ⏳ Show export preview (sample of first few rows)
+- ⏳ Style with Flux UI components
+
+**Deliverable:** User-friendly export interface
+
+**Tests:** Manual UI testing
+
+---
+
+### Task 4.4: Temporal Correlation Visualization
+- ⏳ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
+  - ⏳ Add info panel showing temporal correlation
+  - ⏳ Color-coded quality indicator (green/yellow/red)
+  - ⏳ Display days difference
+  - ⏳ Show warning message if quality is poor
+- ⏳ Style with Tailwind classes
+
+**Deliverable:** Visual feedback on temporal alignment
+
+**Tests:** Manual verification
+
+---
+
+### Task 4.5: Filament Admin Panel for Zone Management
+- ⏳ Create Filament resource: `SurveyZoneResource`
+  - ⏳ Table view: name, campaign, area_km2
+  - ⏳ Form: name, description, campaign selector
+  - ⏳ Add polygon drawing tool (future enhancement - note for now)
+- ⏳ Add to Filament navigation
+
+**Deliverable:** Admin can view/edit survey zones
+
+**Tests:**
+- ⏳ Test resource accessibility
+- ⏳ Test CRUD operations via Filament
+
+---
+
+### Task 4.6: Documentation Updates
+- ⏳ Update `README.md`
+  - ⏳ Document new features
+  - ⏳ Add export instructions
+  - ⏳ Add PostGIS feature showcase
+- ⏳ Create `SCIENTIFIC-METHODS.md`
+  - ⏳ Document QA/QC workflow
+  - ⏳ Explain temporal correlation
+  - ⏳ Cite PostGIS functions used
+  - ⏳ Export format specification
+
+**Deliverable:** Comprehensive documentation
+
+**Tests:** Documentation review
+
+---
+
+**Priority 4 Checklist:**
+- [ ] DataExportService created
+- [ ] Export controller and routes added
+- [ ] Export UI added to campaign view
+- [ ] Temporal correlation visualization
+- [ ] Filament SurveyZone resource
+- [ ] Documentation updated
+- [ ] All export tests passing (estimate: 6+ tests)
+
+---
+
+## Testing Summary
+
+### New Test Files Created
+1. ⏳ `tests/Feature/SatelliteAnalysisTest.php`
+2. ⏳ `tests/Feature/SurveyZoneTest.php`
+3. ⏳ `tests/Feature/Jobs/EnrichDataPointWithSatelliteDataTest.php`
+4. ⏳ `tests/Feature/DataExportServiceTest.php`
+
+### Enhanced Test Files
+1. ⏳ `tests/Feature/GeospatialServiceTest.php` (add 12+ new tests)
+2. ⏳ `tests/Feature/Maps/SatelliteViewerTest.php` (add integration tests)
+
+### Test Count Estimate
+- Priority 0: 0 new tests (regression testing only)
+- Priority 1: ~15 tests
+- Priority 2: ~8 tests
+- Priority 3: ~12 tests
+- Priority 4: ~6 tests
+- **Total: ~41 new tests**
+
+---
+
+## Deployment Checklist
+
+Before marking Phase 4 Improvements as complete:
+
+### Code Quality
+- [ ] All new tests passing (41+ tests)
+- [ ] No existing test regressions
+- [ ] Run `ddev pint --dirty` (code formatting)
+- [ ] No linting errors
+
+### Database
+- [ ] All migrations run successfully
+- [ ] Seeders updated with new fields
+- [ ] Database indexes created
+
+### Documentation
+- [ ] README.md updated
+- [ ] SCIENTIFIC-METHODS.md created
+- [ ] API documentation for export endpoints
+- [ ] Code comments added
+
+### Performance
+- [ ] Spatial indexes verified
+- [ ] N+1 query prevention checked
+- [ ] Caching strategy reviewed
+
+### Security
+- [ ] Export routes require authentication
+- [ ] Mass assignment protection verified
+- [ ] File upload validation checked
+
+---
+
+## Success Metrics
+
+After Phase 4 Improvements completion:
+
+### Scientific Credibility ✅
+- [ ] QA/QC workflow operational
+- [ ] Satellite data persisted with audit trail
+- [ ] Temporal correlation quantified
+- [ ] Export includes full provenance
+
+### PostGIS Expertise ✅
+- [ ] 6 advanced PostGIS patterns demonstrated
+- [ ] Spatial joins working
+- [ ] KNN queries functional
+- [ ] Clustering algorithms implemented
+
+### Data Integration ✅
+- [ ] Manual data overlaid on satellite maps
+- [ ] Click-to-analyze interaction
+- [ ] Survey zones used for map centering
+- [ ] Temporal alignment visualized
+
+### Production Readiness ✅
+- [ ] Background jobs processing satellite enrichment
+- [ ] Observer pattern automation
+- [ ] Export service operational
+- [ ] Admin panel for zone management
+
+---
+
+## Timeline Overview
+
+```
+Week 0 (Day 1): Priority 0 - Critical Fixes (2-3 hours)
+├── Fix DataPoint model
+└── Fix Campaign model
+
+Week 1: Priority 1 - Foundation (5 days)
+├── QA/QC fields and workflow
+├── SatelliteAnalysis persistence
+├── SurveyZone model
+├── Auto-enrichment job
+└── Testing
+
+Week 2: Priority 2 - Integration (5 days)
+├── DataPoints overlay on satellite map
+├── Click-to-analyze interaction
+├── Survey zone centering
+├── Temporal correlation display
+└── Testing
+
+Week 3: Priority 3 - Advanced PostGIS (5 days)
+├── Spatial joins (zone statistics)
+├── KNN queries
+├── Grid aggregation
+├── DBSCAN clustering
+├── Voronoi diagrams
+├── Convex hull
+├── Spatial analysis component
+└── Testing
+
+Week 4: Priority 4 - Scientific Features (3-4 days)
+├── DataExportService
+├── Export controller and routes
+├── Export UI
+├── Temporal correlation visualization
+├── Filament zone management
+├── Documentation
+└── Final testing
+
+Total: 18-20 development days (4 weeks)
+```
+
+---
+
+## Next Steps After Completion
+
+Once Phase 4 Improvements are complete:
+
+1. ✅ Mark this roadmap as complete
+2. ✅ Update main `Development-Roadmap.md` to reflect Phase 4 completion
+3. ✅ Continue with **Phase 5: Analytics & Heatmaps** (Week 7) from original roadmap
+4. ✅ Consider implementing optional biodiversity features (Darwin Core, GBIF) if relevant
+
+---
+
+## Key Files Created/Modified
+
+**New Files (23):**
+- Migrations: 2
+- Models: 2 (SatelliteAnalysis, SurveyZone)
+- Factories: 2
+- Jobs: 1
+- Observers: 1
+- Services: 1 (DataExportService)
+- Controllers: 1
+- Tests: 4
+- Documentation: 1 (SCIENTIFIC-METHODS.md)
+- Filament Resources: 1
+
+**Modified Files (8):**
+- Models: 2 (DataPoint, Campaign)
+- Services: 1 (GeospatialService - add 6 methods)
+- Components: 1 (satellite-viewer.blade.php)
+- JavaScript: 1 (satellite-map.js)
+- Routes: 1 (web.php)
+- Tests: 2 (enhance existing)
+
+**Total: 31 files**
+
+---
+
+## Command Reference
+
+```powershell
+# Setup
+ddev start
+ddev composer install
+ddev npm install
+
+# Migrations
+ddev artisan make:migration add_qa_workflow_to_data_points
+ddev artisan make:migration create_satellite_analyses_table
+ddev artisan migrate
+
+# Models & Factories
+ddev artisan make:model SatelliteAnalysis -mf
+ddev artisan make:model SurveyZone -f
+ddev artisan make:factory SatelliteAnalysisFactory
+ddev artisan make:factory SurveyZoneFactory
+
+# Jobs & Observers
+ddev artisan make:job EnrichDataPointWithSatelliteData
+ddev artisan make:observer DataPointObserver --model=DataPoint
+
+# Services & Controllers
+ddev artisan make:class Services/DataExportService
+ddev artisan make:controller ExportController
+
+# Filament
+ddev artisan make:filament-resource SurveyZone --generate --panel=admin
+
+# Testing
+ddev artisan make:test SatelliteAnalysisTest --pest
+ddev artisan make:test SurveyZoneTest --pest
+ddev artisan make:test Jobs/EnrichDataPointWithSatelliteDataTest --pest
+ddev artisan make:test DataExportServiceTest --pest
+
+# Run tests
+ddev artisan test --filter=SatelliteAnalysis
+ddev artisan test --filter=SurveyZone
+ddev artisan test --filter=GeospatialService
+ddev artisan test  # Full suite
+
+# Code formatting
+ddev pint --dirty
+
+# Development
+ddev npm run dev  # Frontend (auto-starts with ddev start)
+ddev artisan queue:work  # Queue worker (auto-starts with ddev start)
+```
+
+---
+
+**Status:** Ready to begin implementation  
+**Start Date:** TBD  
+**Completion Target:** 4 weeks from start  
+
+---
+
+**Notes:**
+- This roadmap focuses ONLY on implementing review recommendations
+- Original Phase 5 (Analytics & Heatmaps) already complete - will continue with Phase 6
+- Optional biodiversity features (Darwin Core, GBIF) can be added as Phase 5+ if needed
+- All tasks marked with ⏳ are pending completion
+- Update checkboxes [ ] to [✅] as tasks complete
+

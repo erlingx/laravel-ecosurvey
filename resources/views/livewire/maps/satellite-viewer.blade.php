@@ -175,6 +175,46 @@ $analysisData = computed(function () {
     };
 });
 
+// Save satellite analysis to database
+$saveSatelliteAnalysis = function (): void {
+    $satelliteData = $this->satelliteData;
+    $analysisData = $this->analysisData;
+
+    if (! $satelliteData) {
+        Log::warning('No satellite data to save');
+
+        return;
+    }
+
+    try {
+        $analysis = \App\Models\SatelliteAnalysis::create([
+            'campaign_id' => $this->campaignId,
+            'data_point_id' => null, // Can be linked later
+            'location' => DB::raw("ST_SetSRID(ST_MakePoint({$this->selectedLon}, {$this->selectedLat}), 4326)"),
+            'image_url' => $satelliteData['image_url'] ?? null,
+            'ndvi_value' => $analysisData['ndvi'] ?? null,
+            'ndvi_interpretation' => $analysisData['interpretation'] ?? null,
+            'moisture_index' => $analysisData['moisture_index'] ?? null,
+            'temperature_kelvin' => $analysisData['temperature'] ?? null,
+            'acquisition_date' => $this->selectedDate,
+            'satellite_source' => 'Copernicus',
+            'processing_level' => $satelliteData['processing_level'] ?? 'L2A',
+            'cloud_coverage_percent' => $satelliteData['cloud_coverage'] ?? null,
+            'metadata' => [
+                'overlay_type' => $this->overlayType,
+                'platform' => $satelliteData['platform'] ?? 'Sentinel-2',
+                'provider' => $satelliteData['provider'] ?? 'Copernicus Data Space',
+            ],
+        ]);
+
+        Log::info('✅ Satellite analysis saved', ['id' => $analysis->id]);
+
+        $this->dispatch('satellite-saved', id: $analysis->id);
+    } catch (\Exception $e) {
+        Log::error('Failed to save satellite analysis', ['error' => $e->getMessage()]);
+    }
+};
+
 ?>
 
 <div class="min-h-screen">

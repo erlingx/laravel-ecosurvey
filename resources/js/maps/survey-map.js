@@ -56,7 +56,7 @@ export function initSurveyMap() {
                 const coords = feature.geometry.coordinates;
                 const props = feature.properties;
 
-                const marker = L.marker([coords[1], coords[0]])
+                const marker = L.circleMarker([coords[1], coords[0]], getMarkerStyle(props))
                     .bindPopup(createPopupContent(props));
 
                 clusterGroup.addLayer(marker);
@@ -106,9 +106,67 @@ export function createPopupContent(props) {
                 <p><strong>Date:</strong> ${props.collected_at}</p>
                 ${props.accuracy ? `<p><strong>Accuracy:</strong> ±${Math.round(props.accuracy)}m</p>` : ''}
                 ${props.notes ? `<p><strong>Notes:</strong> ${props.notes}</p>` : ''}
+                ${props.qa_flags && props.qa_flags.length > 0 ? `<p class="text-red-600"><strong>⚠ QA Flags:</strong> ${props.qa_flags.length}</p>` : ''}
+                ${props.status ? `<p><strong>Status:</strong> ${props.status}</p>` : ''}
             </div>
         </div>
     `;
+}
+
+/**
+ * Get marker style based on data quality indicators
+ * - Yellow dashed outline for accuracy > 50m (low confidence)
+ * - Red outline for points with QA flags (flagged issues)
+ * - Normal black outline for approved/high quality data
+ */
+export function getMarkerStyle(props) {
+    const hasQAFlags = props.qa_flags && props.qa_flags.length > 0;
+    const lowAccuracy = props.accuracy && props.accuracy > 50;
+    const isApproved = props.status === 'approved';
+
+    if (hasQAFlags) {
+        // Red outline for flagged data
+        return {
+            radius: 8,
+            fillColor: '#ef4444',
+            color: '#dc2626',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.6,
+            dashArray: '5, 5'
+        };
+    } else if (lowAccuracy) {
+        // Yellow dashed outline for low confidence
+        return {
+            radius: 8,
+            fillColor: '#fbbf24',
+            color: '#f59e0b',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.5,
+            dashArray: '5, 5'
+        };
+    } else if (isApproved) {
+        // Green for approved high quality data
+        return {
+            radius: 8,
+            fillColor: '#10b981',
+            color: '#059669',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.7
+        };
+    } else {
+        // Default blue for pending/normal data
+        return {
+            radius: 8,
+            fillColor: '#3b82f6',
+            color: '#1d4ed8',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.6
+        };
+    }
 }
 
 export function resetMapView() {
@@ -161,7 +219,7 @@ export function updateMapMarkers() {
                 const coords = feature.geometry.coordinates;
                 const props = feature.properties;
 
-                const marker = L.marker([coords[1], coords[0]])
+                const marker = L.circleMarker([coords[1], coords[0]], getMarkerStyle(props))
                     .bindPopup(createPopupContent(props));
 
                 window.surveyClusterGroup.addLayer(marker);

@@ -6,6 +6,7 @@ namespace App\Models;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -70,5 +71,29 @@ class User extends Authenticatable implements FilamentUser
     public function canAccessPanel(Panel $panel): bool
     {
         return true; // All users can access admin panel
+    }
+
+    /**
+     * Get the data points submitted by this user
+     */
+    public function dataPoints(): HasMany
+    {
+        return $this->hasMany(DataPoint::class);
+    }
+
+    /**
+     * Get the campaigns created by this user
+     */
+    public function campaigns(): HasMany
+    {
+        return $this->hasMany(Campaign::class);
+    }
+
+    /**
+     * Get the data points reviewed by this user
+     */
+    public function reviewedDataPoints(): HasMany
+    {
+        return $this->hasMany(DataPoint::class, 'reviewed_by');
     }
 }

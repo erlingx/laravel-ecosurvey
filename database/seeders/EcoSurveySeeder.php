@@ -216,7 +216,62 @@ class EcoSurveySeeder extends Seeder
             $this->command->info('✓ Created sample data points for Urban Noise Pollution Study (14 days of data)');
         }
 
+        // Add sample satellite analyses for Fælledparken campaign
+        if ($parkCampaign) {
+            $this->command->info('Creating satellite analyses for Fælledparken...');
+
+            // Create satellite analyses for the park center location
+            $parkCenter = ['lat' => 55.7072, 'lon' => 12.5704];
+
+            // Create analyses for the last 30 days (every 5 days to match Sentinel-2 revisit time)
+            for ($day = 0; $day <= 30; $day += 5) {
+                $date = now()->subDays(30 - $day);
+
+                // NDVI value varies by season (higher in summer)
+                $seasonalFactor = 0.6 + (sin($day / 30 * pi()) * 0.2); // 0.4 to 0.8 range
+                $ndviValue = round($seasonalFactor + (rand(-5, 5) / 100), 4);
+
+                \App\Models\SatelliteAnalysis::create([
+                    'campaign_id' => $parkCampaign->id,
+                    'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$parkCenter['lon']}, {$parkCenter['lat']}), 4326)"),
+                    'ndvi_value' => $ndviValue,
+                    'ndvi_interpretation' => $this->interpretNDVI($ndviValue),
+                    'moisture_index' => round(rand(30, 70) / 100, 4),
+                    'temperature_kelvin' => round(273.15 + rand(15, 25), 2),
+                    'acquisition_date' => $date,
+                    'satellite_source' => 'Copernicus',
+                    'processing_level' => 'L2A',
+                    'cloud_coverage_percent' => round(rand(0, 30), 2),
+                    'metadata' => [
+                        'platform' => 'Sentinel-2A',
+                        'instrument' => 'MSI',
+                        'resolution' => '10m',
+                    ],
+                ]);
+            }
+
+            $this->command->info('✓ Created satellite analyses for Fælledparken (7 analyses)');
+        }
+
         $this->command->info('✓ Created '.count($metrics).' environmental metrics');
         $this->command->info('✓ Created '.count($campaigns).' campaigns');
+    }
+
+    /**
+     * Interpret NDVI value
+     */
+    private function interpretNDVI(float $ndvi): string
+    {
+        if ($ndvi < 0) {
+            return 'Water or snow';
+        } elseif ($ndvi < 0.2) {
+            return 'Bare soil or urban area';
+        } elseif ($ndvi < 0.4) {
+            return 'Sparse vegetation';
+        } elseif ($ndvi < 0.6) {
+            return 'Moderate vegetation';
+        } else {
+            return 'Dense vegetation';
+        }
     }
 }

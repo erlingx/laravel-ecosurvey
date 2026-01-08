@@ -32,6 +32,39 @@ class DataPointFactory extends Factory
             'accuracy' => fake()->randomFloat(2, 5, 50),
             'notes' => fake()->optional()->sentence(),
             'collected_at' => fake()->dateTimeBetween('-1 month', 'now'),
+            'status' => fake()->randomElement(['draft', 'pending', 'approved', 'rejected']),
+            'review_notes' => fake()->optional()->sentence(),
+            'device_model' => fake()->optional()->randomElement(['iPhone 14', 'Samsung Galaxy S23', 'Pixel 7', 'Manual Entry']),
+            'sensor_type' => fake()->optional()->randomElement(['GPS', 'Mobile Device', 'Survey Equipment', 'Manual']),
+            'calibration_at' => fake()->optional()->dateTimeBetween('-3 months', 'now'),
+            'protocol_version' => '1.0',
         ];
+    }
+
+    /**
+     * Indicate that the data point is approved.
+     */
+    public function approved(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'approved',
+            'reviewed_by' => User::factory(),
+            'reviewed_at' => fake()->dateTimeBetween('-1 week', 'now'),
+            'review_notes' => 'Data quality verified and approved.',
+        ]);
+    }
+
+    /**
+     * Indicate that the data point is high quality (approved with good accuracy).
+     */
+    public function highQuality(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'approved',
+            'accuracy' => fake()->randomFloat(2, 5, 20),
+            'reviewed_by' => User::factory(),
+            'reviewed_at' => fake()->dateTimeBetween('-1 week', 'now'),
+            'review_notes' => 'High quality data - approved.',
+        ]);
     }
 }

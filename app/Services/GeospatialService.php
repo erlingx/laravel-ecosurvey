@@ -50,6 +50,8 @@ class GeospatialService
                         'notes' => $point->notes,
                         'photo_path' => $point->photo_path,
                         'collected_at' => $point->collected_at->format('Y-m-d H:i'),
+                        'qa_flags' => $point->qa_flags,
+                        'status' => $point->status,
                     ],
                 ];
             })->toArray(),
