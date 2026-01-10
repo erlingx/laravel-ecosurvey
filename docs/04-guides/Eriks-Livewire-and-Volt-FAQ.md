@@ -130,7 +130,7 @@ let value = @this.get('propertyName');
 use function Livewire\Volt\state;
 
 state(['count' => 0]);
-$increment = fn() => $this->count++;
+$increment = fn () => $this->count++;
 ?>
 <button wire:click="increment">{{ $count }}</button>
 ```

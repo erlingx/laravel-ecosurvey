@@ -44,8 +44,8 @@
         >
             <flux:navlist.item
                 icon="map-pin"
-                :href="route('readings.submit')"
-                :current="request()->routeIs('readings.submit')"
+                :href="route('data-points.submit')"
+                :current="request()->routeIs('data-points.submit')"
                 wire:navigate
             >{{ __('Submit Reading') }}</flux:navlist.item>
             <flux:navlist.item

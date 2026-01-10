@@ -16,8 +16,8 @@ Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
     // Data Collection
-    Volt::route('readings/submit', 'data-collection.reading-form')->name('readings.submit');
-    Volt::route('data-points/capture', 'datapointcapture')->name('data-points.capture');
+    Volt::route('data-points/submit', 'data-collection.reading-form')->name('data-points.submit');
+    Volt::route('data-points/{dataPoint}/edit', 'data-collection.reading-form')->name('data-points.edit');
 
     // Maps
     Volt::route('maps/survey', 'maps.survey-map-viewer')->name('maps.survey');

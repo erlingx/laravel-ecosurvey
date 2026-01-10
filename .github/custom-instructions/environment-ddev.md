@@ -101,10 +101,12 @@ ddev stop
 # Queue/Job changes - fast restart (1-3 seconds)
 ddev artisan queue:restart
 
-# Frontend changes - auto-reload via Vite (already running)
-# No action needed!
+# Frontend changes (JS/CSS) - auto-reload via Vite HMR (already running)
+# No action needed! Changes are hot-reloaded automatically.
+# DO NOT run `ddev npm run build` - Vite handles it!
 
 # ❌ NEVER restart entire DDEV for queue changes (too slow - 30+ seconds)
+# ❌ NEVER run npm run build when Vite dev server is running
 ```
 
 ### Check Running Services
@@ -210,8 +212,14 @@ ddev composer update
 ```powershell
 ddev npm install
 ddev npm run dev -- --host
-ddev npm run build
+ddev npm run build  # Only when hot reloading is not available
 ```
+
+**Important:** `ddev npm run build` is **only needed** when:
+- Vite dev server is NOT running (production builds)
+- User explicitly requests a production build
+- **DO NOT run** if Vite hot reloading is active (default with `ddev start`)
+- Vite HMR automatically picks up JS/CSS changes when running
 
 ### Database
 ```powershell
@@ -302,15 +310,27 @@ ddev artisan view:clear
 
 ## Vite with DDEV
 
-### Development Mode
-Vite auto-starts with DDEV via `web_extra_daemons`:
+### Development Mode (Hot Module Replacement)
+Vite **auto-starts** with DDEV via `web_extra_daemons`:
 
 ```powershell
 # Check if running
 ddev exec bash -c "ps aux | grep vite | grep -v grep"
 
-# Manually start if needed
+# Manually start if needed (rarely required)
 ddev npm run dev -- --host
+```
+
+**Important:**
+- ✅ Vite HMR is **always active** after `ddev start`
+- ✅ JS/CSS changes are **auto-reloaded** in browser
+- ❌ **DO NOT run `ddev npm run build`** during development
+- ⚠️ Only build for production or when Vite is not running
+
+### Production Build
+```powershell
+# Only when deploying or Vite dev server is stopped
+ddev npm run build
 ```
 
 ### Vite Configuration

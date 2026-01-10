@@ -1,6 +1,7 @@
 # EcoSurvey improvements (ChatGPT)
 
-**Date:** 2026-01-08
+**Date:** 2026-01-08  
+**Last Updated:** 2026-01-10
 
 ## Executive summary
 
@@ -15,6 +16,120 @@ To make the project stand out for **real-world scientific use**, to better **dem
 1. **Scientific credibility** (provenance, QA/QC, uncertainty handling, reproducibility)
 2. **PostGIS “portfolio proof” queries** (zones/polygons, spatial joins, indexing patterns, grid/cluster analytics)
 3. **True manual↔satellite coupling** (shared geometry, point-click analysis on satellite layer, temporal alignment, persistence)
+
+---
+
+## ✅ Completed Improvements (January 2026)
+
+### 1. QA/QC Workflow & Data Quality (COMPLETED Jan 8-10, 2026)
+
+**What was implemented:**
+
+#### A. QA/QC Fields and Workflow ✅
+- Added `qa_flags` (JSON array) to `data_points` table
+- Added `status` field (`pending`, `approved`, `rejected`)
+- Added `reviewed_by`, `reviewed_at`, `review_notes` for audit trail
+- Auto-flagging logic:
+  - `location_uncertainty`: Triggered when GPS accuracy > 80m
+  - `calibration_overdue`: Triggered when calibration date > 90 days old
+
+#### B. Visual Quality Differentiation ✅
+- Survey map now displays different marker styles based on quality:
+  - 🟢 **Green solid** = Approved high-quality (`status=approved`, `accuracy≤50m`)
+  - 🟡 **Yellow dashed** = Low confidence (`accuracy>50m`)
+  - 🔴 **Red dashed** = Flagged data (has QA flags)
+  - 🔵 **Blue solid** = Normal/pending data
+- Popups display QA flags with descriptive names
+- Status and accuracy prominently shown
+
+#### C. Measurement Protocol Metadata ✅
+- Added fields to `data_points`:
+  - `device_model` (varchar)
+  - `sensor_type` (varchar)
+  - `calibration_at` (timestamp)
+  - `protocol_version` (varchar)
+- Form captures this metadata during data collection
+- Display in map popups and edit forms
+
+#### D. GPS Accuracy Handling ✅
+- Auto-capture GPS with browser geolocation API
+- Accuracy automatically captured from device (in meters)
+- Manual coordinate entry sets accuracy to 0m (surveyed/exact location)
+- Accuracy value shown in all data displays
+- Used in visual differentiation (yellow markers for >50m accuracy)
+
+### 2. Data Point CRUD Operations (COMPLETED Jan 10, 2026)
+
+**What was implemented:**
+
+#### A. Data Point Edit Feature ✅
+- Edit link in map popups (✏️ icon)
+- Dedicated edit route: `/data-points/{id}/edit`
+- Form pre-populated with existing data
+- All fields editable:
+  - Campaign, metric type, value
+  - GPS coordinates (manual or recapture)
+  - Notes, photo, device info, calibration date
+- Success message on save
+- Form stays on edit page (doesn't redirect)
+- Changes immediately reflected on map
+
+#### B. Photo Upload System (Complete Rewrite) ✅
+- **Problem solved:** Windows + DDEV + Mutagen symlink incompatibility
+- **Solution:** Direct storage in `public/files/` (no symlink needed)
+- New `uploads` filesystem disk in `config/filesystems.php`
+- Photos stored in `public/files/data-points/`
+- Seeded demo photos in `public/files/seed-photos/`
+- Photo persistence verified:
+  - Thumbnail shows immediately after upload
+  - Photo survives page refresh
+  - Old photo deleted when uploading new one
+  - Works perfectly on Windows development environment
+- `DataPoint::photo_url` accessor handles both:
+  - New uploads (`files/data-points/`)
+  - Legacy seeded photos (`files/seed-photos/` or external URLs)
+- All 21 ReadingForm tests passing ✅
+- Issue documented in: `docs/99-issues/2026-01-photo-upload-windows-symlink-issue.md`
+
+#### C. Data Collection Form Enhancements ✅
+- Campaign auto-selection when only one active campaign
+- GPS capture with live feedback
+- Manual coordinate entry option
+- Photo upload with preview
+- Photo thumbnail on edit form
+- Validation with helpful error messages
+- Form auto-fills accuracy based on input method:
+  - GPS captured: Uses device-reported accuracy
+  - Manual entry: Sets accuracy to 0m (scientific best practice)
+
+### 3. Map Visualization Improvements (COMPLETED Jan 9, 2026)
+
+#### A. Enhanced Map Popups ✅
+- Draggable popups with grab handle
+- Photos displayed at top (when available)
+- Organized content order:
+  1. Environmental metric name (title)
+  2. QA Flags (if any)
+  3. Value with unit
+  4. GPS accuracy
+  5. Location (lat/long)
+  6. Collection date
+  7. Campaign name
+  8. Submitted by user
+  9. Status
+  10. Notes (if provided)
+  11. Photo
+  12. Edit link (✏️)
+- Data Point ID displayed
+- Cursor changes to normal over selectable text
+
+#### B. Map Interaction ✅
+- Markers cluster when zoomed out
+- Auto-zoom to fit visible data
+- Filter by campaign and metric
+- Point count badge
+- Reset view button
+- No page reload on filter changes (Livewire)
 
 ---
 
@@ -245,4 +360,3 @@ Outcome:
 - `docs/ProjectDescription-EcoSurvey.md`
 - `docs/COPERNICUS-COMPLETE.md`
 - `docs/GIS-PostGIS-Crashcourse.md`
-

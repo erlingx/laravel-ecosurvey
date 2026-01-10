@@ -77,13 +77,15 @@ setupSatelliteNavigation();
 setupTrendChartListeners();
 setupHeatmapListeners();
 
-// Initialize maps when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
+// Initialize maps - called on both DOMContentLoaded and Livewire navigations
+function initializeMaps() {
+    console.log('initializeMaps() called');
+
     // Survey Map
     const mapElement = document.getElementById('survey-map');
     const dataContainer = document.getElementById('map-data-container');
 
-    console.log('DOM loaded - Map element:', mapElement, 'Data container:', dataContainer);
+    console.log('Map element:', mapElement, 'Data container:', dataContainer);
 
     if (mapElement) {
         // Initialize map data from data container if it exists
@@ -108,11 +110,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Initialize the map
-        if (!window.mapInitialized) {
-            console.log('Initializing survey map...');
-            initSurveyMap();
-            window.mapInitialized = true;
-        }
+        console.log('Initializing survey map...');
+        initSurveyMap();
     }
 
     // Satellite Map
@@ -121,4 +120,15 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Initializing satellite map...');
         initSatelliteMap();
     }
+}
+
+// Initialize maps when DOM is ready
+document.addEventListener('DOMContentLoaded', initializeMaps);
+
+// Initialize maps after Livewire navigation
+document.addEventListener('livewire:navigated', () => {
+    console.log('Livewire navigated - reinitializing maps...');
+    // Reset flag to allow reinitialization
+    window.mapInitialized = false;
+    initializeMaps();
 });

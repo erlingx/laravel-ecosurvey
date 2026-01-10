@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class DataPoint extends Model
 {
@@ -99,9 +100,90 @@ class DataPoint extends Model
         $flags[] = [
             'type' => 'outlier',
             'reason' => $reason,
-            'flagged_at' => now()->toISOString(),
+            'flagged_at' => now(),
         ];
         $this->qa_flags = $flags;
         $this->save();
+    }
+
+    /**
+     * Get latitude from PostGIS location field
+     */
+    public function getLatitudeAttribute(): ?float
+    {
+        if (! $this->location) {
+            return null;
+        }
+
+        $result = \DB::selectOne(
+            'SELECT ST_Y(location::geometry) as latitude FROM data_points WHERE id = ?',
+            [$this->id]
+        );
+
+        return $result ? (float) $result->latitude : null;
+    }
+
+    /**
+     * Get longitude from PostGIS location field
+     */
+    public function getLongitudeAttribute(): ?float
+    {
+        if (! $this->location) {
+            return null;
+        }
+
+        $result = \DB::selectOne(
+            'SELECT ST_X(location::geometry) as longitude FROM data_points WHERE id = ?',
+            [$this->id]
+        );
+
+        return $result ? (float) $result->longitude : null;
+    }
+
+    public function getPhotoUrlAttribute(): ?string
+    {
+        $path = $this->photo_path;
+
+        if (! $path) {
+            return null;
+        }
+
+        $path = trim($path);
+
+        if ($path === '') {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        // Check if it's already a /files/ path (new upload location)
+        if (str_starts_with($path, '/files/')) {
+            return url($path);
+        }
+
+        if (str_starts_with($path, 'files/')) {
+            return url('/'.$path);
+        }
+
+        // New uploads stored in data-points/ go to uploads disk (public/files)
+        if (str_starts_with($path, 'data-points/')) {
+            // Check if it exists in uploads disk first
+            if (Storage::disk('uploads')->exists($path)) {
+                return Storage::disk('uploads')->url($path);
+            }
+        }
+
+        // Legacy paths in storage/app/public (for seeded data)
+        if (str_starts_with($path, '/storage/')) {
+            $path = ltrim(substr($path, strlen('/storage/')), '/');
+        }
+
+        if (str_starts_with($path, 'storage/')) {
+            $path = ltrim(substr($path, strlen('storage/')), '/');
+        }
+
+        return Storage::disk('public')->url($path);
     }
 }

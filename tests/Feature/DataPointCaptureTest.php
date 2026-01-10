@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Campaign;
-use App\Models\DataPoint;
 use App\Models\EnvironmentalMetric;
 use App\Models\User;
 use Livewire\Livewire;
@@ -9,14 +8,14 @@ use Livewire\Livewire;
 test('data point capture page is accessible for authenticated users', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->get('/data-points/capture');
+    $response = $this->actingAs($user)->get('/data-points/submit');
 
     $response->assertSuccessful();
-    $response->assertSeeLivewire('datapointcapture');
+    $response->assertSeeLivewire('data-collection.reading-form');
 });
 
 test('data point capture page requires authentication', function () {
-    $response = $this->get('/data-points/capture');
+    $response = $this->get('/data-points/submit');
 
     $response->assertRedirect('/login');
 });
@@ -27,7 +26,7 @@ test('can submit data point with valid data', function () {
     $metric = EnvironmentalMetric::factory()->create(['is_active' => true]);
 
     Livewire::actingAs($user)
-        ->test('datapointcapture')
+        ->test('data-collection.reading-form')
         ->set('campaignId', $campaign->id)
         ->set('metricId', $metric->id)
         ->set('value', 23.5)
@@ -52,9 +51,9 @@ test('validates required fields', function () {
     $user = User::factory()->create();
 
     Livewire::actingAs($user)
-        ->test('datapointcapture')
+        ->test('data-collection.reading-form')
         ->call('save')
-        ->assertHasErrors(['campaignId', 'metricId', 'value', 'latitude', 'longitude']);
+        ->assertHasErrors(['campaignId', 'metricId', 'value']);
 });
 
 test('validates latitude range', function () {
@@ -63,7 +62,7 @@ test('validates latitude range', function () {
     $metric = EnvironmentalMetric::factory()->create(['is_active' => true]);
 
     Livewire::actingAs($user)
-        ->test('datapointcapture')
+        ->test('data-collection.reading-form')
         ->set('campaignId', $campaign->id)
         ->set('metricId', $metric->id)
         ->set('value', 23.5)
@@ -79,7 +78,7 @@ test('validates longitude range', function () {
     $metric = EnvironmentalMetric::factory()->create(['is_active' => true]);
 
     Livewire::actingAs($user)
-        ->test('datapointcapture')
+        ->test('data-collection.reading-form')
         ->set('campaignId', $campaign->id)
         ->set('metricId', $metric->id)
         ->set('value', 23.5)
@@ -95,7 +94,7 @@ test('validates notes length', function () {
     $metric = EnvironmentalMetric::factory()->create(['is_active' => true]);
 
     Livewire::actingAs($user)
-        ->test('datapointcapture')
+        ->test('data-collection.reading-form')
         ->set('campaignId', $campaign->id)
         ->set('metricId', $metric->id)
         ->set('value', 23.5)
@@ -111,18 +110,18 @@ test('auto-selects campaign when only one exists', function () {
     $campaign = Campaign::factory()->create(['status' => 'active']);
 
     $component = Livewire::actingAs($user)
-        ->test('datapointcapture');
+        ->test('data-collection.reading-form');
 
     expect($component->get('campaignId'))->toBe($campaign->id);
 });
 
-test('resets form after successful submission', function () {
+test('redirects to survey map after successful submission', function () {
     $user = User::factory()->create();
     $campaign = Campaign::factory()->create(['status' => 'active']);
     $metric = EnvironmentalMetric::factory()->create(['is_active' => true]);
 
     Livewire::actingAs($user)
-        ->test('datapointcapture')
+        ->test('data-collection.reading-form')
         ->set('campaignId', $campaign->id)
         ->set('metricId', $metric->id)
         ->set('value', 23.5)
@@ -130,9 +129,5 @@ test('resets form after successful submission', function () {
         ->set('longitude', -74.0060)
         ->set('notes', 'Test note')
         ->call('save')
-        ->assertSet('value', null)
-        ->assertSet('notes', '')
-        ->assertSet('latitude', null)
-        ->assertSet('longitude', null);
+        ->assertRedirect(route('maps.survey'));
 });
-

@@ -19,7 +19,7 @@ beforeEach(function () {
 
 test('reading form can be rendered', function () {
     $this->actingAs($this->user)
-        ->get(route('readings.submit'))
+        ->get(route('data-points.submit'))
         ->assertOk()
         ->assertSee('Submit Environmental Reading');
 });
@@ -35,10 +35,7 @@ test('authenticated users can submit a reading with GPS coordinates', function (
         ->set('accuracy', 15.5)
         ->set('notes', 'Clear sunny day')
         ->call('save')
-        ->assertHasNoErrors()
-        ->assertSet('value', null) // Form reset
-        ->assertSet('notes', '') // Form reset
-        ->assertSet('latitude', null); // Form reset
+        ->assertHasNoErrors();
 
     // Verify DataPoint was created
     $this->assertDatabaseHas('data_points', [
@@ -108,7 +105,7 @@ test('GPS coordinates are required', function () {
         ->set('metricId', $this->metric->id)
         ->set('value', 42.5)
         ->call('save')
-        ->assertHasErrors(['latitude' => 'required', 'longitude' => 'required']);
+        ->assertHasErrors(['location']);
 });
 
 test('latitude must be between -90 and 90', function () {
@@ -166,7 +163,7 @@ test('photo upload is optional', function () {
 });
 
 test('can upload photo with reading', function () {
-    Storage::fake('public');
+    Storage::fake('uploads');
 
     $photo = UploadedFile::fake()->image('test-photo.jpg', 800, 600);
 
@@ -183,11 +180,11 @@ test('can upload photo with reading', function () {
 
     $dataPoint = DataPoint::query()->latest()->first();
     expect($dataPoint->photo_path)->not->toBeNull();
-    Storage::disk('public')->assertExists($dataPoint->photo_path);
+    Storage::disk('uploads')->assertExists($dataPoint->photo_path);
 });
 
 test('photo must be valid image file', function () {
-    Storage::fake('public');
+    Storage::fake('uploads');
 
     $invalidFile = UploadedFile::fake()->create('document.pdf', 1000);
 
@@ -204,7 +201,7 @@ test('photo must be valid image file', function () {
 });
 
 test('photo size must not exceed 5MB', function () {
-    Storage::fake('public');
+    Storage::fake('uploads');
 
     $largePhoto = UploadedFile::fake()->image('large.jpg')->size(6000); // 6MB
 
@@ -254,4 +251,204 @@ test('metrics list only shows active metrics', function () {
     // Should only show the active metric from beforeEach, not the inactive one
     expect($metrics)->toHaveCount(1)
         ->and($metrics->first()->id)->toBe($this->metric->id);
+});
+
+test('can edit data point and update photo', function () {
+    Storage::fake('uploads');
+
+    // Create existing data point with photo
+    $oldPhoto = UploadedFile::fake()->image('old-photo.jpg');
+    $oldPhotoPath = $oldPhoto->store('data-points', 'uploads');
+
+    $dataPoint = DataPoint::factory()->create([
+        'campaign_id' => $this->campaign->id,
+        'environmental_metric_id' => $this->metric->id,
+        'user_id' => $this->user->id,
+        'value' => 25.5,
+        'photo_path' => $oldPhotoPath,
+        'notes' => 'Original note',
+    ]);
+
+    // Update with new photo
+    $newPhoto = UploadedFile::fake()->image('new-photo.jpg');
+
+    Livewire::actingAs($this->user)
+        ->test('data-collection.reading-form', ['dataPoint' => $dataPoint->id])
+        ->assertSet('existingPhotoPath', $oldPhotoPath)
+        ->assertSet('value', '25.50')
+        ->set('value', 30.0)
+        ->set('notes', 'Updated note')
+        ->set('photo', $newPhoto)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    // Refresh from database
+    $dataPoint->refresh();
+
+    // Assert photo was updated
+    expect($dataPoint->photo_path)
+        ->not->toBeNull()
+        ->not->toBe($oldPhotoPath);
+
+    expect($dataPoint->value)->toBe('30.00');
+    expect($dataPoint->notes)->toBe('Updated note');
+
+    // Verify new photo exists and old photo was deleted
+    Storage::disk('uploads')->assertExists($dataPoint->photo_path);
+    Storage::disk('uploads')->assertMissing($oldPhotoPath);
+});
+
+test('photo persists after edit without new photo upload', function () {
+    Storage::fake('uploads');
+
+    // Create existing data point with photo
+    $photo = UploadedFile::fake()->image('existing-photo.jpg');
+    $photoPath = $photo->store('data-points', 'uploads');
+
+    $dataPoint = DataPoint::factory()->create([
+        'campaign_id' => $this->campaign->id,
+        'environmental_metric_id' => $this->metric->id,
+        'user_id' => $this->user->id,
+        'value' => 25.5,
+        'photo_path' => $photoPath,
+    ]);
+
+    // Update WITHOUT uploading new photo
+    Livewire::actingAs($this->user)
+        ->test('data-collection.reading-form', ['dataPoint' => $dataPoint->id])
+        ->assertSet('existingPhotoPath', $photoPath)
+        ->set('value', 30.0)
+        ->set('notes', 'Updated without changing photo')
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertSet('existingPhotoPath', $photoPath); // Verify component still has photo path
+
+    // Refresh from database
+    $dataPoint->refresh();
+
+    // Assert photo is STILL there
+    expect($dataPoint->photo_path)
+        ->not->toBeNull()
+        ->toBe($photoPath);
+
+    expect($dataPoint->value)->toBe('30.00');
+
+    // Verify photo still exists
+    Storage::disk('uploads')->assertExists($photoPath);
+});
+
+test('existingPhotoPath updates in component after uploading new photo', function () {
+    Storage::fake('uploads');
+
+    // Create existing data point with photo
+    $oldPhoto = UploadedFile::fake()->image('old-photo.jpg');
+    $oldPhotoPath = $oldPhoto->store('data-points', 'uploads');
+
+    $dataPoint = DataPoint::factory()->create([
+        'campaign_id' => $this->campaign->id,
+        'environmental_metric_id' => $this->metric->id,
+        'user_id' => $this->user->id,
+        'value' => 25.5,
+        'photo_path' => $oldPhotoPath,
+    ]);
+
+    // Upload new photo
+    $newPhoto = UploadedFile::fake()->image('new-photo.jpg');
+
+    $component = Livewire::actingAs($this->user)
+        ->test('data-collection.reading-form', ['dataPoint' => $dataPoint->id])
+        ->assertSet('existingPhotoPath', $oldPhotoPath)
+        ->set('photo', $newPhoto)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    // Component should have updated existingPhotoPath and cleared photo
+    $newPath = $component->get('existingPhotoPath');
+    expect($newPath)->not->toBeNull();
+    expect($newPath)->not->toBe($oldPhotoPath);
+    expect($component->get('photo'))->toBeNull();
+
+    // Verify in database
+    $dataPoint->refresh();
+    expect($dataPoint->photo_path)->toBe($newPath);
+    Storage::disk('uploads')->assertExists($newPath);
+});
+
+test('photo persists after refresh when uploading new photo in edit mode', function () {
+    Storage::fake('uploads');
+
+    // Create existing data point WITHOUT photo
+    $dataPoint = DataPoint::factory()->create([
+        'campaign_id' => $this->campaign->id,
+        'environmental_metric_id' => $this->metric->id,
+        'user_id' => $this->user->id,
+        'value' => 25.5,
+        'photo_path' => null,
+    ]);
+
+    // Upload a new photo
+    $newPhoto = UploadedFile::fake()->image('new-photo.jpg');
+
+    $component = Livewire::actingAs($this->user)
+        ->test('data-collection.reading-form', ['dataPoint' => $dataPoint->id])
+        ->assertSet('existingPhotoPath', null)
+        ->set('photo', $newPhoto)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($component->get('existingPhotoPath'))->not->toBeNull();
+    expect($component->get('existingPhotoUrl'))->not->toBeNull();
+
+    // Refresh from database - THE ACTUAL BUG TEST
+    $dataPoint->refresh();
+    $savedPhotoPath = $dataPoint->photo_path;
+
+    // Photo should be saved in database
+    expect($savedPhotoPath)->not->toBeNull();
+    Storage::disk('uploads')->assertExists($savedPhotoPath);
+
+    // NOW SIMULATE PAGE REFRESH - reload the component fresh
+    $reloadedComponent = Livewire::actingAs($this->user)
+        ->test('data-collection.reading-form', ['dataPoint' => $dataPoint->id]);
+
+    // After "refresh", the existingPhotoPath should be loaded from database
+    expect($reloadedComponent->get('existingPhotoPath'))->toBe($savedPhotoPath);
+});
+
+test('photo url uses uploads disk and geojson exposes it for popups', function () {
+    Storage::fake('uploads');
+
+    $photo = UploadedFile::fake()->image('test-photo.jpg', 800, 600);
+
+    $dataPoint = DataPoint::factory()->create([
+        'campaign_id' => $this->campaign->id,
+        'environmental_metric_id' => $this->metric->id,
+        'user_id' => $this->user->id,
+        'photo_path' => null,
+    ]);
+
+    Livewire::actingAs($this->user)
+        ->test('data-collection.reading-form', ['dataPoint' => $dataPoint->id])
+        ->set('photo', $photo)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $dataPoint->refresh();
+
+    expect($dataPoint->photo_path)
+        ->not->toBeNull()
+        ->and($dataPoint->photo_path)
+        ->toStartWith('data-points/');
+
+    Storage::disk('uploads')->assertExists($dataPoint->photo_path);
+
+    // Verify photo_url is generated
+    expect($dataPoint->photo_url)->not->toBeNull();
+
+    $geojson = app(\App\Services\GeospatialService::class)->getDataPointsAsGeoJSON($this->campaign->id);
+
+    $feature = collect($geojson['features'])->firstWhere('properties.id', $dataPoint->id);
+
+    expect($feature)->not->toBeNull();
+    expect($feature['properties']['photo_path'])->toBe($dataPoint->photo_url);
 });

@@ -22,15 +22,26 @@ Let me cut down to the most **impressive portfolio features** that showcase adva
 - **Live Map Dashboard:**
     - Leaflet.js map with real-time data point markers
     - Cluster markers for performance
-    - Click marker to see reading details
+    - **Color-coded markers** based on data quality:
+      - 🟢 Green solid = Approved high-quality (accuracy ≤50m)
+      - 🟡 Yellow dashed = Low confidence (accuracy >50m)
+      - 🔴 Red dashed = Flagged data (QA issues)
+      - 🔵 Blue solid = Normal/pending data
+    - Click marker to see reading details in draggable popup
+    - **Edit link (✏️) in popup** to modify data points
     - Draw polygon/circle tools to define survey zones
     - Filter by date range and metric type
+    - Auto-zoom to fit data coverage
 
 - **Mobile-First Survey Form (Livewire):**
     - GPS location auto-capture (geolocation API)
+    - Manual coordinate entry with 0m accuracy (for surveyed locations)
     - Form validation with real-time feedback
-    - Photo upload with geotag
+    - Photo upload with geotag and preview
     - Submit reading and see it appear on map instantly
+    - **Edit existing data points** from map popup
+    - Photo replacement (old photo deleted automatically)
+    - All fields editable (value, notes, photo, device info, GPS)
     - Offline draft saving (localStorage)
 
 ### **2. Advanced Geospatial Queries (PostGIS)**
@@ -204,7 +215,12 @@ survey_zones (polygons for geographic areas)
 data_points (individual environmental readings)
   - id, campaign_id, user_id, location (point geometry), 
     metric_type (aqi/temp/humidity/ph/pollution), metric_value, 
-    photo_url, notes, created_at
+    accuracy (GPS accuracy in meters, 0m for manual entry),
+    photo_url (stored in public/files/data-points/), notes,
+    device_model, sensor_type, calibration_at, protocol_version,
+    status (pending/approved/rejected), qa_flags (JSON array),
+    reviewed_by, reviewed_at, review_notes,
+    created_at, updated_at
 
 environmental_metrics
   - id, data_point_id, official_aqi, user_aqi, variance, source, created_at
@@ -231,9 +247,9 @@ components/
 │ ├── HeatmapGenerator.php // Generate/display heatmap
 │ └── PolygonDrawer.php // Draw survey zones
 ├── DataCollection/
-│ ├── ReadingForm.php // GPS + form with live validation
+│ ├── ReadingForm.php // GPS + form with live validation + edit mode
 │ ├── OfflineDraftQueue.php // Manage offline readings
-│ └── PhotoUpload.php // Image capture + geotag
+│ └── PhotoUpload.php // Image capture + geotag + replacement
 ├── Analytics/
 │ ├── TrendChart.php // Time-series visualization
 │ ├── StatisticsSummary.php // Min, max, avg, median
@@ -290,7 +306,7 @@ public function compareWithOfficialStations($latitude, $longitude)
 ```
 ### **3. Satellite Imagery APIs:**
 
-**Implementation Decision:** After evaluating NASA, Sentinel Hub, and Copernicus Data Space, **Copernicus Data Space Ecosystem** was selected as the primary provider.
+**Implementation Decision:** After evaluating NASA, Sentinel Hub, and Copernicus Data Space, **Copernicus Data Space** was selected as the primary provider.
 
 **Why Copernicus Data Space?**
 - ✅ **100% FREE UNLIMITED** (EU taxpayer funded)
@@ -443,7 +459,11 @@ eco-survey/
 ✅ **Clean Architecture** - Service classes and organized structure  
 ✅ **Testing** - Unit + feature tests show quality mindset  
 ✅ **Deployment Ready** - Docker setup shows DevOps knowledge  
-✅ **Documentation** - Thorough README for easy onboarding
+✅ **Documentation** - Thorough README for easy onboarding  
+✅ **Data Quality & QA/QC** - Scientific rigor with auto-flagging and review workflow  
+✅ **Full CRUD Operations** - Create, read, update (edit), delete data points  
+✅ **Photo Management** - Upload, preview, replace, persist (Windows-compatible solution)  
+✅ **GPS Accuracy Handling** - Auto-capture with device accuracy + manual entry (0m for surveyed locations)
 
 ---
 
