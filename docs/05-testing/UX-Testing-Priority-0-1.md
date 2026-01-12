@@ -78,7 +78,7 @@ ddev artisan migrate:fresh --seed
 
 ## Test Suite 2: QA/QC Workflow (Tasks 1.1, 1.2) ✅
 
-**Goal:** Verify QA/QC metadata can be captured and displayed  
+**Goal:** Verify QA/QC metadata can be captured and displayed
 **Status:** COMPLETED - January 10, 2026
 
 
@@ -177,11 +177,39 @@ ddev artisan migrate:fresh --seed
 
 ---
 
-## Test Suite 3: Automatic Satellite Enrichment (Tasks 1.6, 1.7)
+## Test Suite 3: Data Point Status Management ✅
 
-**Goal:** Verify that new data points trigger background satellite analysis job
+**Goal:** Verify status changes for flagged data points via UI  
+**Status:** COMPLETED - January 12, 2026
 
-### Test 3.1: Monitor Queue Job Dispatch
+### Test 3.1: Change Status of Flagged Data Point ✅
+
+1. **Find a flagged data point on map:**
+   - Navigate to `/maps/survey`
+   - Look for **red dashed marker** (flagged data)
+   - Click it to open popup
+
+2. **Edit and approve it:**
+   - Click "✏️ Edit" in popup
+   - Scroll down to **Quality Review** section (below device info)
+   - Change **Status** dropdown from "Flagged" to "Approved"
+   - (Optional) Add **Review Notes** like "Verified - GPS accuracy acceptable"
+   - Click "Update Reading"
+
+3. **Verify marker color changed:**
+   - Navigate back to `/maps/survey`
+   - Find same data point - now shows **green marker** (if accuracy ≤ 50m)
+
+**Note:** Status and Review Notes fields only appear when editing existing data points, not when submitting new ones.
+
+---
+
+## Test Suite 4: Automatic Satellite Enrichment (Tasks 1.6, 1.7) ✅
+
+**Goal:** Verify that new data points trigger background satellite analysis job  
+**Status:** COMPLETED - January 12, 2026
+
+### Test 4.1: Monitor Queue Job Dispatch ✅
 
 1. **Check Queue Status Before**
    ```powershell
@@ -208,7 +236,7 @@ ddev artisan migrate:fresh --seed
      - "Successfully enriched DataPoint {id} with satellite data"
      - OR "Failed to fetch NDVI..." (if API issues)
 
-### Test 3.2: Verify SatelliteAnalysis Records Created
+### Test 4.2: Verify SatelliteAnalysis Records Created ✅
 
 1. **Check Database** (using Tinker):
    ```powershell
@@ -243,11 +271,11 @@ ddev artisan migrate:fresh --seed
 
 ---
 
-## Test Suite 4: Survey Zones & Spatial Methods (Task 1.8)
+## Test Suite 5: Survey Zones & Spatial Methods (Task 1.8)
 
 **Goal:** Test SurveyZone model's PostGIS spatial methods
 
-### Test 4.1: Create Survey Zone via Tinker
+### Test 5.1: Create Survey Zone via Tinker
 
 1. **Open Tinker:**
    ```powershell
@@ -301,7 +329,7 @@ ddev artisan migrate:fresh --seed
    - Bounding Box: 4 coordinates defining rectangle
    - GeoJSON: Valid Feature with Polygon geometry
 
-### Test 4.2: Test Contained Data Points Query
+### Test 5.2: Test Contained Data Points Query
 
 ```php
 // In Tinker
@@ -320,11 +348,11 @@ exit
 
 ---
 
-## Test Suite 5: Campaign Map Centering (Task 1.9)
+## Test Suite 6: Campaign Map Centering (Task 1.9)
 
 **Goal:** Verify intelligent map center calculation
 
-### Test 5.1: Test getMapCenter() Method
+### Test 6.1: Test getMapCenter() Method
 
 1. **Open Tinker:**
    ```powershell
@@ -373,11 +401,11 @@ exit
 
 ---
 
-## Test Suite 6: Data Point Relationships (Priority 0 Fixes)
+## Test Suite 7: Data Point Relationships (Priority 0 Fixes)
 
 **Goal:** Verify all model relationships work correctly
 
-### Test 6.1: Test DataPoint Relationships
+### Test 7.1: Test DataPoint Relationships
 
 ```php
 // In Tinker
@@ -396,7 +424,7 @@ echo "Satellite Analyses: " . $dataPoint->satelliteAnalyses->count() . " records
 exit
 ```
 
-### Test 6.2: Test High Quality Scope
+### Test 7.2: Test High Quality Scope
 
 ```php
 // In Tinker
@@ -418,11 +446,11 @@ exit
 
 ---
 
-## Test Suite 7: Visual Inspection on Maps
+## Test Suite 8: Visual Inspection on Maps
 
 **Goal:** Manually verify UI updates and visual quality
 
-### Test 7.1: Survey Map Visual Quality
+### Test 8.1: Survey Map Visual Quality
 
 1. **Open Survey Map:** `/maps/survey`
 2. **Check Visual Elements:**
@@ -439,7 +467,7 @@ exit
    - Change filters: Map updates reactively
    - Click "Reset View": Map resets to campaign bounds
 
-### Test 7.2: Satellite Viewer (Existing Feature - Verify No Regression)
+### Test 8.2: Satellite Viewer (Existing Feature - Verify No Regression)
 
 1. **Open Satellite Viewer:** `/maps/satellite`
 2. **Verify Still Works:**

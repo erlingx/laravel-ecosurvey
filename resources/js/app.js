@@ -32,7 +32,6 @@ import {
     initSurveyMap,
     createPopupContent,
     resetMapView,
-    toggleClustering,
     updateMapMarkers,
     setupSurveyMapListeners
 } from './maps/survey-map.js';
@@ -59,7 +58,6 @@ import {
 window.initSurveyMap = initSurveyMap;
 window.createPopupContent = createPopupContent;
 window.resetMapView = resetMapView;
-window.toggleClustering = toggleClustering;
 window.updateMapMarkers = updateMapMarkers;
 
 window.initSatelliteMap = initSatelliteMap;
@@ -78,48 +76,58 @@ setupTrendChartListeners();
 setupHeatmapListeners();
 
 // Initialize maps - called on both DOMContentLoaded and Livewire navigations
+let initTimeout = null;
+
 function initializeMaps() {
-    console.log('initializeMaps() called');
+    // Clear any pending initialization to prevent double init
+    if (initTimeout) {
+        clearTimeout(initTimeout);
+    }
 
-    // Survey Map
-    const mapElement = document.getElementById('survey-map');
-    const dataContainer = document.getElementById('map-data-container');
+    // Debounce to prevent rapid re-initialization
+    initTimeout = setTimeout(() => {
+        console.log('initializeMaps() called');
 
-    console.log('Map element:', mapElement, 'Data container:', dataContainer);
+        // Survey Map
+        const mapElement = document.getElementById('survey-map');
+        const dataContainer = document.getElementById('map-data-container');
 
-    if (mapElement) {
-        // Initialize map data from data container if it exists
-        if (dataContainer) {
-            try {
-                const pointsData = dataContainer.getAttribute('data-points');
-                const boundsData = dataContainer.getAttribute('data-bounds');
+        console.log('Map element:', mapElement, 'Data container:', dataContainer);
 
-                window.mapData = pointsData ? JSON.parse(pointsData) : {"type":"FeatureCollection","features":[]};
-                window.mapBounds = boundsData ? JSON.parse(boundsData) : null;
+        if (mapElement) {
+            // Initialize map data from data container if it exists
+            if (dataContainer) {
+                try {
+                    const pointsData = dataContainer.getAttribute('data-points');
+                    const boundsData = dataContainer.getAttribute('data-bounds');
 
-                console.log('Loaded map data:', window.mapData);
-            } catch (e) {
-                console.error('Error parsing initial map data:', e);
+                    window.mapData = pointsData ? JSON.parse(pointsData) : {"type":"FeatureCollection","features":[]};
+                    window.mapBounds = boundsData ? JSON.parse(boundsData) : null;
+
+                    console.log('Loaded map data:', window.mapData);
+                } catch (e) {
+                    console.error('Error parsing initial map data:', e);
+                    window.mapData = {"type":"FeatureCollection","features":[]};
+                    window.mapBounds = null;
+                }
+            } else {
+                // Fallback if data container doesn't exist yet
                 window.mapData = {"type":"FeatureCollection","features":[]};
                 window.mapBounds = null;
             }
-        } else {
-            // Fallback if data container doesn't exist yet
-            window.mapData = {"type":"FeatureCollection","features":[]};
-            window.mapBounds = null;
+
+            // Initialize the map
+            console.log('Initializing survey map...');
+            initSurveyMap();
         }
 
-        // Initialize the map
-        console.log('Initializing survey map...');
-        initSurveyMap();
-    }
-
-    // Satellite Map
-    const satelliteElement = document.getElementById('satellite-map');
-    if (satelliteElement) {
-        console.log('Initializing satellite map...');
-        initSatelliteMap();
-    }
+        // Satellite Map
+        const satelliteElement = document.getElementById('satellite-map');
+        if (satelliteElement) {
+            console.log('Initializing satellite map...');
+            initSatelliteMap();
+        }
+    }, 100); // 100ms debounce
 }
 
 // Initialize maps when DOM is ready

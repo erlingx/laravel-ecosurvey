@@ -6,11 +6,41 @@ use App\Services\GeospatialService;
 
 use function Livewire\Volt\computed;
 use function Livewire\Volt\state;
+use function Livewire\Volt\on;
 
 state([
     'campaignId' => null,
     'metricId' => null,
+    'showEditModal' => false,
+    'editDataPointId' => null,
 ]);
+
+// Listen for edit request from map popup
+on(['edit-data-point' => function ($dataPointId) {
+    // Dispatch Alpine event to open modal instantly with loading spinner
+    $this->dispatch('open-edit-modal', id: $dataPointId);
+}]);
+
+// Close modal method
+$closeModal = function () {
+    $this->showEditModal = false;
+    $this->editDataPointId = null;
+};
+
+// Listen for close modal event
+on(['close-edit-modal' => function () {
+    $this->showEditModal = false;
+    $this->editDataPointId = null;
+}]);
+
+// Listen for data point saved event
+on(['data-point-saved' => function () {
+    $this->showEditModal = false;
+    $this->editDataPointId = null;
+    $this->dispatch('edit-modal-close');
+    // Trigger filter refresh to update map
+    $this->filterChanged();
+}]);
 
 // Method called when filters change
 $filterChanged = function () {
@@ -116,9 +146,6 @@ $boundingBox = computed(function () {
                     <flux:button variant="outline" size="sm" onclick="resetMapView()">
                         🔄 Reset View
                     </flux:button>
-                    <flux:button variant="outline" size="sm" onclick="toggleClustering()">
-                        🗺️ Toggle Clustering
-                    </flux:button>
                 </div>
 
                 {{-- Map Legend --}}
@@ -142,6 +169,73 @@ $boundingBox = computed(function () {
                 </div>
             </div>
     </x-card>
+
+    {{-- Edit Data Point Modal --}}
+    <div
+        x-data="{
+            open: false,
+            loading: true,
+            dataPointId: null,
+            init() {
+                // Close modal and reset state
+                this.$watch('open', (value) => {
+                    if (!value) {
+                        this.loading = true;
+                        this.dataPointId = null;
+                    }
+                });
+            }
+        }"
+        x-show="open"
+        x-on:open-edit-modal.window="dataPointId = $event.detail.id; loading = true; open = true; $nextTick(() => { $wire.set('editDataPointId', dataPointId); $wire.set('showEditModal', true); })"
+        x-on:edit-modal-close.window="open = false"
+        x-on:data-point-loaded.window="loading = false"
+        x-cloak
+        class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+        style="display: none;"
+    >
+        {{-- Backdrop --}}
+        <div
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            @click="open = false"
+        ></div>
+
+        {{-- Centered Modal --}}
+        <div
+            class="relative w-full max-w-2xl max-h-[90vh] bg-white dark:bg-zinc-900 rounded-lg shadow-2xl overflow-hidden flex flex-col"
+            @click.stop
+        >
+            <div class="shrink-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 px-6 py-4 flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Edit Data Point</h2>
+                <button
+                    @click="open = false"
+                    class="text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                {{-- Loading Spinner - shown immediately when modal opens --}}
+                <div x-show="loading" class="flex flex-col items-center justify-center py-20">
+                    <div class="relative">
+                        <div class="w-16 h-16 border-4 border-blue-200 dark:border-blue-900 rounded-full"></div>
+                        <div class="w-16 h-16 border-4 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+                    </div>
+                    <p class="mt-4 text-sm text-zinc-600 dark:text-zinc-400">Loading data point...</p>
+                </div>
+                {{-- Form content - hidden until loaded --}}
+                <div x-show="!loading" x-cloak>
+                    @if($showEditModal && $editDataPointId)
+                        <div x-init="$nextTick(() => window.dispatchEvent(new CustomEvent('data-point-loaded')))">
+                            @livewire('data-collection.reading-form', ['dataPoint' => $editDataPointId, 'inModal' => true], key('edit-form-'.$editDataPointId))
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 {{-- Hidden div that updates when filters change - triggers map update via mutation observer --}}

@@ -106,6 +106,59 @@ class DataPoint extends Model
         $this->save();
     }
 
+    public function approve(User $reviewer, ?string $notes = null): void
+    {
+        $this->status = 'approved';
+        $this->reviewed_by = $reviewer->id;
+        $this->reviewed_at = now();
+        $this->review_notes = $notes;
+        $this->save();
+    }
+
+    public function reject(User $reviewer, string $reason): void
+    {
+        $this->status = 'rejected';
+        $this->reviewed_by = $reviewer->id;
+        $this->reviewed_at = now();
+        $this->review_notes = $reason;
+        $this->save();
+    }
+
+    public function resetToReview(): void
+    {
+        $this->status = 'pending';
+        $this->reviewed_by = null;
+        $this->reviewed_at = null;
+        $this->review_notes = null;
+        $this->save();
+    }
+
+    public function clearFlags(): void
+    {
+        $this->qa_flags = null;
+        $this->save();
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === 'rejected';
+    }
+
+    public function isFlagged(): bool
+    {
+        return ! empty($this->qa_flags);
+    }
+
     /**
      * Get latitude from PostGIS location field
      */

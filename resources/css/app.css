@@ -175,3 +175,18 @@ select:focus[data-flux-control] {
     font-weight: 600;
 }
 
+/* Marker tooltips for Data IDs */
+.marker-tooltip {
+    background-color: rgba(0, 0, 0, 0.85) !important;
+    border: none !important;
+    border-radius: 4px !important;
+    color: white !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    padding: 4px 8px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+.marker-tooltip::before {
+    border-top-color: rgba(0, 0, 0, 0.85) !important;
+}

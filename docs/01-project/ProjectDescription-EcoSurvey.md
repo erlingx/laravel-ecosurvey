@@ -68,7 +68,25 @@ Let me cut down to the most **impressive portfolio features** that showcase adva
     - Display NDVI (vegetation index) overlay
     - Show terrain/elevation context
 
-### **4. Heatmap & Visualization (Chart.js + Advanced Plugins)**
+### **4. QA/QC Workflow (Data Quality Management)**
+- **Automated Quality Control:**
+    - Auto-flag outliers using IQR and Z-score methods
+    - Flag data with GPS accuracy >50m
+    - Cross-validate against official monitoring stations
+    
+- **Manual Review System:**
+    - Approve flagged data with reviewer notes
+    - Reject invalid readings with explanations
+    - Reset status for re-review when needed
+    - Audit trail (reviewer, timestamp, decision notes)
+    - Preserve QA flags for transparency
+    
+- **Status-Based Filtering:**
+    - Draft → Pending → Approved/Rejected workflow
+    - Export only approved data for publications
+    - High-quality scope (approved + accuracy ≤50m)
+
+### **5. Heatmap & Visualization (Chart.js + Advanced Plugins)**
 - **Real-time Heatmap:**
     - Display pollution/contamination distribution
     - Color-coded intensity map (blue → green → red)
@@ -114,7 +132,7 @@ Let me cut down to the most **impressive portfolio features** that showcase adva
       - Professional chart configuration with axis labels
       - Responsive design with proper canvas sizing
 
-### **5. Automated Report Generation (PDF)**
+### **6. Automated Report Generation (PDF)**
 - **One-click Report Export:**
     - Include map with data points
     - Embed heatmap visualization
@@ -122,7 +140,7 @@ Let me cut down to the most **impressive portfolio features** that showcase adva
     - Executive summary with recommendations
     - PDF export with branding
 
-### **6. Filament Admin Dashboard**
+### **7. Filament Admin Dashboard**
 - **Campaign Management:**
     - Create/edit survey campaigns
     - View all data collection progress
@@ -135,7 +153,7 @@ Let me cut down to the most **impressive portfolio features** that showcase adva
     - Quality assurance dashboard
     - User contribution leaderboard
 
-### **7. Stripe Integration (Optional but Impressive)**
+### **8. Stripe Integration (Optional but Impressive)**
 - **Premium Features/Paywall:**
     - Free tier: 50 readings/month
     - Pro tier: Unlimited readings + advanced reports + API access
