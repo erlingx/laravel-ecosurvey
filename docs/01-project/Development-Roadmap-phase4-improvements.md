@@ -445,6 +445,222 @@ This roadmap implements the recommendations from the consolidated review (ChatGP
 
 ---
 
+## Priority 2.5: Advanced Satellite Indices (Week 2.5)
+
+**Time:** 2-3 days  
+**Goal:** Add missing satellite indices for better metric correlation  
+**Based on:** `docs/01-project/Satellite-Manual-Metrics-Analysis.md`
+
+### Background
+Current implementation has only 2 satellite indices (NDVI, NDMI) but Sentinel-2 provides 13 bands enabling 15+ scientifically-validated indices. Recent migration added 12 manual metrics with satellite correlation potential, but overlays don't exist yet.
+
+**Gap Analysis:**
+- ✅ Manual metrics added: Chlorophyll Content, LAI, Soil Moisture, etc.
+- ❌ Missing NDRE (best for chlorophyll - R² > 0.8)
+- ❌ Missing EVI (better than NDVI for dense vegetation)
+- ❌ Missing MSI (moisture stress complement to NDMI)
+
+### Task 2.5.1: Add NDRE Overlay (Chlorophyll Detection) 🔴 P0
+- ⏳ Update `app/Services/CopernicusDataSpaceService.php`
+  - ⏳ Add `getNDREData(float $lat, float $lon, ?string $date = null): ?array`
+    - Formula: `(B08 - B05) / (B08 + B05)` where B05 is Red Edge (705nm)
+    - Use PNG decoding pattern like NDVI
+    - Return average NDRE value + metadata
+  - ⏳ Add `getNDREVisualizationScript(): string`
+    - Color scale: Red (low chlorophyll) → Yellow → Green (high chlorophyll)
+  - ⏳ Add `getNDREScriptSimple(): string`
+    - Output grayscale RGB for value extraction
+  - ⏳ Update `getOverlayVisualization()` to handle `'ndre'` type
+- ⏳ Update satellite viewer UI
+  - ⏳ Add "NDRE (Chlorophyll)" option to overlay selector
+  - ⏳ Add legend showing NDRE value interpretation
+
+**Deliverable:** NDRE overlay available on satellite map - directly validates "Chlorophyll Content" manual metric
+
+**Scientific Value:**
+- Red Edge bands highly sensitive to chlorophyll concentration
+- Less saturation than NDVI in dense canopy
+- Direct correlation with field SPAD meter readings
+
+**Tests:**
+- ⏳ `test('getNDREData returns valid values')`
+- ⏳ `test('NDRE overlay renders on map')`
+
+---
+
+### Task 2.5.2: Add EVI Overlay (Enhanced Vegetation Index) 🔴 P0
+- ⏳ Update `app/Services/CopernicusDataSpaceService.php`
+  - ⏳ Add `getEVIData(float $lat, float $lon, ?string $date = null): ?array`
+    - Formula: `2.5 * ((B08 - B04) / (B08 + 6*B04 - 7.5*B02 + 1))`
+    - Uses B02 (Blue), B04 (Red), B08 (NIR)
+    - Return average EVI value + metadata
+  - ⏳ Add `getEVIVisualizationScript(): string`
+    - Color scale similar to NDVI but optimized for EVI range (0-1)
+  - ⏳ Add `getEVIScriptSimple(): string`
+  - ⏳ Update `getOverlayVisualization()` to handle `'evi'` type
+- ⏳ Update satellite viewer UI
+  - ⏳ Add "EVI (Enhanced Vegetation)" option to overlay selector
+  - ⏳ Add tooltip: "Better than NDVI for dense forests and crops"
+
+**Deliverable:** EVI overlay available - validates LAI and FAPAR metrics
+
+**Scientific Value:**
+- Improved sensitivity in high-biomass regions
+- Reduces atmospheric influence (uses blue band correction)
+- Standard product for global vegetation monitoring (MODIS, Copernicus)
+
+**Tests:**
+- ⏳ `test('getEVIData returns valid values')`
+- ⏳ `test('EVI values differ from NDVI in dense vegetation')`
+
+---
+
+### Task 2.5.3: Add MSI Overlay (Moisture Stress Index) 🟡 P1
+- ⏳ Update `app/Services/CopernicusDataSpaceService.php`
+  - ⏳ Add `getMSIData(float $lat, float $lon, ?string $date = null): ?array`
+    - Formula: `B11 / B08` (SWIR1 / NIR)
+    - Higher values = more water stress
+    - Return average MSI value + metadata
+  - ⏳ Add `getMSIVisualizationScript(): string`
+    - Color scale: Green (low stress) → Yellow → Red (high stress)
+  - ⏳ Add `getMSIScriptSimple(): string`
+  - ⏳ Update `getOverlayVisualization()` to handle `'msi'` type
+- ⏳ Update satellite viewer UI
+  - ⏳ Add "MSI (Moisture Stress)" option to overlay selector
+  - ⏳ Add tooltip: "Plant water stress - complements NDMI"
+
+**Deliverable:** MSI overlay available - provides alternative moisture stress indicator
+
+**Scientific Value:**
+- Different wavelength ratio than NDMI (both use SWIR but different combinations)
+- Validated for crop stress detection
+- Simpler calculation (ratio vs. normalized difference)
+
+**Tests:**
+- ⏳ `test('getMSIData returns valid values')`
+- ⏳ `test('MSI overlay renders on map')`
+
+---
+
+### Task 2.5.4: Add SAVI Overlay (Soil-Adjusted Vegetation Index) 🟡 P1
+- ⏳ Update `app/Services/CopernicusDataSpaceService.php`
+  - ⏳ Add `getSAVIData(float $lat, float $lon, ?string $date = null): ?array`
+    - Formula: `((B08 - B04) / (B08 + B04 + L)) * (1 + L)` where L=0.5
+    - Corrects for soil brightness in sparse vegetation
+    - Return average SAVI value + metadata
+  - ⏳ Add visualization scripts
+  - ⏳ Update `getOverlayVisualization()` to handle `'savi'` type
+- ⏳ Update satellite viewer UI
+  - ⏳ Add "SAVI (Soil-Adjusted)" option
+  - ⏳ Add tooltip: "Better for sparse vegetation and agricultural areas"
+
+**Deliverable:** SAVI overlay available - improves LAI estimation in sparse canopy
+
+**Tests:**
+- ⏳ `test('getSAVIData returns valid values')`
+
+---
+
+### Task 2.5.5: Update SatelliteAnalysis Model
+- ⏳ Create migration: `add_advanced_satellite_indices_to_satellite_analyses.php`
+  - ⏳ Add `ndre_value` decimal(5,3) nullable
+  - ⏳ Add `evi_value` decimal(5,3) nullable
+  - ⏳ Add `msi_value` decimal(5,3) nullable
+  - ⏳ Add `savi_value` decimal(5,3) nullable
+  - ⏳ Add `gndvi_value` decimal(5,3) nullable (future)
+- ⏳ Update `app/Models/SatelliteAnalysis.php`
+  - ⏳ Add new fields to `$fillable`
+  - ⏳ Add to casts as decimal values
+- ⏳ Run migration: `ddev artisan migrate`
+
+**Deliverable:** Database can store all new satellite indices
+
+**Tests:**
+- ⏳ Migration runs successfully
+- ⏳ `test('SatelliteAnalysis can store new indices')`
+
+---
+
+### Task 2.5.6: Update EnrichDataPointWithSatelliteData Job
+- ⏳ Update `app/Jobs/EnrichDataPointWithSatelliteData.php`
+  - ⏳ Fetch NDRE data: `$service->getNDREData($lat, $lon, $date)`
+  - ⏳ Fetch EVI data: `$service->getEVIData($lat, $lon, $date)`
+  - ⏳ Fetch MSI data: `$service->getMSIData($lat, $lon, $date)`
+  - ⏳ Fetch SAVI data: `$service->getSAVIData($lat, $lon, $date)`
+  - ⏳ Store all 6 indices in SatelliteAnalysis record:
+    ```php
+    SatelliteAnalysis::create([
+        'data_point_id' => $dataPoint->id,
+        'campaign_id' => $dataPoint->campaign_id,
+        // Existing
+        'ndvi_value' => $ndvi['value'] ?? null,
+        'ndmi_value' => $ndmi['value'] ?? null,
+        // New
+        'ndre_value' => $ndre['value'] ?? null,
+        'evi_value' => $evi['value'] ?? null,
+        'msi_value' => $msi['value'] ?? null,
+        'savi_value' => $savi['value'] ?? null,
+        // ...
+    ]);
+    ```
+  - ⏳ Handle partial failures gracefully (log missing indices, don't fail job)
+
+**Deliverable:** All new data points enriched with 6 satellite indices (was 2)
+
+**Tests:**
+- ⏳ `test('job fetches all 6 indices')`
+- ⏳ `test('job handles partial API failures')`
+- ⏳ `test('SatelliteAnalysis created with all indices')`
+
+---
+
+### Task 2.5.7: Add Metric-to-Satellite Recommendation UI
+- ⏳ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
+  - ⏳ Add info panel: "Recommended satellite indices for this metric"
+  - ⏳ When user selects metric (future feature), show:
+    - **Chlorophyll Content** → Primary: NDRE, Secondary: GNDVI
+    - **LAI** → Primary: EVI, Secondary: NDVI, SAVI
+    - **Soil Moisture** → Primary: NDMI, Secondary: MSI
+    - **FAPAR** → Primary: EVI, Secondary: NDVI
+  - ⏳ Style as info callout using Flux UI
+
+**Deliverable:** Users guided to best satellite index for their metric
+
+**Tests:** Visual verification
+
+---
+
+### Task 2.5.8: Documentation Updates
+- ⏳ Update `README.md`
+  - ⏳ Document all 6 satellite indices
+  - ⏳ Add scientific references for each index
+- ⏳ Update `SCIENTIFIC-METHODS.md` (create if not exists)
+  - ⏳ Document satellite index formulas
+  - ⏳ Explain metric-to-satellite correlations
+  - ⏳ Include expected correlation coefficients (R² values)
+
+**Deliverable:** Comprehensive documentation for publication citation
+
+---
+
+**Priority 2.5 Checklist:**
+- [ ] NDRE overlay implemented (chlorophyll detection)
+- [ ] EVI overlay implemented (enhanced vegetation)
+- [ ] MSI overlay implemented (moisture stress)
+- [ ] SAVI overlay implemented (soil-adjusted vegetation)
+- [ ] SatelliteAnalysis migration + model updated
+- [ ] EnrichDataPointWithSatelliteData job updated (6 indices)
+- [ ] Metric-to-satellite recommendation UI added
+- [ ] Documentation updated
+- [ ] All tests passing (estimate: +10 tests)
+
+**Scientific Impact:**
+- 🎯 Satellite validation coverage: 30% → 80% of manual metrics
+- 🎯 Multi-index correlation reduces uncertainty
+- 🎯 Publication-ready remote sensing integration
+
+---
+
 ## Priority 3: Advanced PostGIS (Week 3)
 
 **Time:** 5 days  

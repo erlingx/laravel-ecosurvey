@@ -44,8 +44,12 @@
 1. **Navigate to:** `/maps/satellite`
 2. **Expected Results:**
    - ✅ Satellite map loads successfully
-   - ✅ Map displays satellite imagery
+   - ✅ Map displays base satellite imagery (no overlay)
    - ✅ UI controls are visible (Campaign selector, Data Overlay, Date picker, Data Points toggle)
+   - ✅ Campaign dropdown shows: "Select a campaign..." (nothing selected)
+   - ✅ Overlay dropdown shows: "Select overlay type..." (nothing selected)
+   - ✅ "Show Field Data" checkbox is unchecked and disabled (no campaign selected)
+   - ✅ Map centers on Copenhagen default location (55.7072°N, 12.5704°E)
 
 ---
 
@@ -54,8 +58,9 @@
 1. **Locate the "Data Points" control** (4th column in filter grid)
 2. **Expected Results:**
    - ✅ Checkbox labeled "Show Field Data" is visible
-   - ✅ Checkbox is checked by default
-   - ✅ Control is clickable
+   - ✅ Checkbox is **unchecked** by default (no campaign selected)
+   - ✅ Checkbox is **disabled** (grayed out) until campaign is selected
+   - ✅ No data points visible on map
 
 ---
 
@@ -63,9 +68,11 @@
 
 1. **Select a campaign** from "Campaign Location" dropdown (choose "Fælledparken Green Space Study")
 2. **Verify date is August 15, 2025** (default date with known satellite coverage)
-3. **Expected Results:**
+3. **Check "Show Field Data" checkbox** (should now be enabled)
+4. **Expected Results:**
    - ✅ Map centers on campaign location (Fælledparken park)
-   - ✅ Data point markers appear on the map (should see 100+ markers across the park)
+   - ✅ "Show Field Data" checkbox becomes enabled (no longer grayed out)
+   - ✅ After checking the box: Data point markers appear on the map (should see 100+ markers across the park)
    - ✅ Markers are visible as colored circles:
      - Green circles = approved data points
      - Gray circles = pending/draft data points
@@ -225,13 +232,14 @@ Compare displayed coordinates with expected centroid values.
 
 ---
 
-### Test 3.3: Empty Campaign (Fallback)
+### Test 3.3: Empty Campaign (Default State)
 
-1. **Select "Fælledparken (Default)" option** (no campaign selected)
+1. **Ensure no campaign is selected** (dropdown shows "Select a campaign...")
 2. **Expected Results:**
    - ✅ Map centers on Copenhagen default: 55.7072°N, 12.5704°E
-   - ✅ Default location is displayed correctly
-   - ✅ Map loads satellite imagery for Copenhagen
+   - ✅ No data points visible (checkbox disabled)
+   - ✅ No satellite overlay (unless overlay type manually selected)
+   - ✅ Base satellite imagery visible
 
 ---
 
@@ -246,7 +254,7 @@ Compare displayed coordinates with expected centroid values.
    - Select campaign with only data points → Should use first point ✅
 
 3. **Tier 3 - Default Fallback:**
-   - Select "Default" option → Should use Copenhagen coordinates ✅
+   - No campaign selected → Should use Copenhagen coordinates (55.7072°N, 12.5704°E) ✅
 
 ---
 
@@ -551,19 +559,19 @@ After completing all tests, verify:
 For rapid verification, follow this streamlined test:
 
 1. Navigate to `/maps/satellite`
-2. Select "Fælledparken Green Space Study" campaign
-3. Verify map centers on Fælledparken (55.7072°N, 12.5704°E)
-4. Toggle "Show Field Data" checkbox (verify marker appears/disappears)
-5. Click on the data point marker at Fælledparken center
-6. **Verify satellite viewer jumps to August 15, 2025** (known good satellite data date)
-7. Verify NDVI overlay loads correctly (should show green vegetation)
-8. Switch between NDVI, Moisture, and True Color overlays
-9. Verify data point remains visible and clickable on all overlays
-10. Check browser console - should be error-free with Copernicus data loaded
+2. Verify empty defaults: Campaign = "Select a campaign...", Overlay = "Select overlay type..."
+3. Select "Fælledparken Green Space Study" campaign
+4. Verify map centers on Fælledparken (55.7072°N, 12.5704°E)
+5. Select "🌿 NDVI - Vegetation Index" overlay
+6. Enable "Show Field Data" checkbox (verify markers appear)
+7. Click on a data point marker
+8. Click "📅 View satellite on [DATE]" button
+9. Verify date changes to match the data point's collection date
+10. Verify NDVI overlay refreshes for the new date
+11. Check browser console - should be error-free with Copernicus data loaded
 
 **Expected time:** ~5 minutes
 
-**Note:** August 15, 2025 is a confirmed date with good Sentinel-2 satellite coverage for Copenhagen.
 
 ---
 

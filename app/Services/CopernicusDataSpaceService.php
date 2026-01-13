@@ -34,30 +34,83 @@ class CopernicusDataSpaceService
      */
     private function getAccessToken(): ?string
     {
-        return Cache::remember('copernicus_dataspace_token', 3600, function () {
-            try {
-                $response = Http::asForm()->post($this->tokenUrl, [
-                    'grant_type' => 'client_credentials',
-                    'client_id' => $this->clientId,
-                    'client_secret' => $this->clientSecret,
-                ]);
+        // Check if we have a valid cached token
+        $cachedData = Cache::get('copernicus_dataspace_token_data');
 
-                if ($response->successful()) {
-                    return $response->json()['access_token'];
-                }
-
-                Log::error('Copernicus Data Space OAuth failed', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-
-                return null;
-            } catch (\Exception $e) {
-                Log::error('Copernicus Data Space OAuth error', ['message' => $e->getMessage()]);
-
-                return null;
+        if ($cachedData && isset($cachedData['token'], $cachedData['expires_at'])) {
+            // Check if token is still valid (with 5 minute buffer)
+            if (time() < $cachedData['expires_at'] - 300) {
+                return $cachedData['token'];
             }
-        });
+
+            Log::info('Copernicus token expired or near expiry, refreshing...');
+        }
+
+        // Fetch new token
+        return $this->refreshAccessToken();
+    }
+
+    /**
+     * Refresh the access token
+     */
+    private function refreshAccessToken(): ?string
+    {
+        try {
+            Log::info('Fetching new Copernicus access token...');
+
+            $response = Http::asForm()->post($this->tokenUrl, [
+                'grant_type' => 'client_credentials',
+                'client_id' => $this->clientId,
+                'client_secret' => $this->clientSecret,
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $token = $data['access_token'];
+                $expiresIn = $data['expires_in'] ?? 3600; // Default to 1 hour
+
+                // Cache token with expiry time
+                Cache::put('copernicus_dataspace_token_data', [
+                    'token' => $token,
+                    'expires_at' => time() + $expiresIn,
+                ], $expiresIn);
+
+                Log::info('✅ New Copernicus token cached', ['expires_in' => $expiresIn . 's']);
+
+                return $token;
+            }
+
+            Log::error('Copernicus Data Space OAuth failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Copernicus Data Space OAuth error', ['message' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Handle 401 errors by refreshing token and retrying
+     */
+    private function handleUnauthorized(callable $request, int $retryCount = 0): mixed
+    {
+        if ($retryCount > 1) {
+            Log::warning('Max retry attempts reached for Copernicus request');
+            return null;
+        }
+
+        Log::info('🔄 Got 401 Unauthorized, refreshing token and retrying...');
+
+        // Clear cached token and get fresh one
+        Cache::forget('copernicus_dataspace_token_data');
+        $this->refreshAccessToken();
+
+        // Retry the original request
+        return $request($retryCount + 1);
     }
 
     /**
@@ -163,12 +216,13 @@ class CopernicusDataSpaceService
     public function getNDVIData(
         float $latitude,
         float $longitude,
-        ?string $date = null
+        ?string $date = null,
+        int $retryCount = 0
     ): ?array {
         $date = $date ?? now()->subDays(7)->format('Y-m-d');
         $cacheKey = "copernicus_ndvi_{$latitude}_{$longitude}_{$date}";
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date) {
+        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
             $token = $this->getAccessToken();
             if (! $token) {
                 return null;
@@ -296,10 +350,17 @@ class CopernicusDataSpaceService
 
                 Log::warning('Copernicus Data Space NDVI request failed', [
                     'status' => $response->status(),
-                    'body' => substr($response->body(), 0, 500),
+                    'body' => $response->body(),
                     'date' => $date,
                     'location' => "{$latitude},{$longitude}",
                 ]);
+
+                // Handle 401 Unauthorized by refreshing token and retrying
+                if ($response->status() === 401 && $retryCount === 0) {
+                    Log::info('🔄 Got 401 Unauthorized, refreshing token and retrying NDVI request...');
+                    Cache::forget('copernicus_dataspace_token_data');
+                    return $this->getNDVIData($latitude, $longitude, $date, $retryCount + 1);
+                }
 
                 return null;
             } catch (\Exception $e) {
@@ -320,12 +381,13 @@ class CopernicusDataSpaceService
     public function getMoistureData(
         float $latitude,
         float $longitude,
-        ?string $date = null
+        ?string $date = null,
+        int $retryCount = 0
     ): ?array {
         $date = $date ?? now()->subDays(7)->format('Y-m-d');
         $cacheKey = "copernicus_moisture_{$latitude}_{$longitude}_{$date}";
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date) {
+        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
             $token = $this->getAccessToken();
             if (! $token) {
                 return null;
@@ -444,6 +506,13 @@ class CopernicusDataSpaceService
                     'date' => $date,
                     'location' => "{$latitude},{$longitude}",
                 ]);
+
+                // Handle 401 Unauthorized by refreshing token and retrying
+                if ($response->status() === 401 && $retryCount === 0) {
+                    Log::info('🔄 Got 401 Unauthorized, refreshing token and retrying Moisture request...');
+                    Cache::forget('copernicus_dataspace_token_data');
+                    return $this->getMoistureData($latitude, $longitude, $date, $retryCount + 1);
+                }
 
                 return null;
             } catch (\Exception $e) {
@@ -758,7 +827,8 @@ SCRIPT;
         ?string $date = null,
         string $overlayType = 'ndvi',
         int $width = 512,
-        int $height = 512
+        int $height = 512,
+        int $retryCount = 0
     ): ?array {
         $date = $date ?? now()->subDays(7)->format('Y-m-d');
 
@@ -768,7 +838,7 @@ SCRIPT;
 
         $cacheKey = "copernicus_overlay_{$overlayType}_{$lat}_{$lon}_{$date}_{$width}x{$height}";
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($lat, $lon, $date, $overlayType, $width, $height) {
+        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($lat, $lon, $date, $overlayType, $width, $height, $retryCount) {
             $token = $this->getAccessToken();
             if (! $token) {
                 return null;
@@ -840,6 +910,13 @@ SCRIPT;
                         'provider' => 'copernicus_dataspace',
                         'overlay_type' => $overlayType,
                     ];
+                }
+
+                // Handle 401 Unauthorized by refreshing token and retrying
+                if ($response->status() === 401 && $retryCount === 0) {
+                    Log::info('🔄 Got 401 Unauthorized, refreshing token and retrying overlay request...');
+                    Cache::forget('copernicus_dataspace_token_data');
+                    return $this->getOverlayVisualization($lat, $lon, $date, $overlayType, $width, $height, $retryCount + 1);
                 }
 
                 Log::warning('Copernicus Data Space overlay request failed', [

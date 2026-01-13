@@ -12,11 +12,11 @@ use function Livewire\Volt\state;
 state([
     'campaignId' => null,
     'selectedDate' => '2025-08-15', // August 15, 2025 (confirmed good Sentinel-2 data for Fælledparken)
-    'overlayType' => 'ndvi', // Options: 'ndvi', 'moisture', 'truecolor'
+    'overlayType' => '', // Start with no overlay selected
     'selectedLat' => 55.7072, // Fælledparken (Copenhagen's park with vegetation)
     'selectedLon' => 12.5704,
     'updateRevision' => 0, // Track updates to force re-render
-    'showDataPoints' => true, // Show/hide data points overlay
+    'showDataPoints' => false, // Start with data points hidden (no campaign selected)
 ]);
 
 // Update location when campaign changes
@@ -171,6 +171,12 @@ $satelliteData = computed(function () {
     $overlay = $this->overlayType;
     $revision = $this->updateRevision; // Force recomputation when revision changes
 
+    // Don't load satellite data if no overlay type is selected
+    if (empty($overlay)) {
+        Log::info('ℹ️ No overlay type selected - skipping satellite data load');
+        return null;
+    }
+
     Log::info('🛰️ Computing satelliteData', [
         'lat' => $lat,
         'lon' => $lon,
@@ -213,6 +219,12 @@ $satelliteData = computed(function () {
 $analysisData = computed(function () {
     // Only load analysis data for overlays that need it
     $overlay = $this->overlayType;
+
+    // Don't load analysis data if no overlay type is selected
+    if (empty($overlay)) {
+        Log::info('ℹ️ No overlay type selected - skipping analysis data load');
+        return null;
+    }
 
     // Don't load any analysis data for true color
     if ($overlay === 'truecolor') {
@@ -317,15 +329,6 @@ $saveSatelliteAnalysis = function (): void {
                 </div>
 
                 <div class="flex gap-2 items-center">
-                    {{-- Loading indicator --}}
-                    <div wire:loading class="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
-                        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span>Loading satellite data...</span>
-                    </div>
-
                     @if($this->satelliteData)
                         <flux:badge variant="outline">
                             {{ \Carbon\Carbon::parse($this->satelliteData['date'])->format('M d, Y') }}
@@ -336,7 +339,7 @@ $saveSatelliteAnalysis = function (): void {
                         <flux:badge color="green">🌿 Vegetation</flux:badge>
                     @elseif($overlayType === 'moisture')
                         <flux:badge color="blue">💧 Moisture</flux:badge>
-                    @else
+                    @elseif($overlayType === 'truecolor')
                         <flux:badge color="zinc">🌍 True Color</flux:badge>
                     @endif
                 </div>
@@ -355,7 +358,7 @@ $saveSatelliteAnalysis = function (): void {
                         id="campaign-select"
                         wire:model.live="campaignId"
                     >
-                        <option value="">Fælledparken (Default - 55.7072°N, 12.5704°E)</option>
+                        <option value="">Select a campaign...</option>
                         @foreach($this->campaigns as $campaign)
                             <option value="{{ $campaign->id }}">
                                 {{ $campaign->name }} ({{ $campaign->location_preview }})
@@ -375,6 +378,7 @@ $saveSatelliteAnalysis = function (): void {
                         id="overlay-select"
                         wire:model.live="overlayType"
                     >
+                        <option value="">Select overlay type...</option>
                         <option value="ndvi">🌿 NDVI - Vegetation Index</option>
                         <option value="moisture">💧 Moisture Index</option>
                         <option value="truecolor">🌍 True Color</option>
@@ -466,8 +470,20 @@ $saveSatelliteAnalysis = function (): void {
             </div>
 
             {{-- Map Container --}}
-            <div class="flex-1 relative min-h-125" wire:ignore>
-                <div id="satellite-map" class="absolute inset-0 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700"></div>
+            <div class="flex-1 relative min-h-125">
+                <div id="satellite-map" class="absolute inset-0 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700" wire:ignore></div>
+
+                {{-- Loading Overlay - hidden by default, shows only during Livewire loading --}}
+                <div wire:loading.class.remove="hidden" class="hidden absolute inset-0 bg-black/20 backdrop-blur-sm rounded-lg flex items-center justify-center" style="z-index: 9999;">
+                    <div class="flex items-center gap-3 px-6 py-4 bg-white/10 rounded-lg backdrop-blur-md">
+                        <svg class="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-sm font-medium text-white drop-shadow-lg">Loading satellite data...</span>
+                    </div>
+                </div>
+
 
                 {{-- Temporal Proximity Legend - Shows when data points are visible --}}
                 @if($showDataPoints && $this->dataPointsGeoJSON)
