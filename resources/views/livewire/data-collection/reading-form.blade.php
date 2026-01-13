@@ -782,112 +782,57 @@ $formatQaFlag = function (string|array $flag): array {
                 <flux:error name="notes" />
             </flux:field>
 
-            {{-- Status & Review (Only shown in edit mode) --}}
-            @if($dataPointId)
-                <flux:separator text="Quality Review" />
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {{-- Status --}}
-                    <flux:field>
-                        <div class="flex items-center justify-between mb-2">
-                            <flux:label>Status</flux:label>
-                            <div class="flex gap-2">
-                                @if(!empty($qaFlags))
-                                    <flux:button
-                                        wire:click="clearFlags"
-                                        variant="danger"
-                                        size="xs"
-                                        type="button"
-                                    >
-                                        🗑️ Clear Flags
-                                    </flux:button>
-                                @endif
-                                <flux:button
-                                    wire:click="openFlagModal"
-                                    variant="outline"
-                                    size="xs"
-                                    type="button"
-                                >
-                                    🚩 Flag for Review
-                                </flux:button>
-                            </div>
-                        </div>
-                        <select
-                            wire:model="status"
-                            class="w-full h-10 rounded-lg border @error('status') border-red-500 dark:border-red-400 @else border-zinc-300 dark:border-zinc-600 @enderror bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 px-3 py-2 text-sm"
-                        >
-                            <option value="pending">Pending</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
-                        </select>
-                        <flux:text class="text-sm">
-                            Review status of this data point
-                        </flux:text>
-                        <flux:error name="status" />
-                    </flux:field>
-
-                    {{-- Review Notes --}}
-                    <flux:field>
-                        <flux:label>Review Notes</flux:label>
-                        <flux:textarea
-                            wire:model="reviewNotes"
-                            rows="3"
-                            placeholder="Add review comments..."
-                        />
-                        <flux:text class="text-sm">
-                            {{ strlen($reviewNotes ?? '') }}/1000 characters
-                        </flux:text>
-                        <flux:error name="reviewNotes" />
-                    </flux:field>
-                </div>
-            @endif
-
-            {{-- Photo Upload (Optional) --}}
+            {{-- Photo Upload (Optional) - Inline with preview --}}
             <flux:field>
                 <flux:label>Photo (Optional)</flux:label>
-                <flux:input
-                    type="file"
-                    wire:model="photo"
-                    accept="image/*"
-                />
-                <flux:text class="text-sm">
-                    Maximum file size: 5MB. Accepted formats: JPG, PNG, WebP
-                </flux:text>
-                <flux:error name="photo" />
-
-                @if ($photo)
-                    <div class="mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                        <flux:text class="text-sm text-green-800 dark:text-green-200 mb-2">
-                            ✓ New photo selected: {{ $photo->getClientOriginalName() }}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <flux:input
+                            type="file"
+                            wire:model="photo"
+                            accept="image/*"
+                        />
+                        <flux:text class="text-sm mt-2">
+                            Maximum file size: 5MB. Accepted formats: JPG, PNG, WebP
                         </flux:text>
-                        <div class="mt-2">
-                            @if (method_exists($photo, 'isPreviewable') && $photo->isPreviewable())
-                                <img
-                                    src="{{ $photo->temporaryUrl() }}"
-                                    alt="Photo preview"
-                                    class="w-32 h-32 object-cover rounded-lg border-2 border-green-300 dark:border-green-600 shadow-sm"
-                                >
-                            @else
-                                <flux:text class="text-sm text-green-800 dark:text-green-200">
-                                    Preview not available.
-                                </flux:text>
-                            @endif
-                        </div>
+                        <flux:error name="photo" />
                     </div>
-                @elseif ($this->existingPhotoUrl)
-                     <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800" wire:key="existing-photo-{{ $existingPhotoPath }}-{{ $existingPhotoVersion ?? '0' }}">
-                         <flux:text class="text-sm text-blue-800 dark:text-blue-200 mb-2">
-                             Current photo:
-                         </flux:text>
-                         <div class="mt-2">
-                             <img
-                                src="{{ $this->existingPhotoUrl }}"
-                                 alt="Current photo"
-                                 class="w-32 h-32 object-cover rounded-lg border-2 border-blue-300 dark:border-blue-600 shadow-sm"
-                             >
-                         </div>
-                     </div>
-                @endif
+                    <div>
+                        @if ($photo)
+                            <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                                <flux:text class="text-sm text-green-800 dark:text-green-200 mb-2">
+                                    ✓ New photo selected
+                                </flux:text>
+                                <div class="mt-2">
+                                    @if (method_exists($photo, 'isPreviewable') && $photo->isPreviewable())
+                                        <img
+                                            src="{{ $photo->temporaryUrl() }}"
+                                            alt="Photo preview"
+                                            class="w-full h-32 object-cover rounded-lg border-2 border-green-300 dark:border-green-600 shadow-sm"
+                                        >
+                                    @else
+                                        <flux:text class="text-sm text-green-800 dark:text-green-200">
+                                            Preview not available.
+                                        </flux:text>
+                                    @endif
+                                </div>
+                            </div>
+                        @elseif ($this->existingPhotoUrl)
+                             <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800" wire:key="existing-photo-{{ $existingPhotoPath }}-{{ $existingPhotoVersion ?? '0' }}">
+                                 <flux:text class="text-sm text-blue-800 dark:text-blue-200 mb-2">
+                                     Current photo:
+                                 </flux:text>
+                                 <div class="mt-2">
+                                     <img
+                                        src="{{ $this->existingPhotoUrl }}"
+                                         alt="Current photo"
+                                         class="w-full h-32 object-cover rounded-lg border-2 border-blue-300 dark:border-blue-600 shadow-sm"
+                                     >
+                                 </div>
+                             </div>
+                        @endif
+                    </div>
+                </div>
             </flux:field>
 
             {{-- Device & Sensor Information (Optional) --}}
@@ -952,6 +897,66 @@ $formatQaFlag = function (string|array $flag): array {
                 </flux:text>
                 <flux:error name="calibrationDate" />
             </flux:field>
+
+            {{-- Quality Review Section (Only shown in edit mode) - Moved to bottom --}}
+            @if($dataPointId)
+                <flux:separator text="Quality Review" />
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {{-- Status --}}
+                    <flux:field>
+                        <div class="flex items-center justify-between mb-2">
+                            <flux:label>Status</flux:label>
+                            <div class="flex gap-2">
+                                @if(!empty($qaFlags))
+                                    <flux:button
+                                        wire:click="clearFlags"
+                                        variant="danger"
+                                        size="xs"
+                                        type="button"
+                                    >
+                                        🗑️ Clear Flags
+                                    </flux:button>
+                                @endif
+                                <flux:button
+                                    wire:click="openFlagModal"
+                                    variant="outline"
+                                    size="xs"
+                                    type="button"
+                                >
+                                    🚩 Flag for Review
+                                </flux:button>
+                            </div>
+                        </div>
+                        <select
+                            wire:model="status"
+                            class="w-full h-10 rounded-lg border @error('status') border-red-500 dark:border-red-400 @else border-zinc-300 dark:border-zinc-600 @enderror bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 px-3 py-2 text-sm"
+                        >
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                        <flux:text class="text-sm">
+                            Review status of this data point
+                        </flux:text>
+                        <flux:error name="status" />
+                    </flux:field>
+
+                    {{-- Review Notes --}}
+                    <flux:field>
+                        <flux:label>Review Notes</flux:label>
+                        <flux:textarea
+                            wire:model="reviewNotes"
+                            rows="3"
+                            placeholder="Add review comments..."
+                        />
+                        <flux:text class="text-sm">
+                            {{ strlen($reviewNotes ?? '') }}/1000 characters
+                        </flux:text>
+                        <flux:error name="reviewNotes" />
+                    </flux:field>
+                </div>
+            @endif
 
             {{-- Submit Button --}}
             <div class="flex gap-2">

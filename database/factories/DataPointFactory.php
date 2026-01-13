@@ -19,9 +19,9 @@ class DataPointFactory extends Factory
      */
     public function definition(): array
     {
-        // Colorado coordinates (Denver area)
-        $latitude = fake()->latitude(39.5, 40.0);
-        $longitude = fake()->longitude(-105.5, -104.5);
+        // Copenhagen coordinates (default area)
+        $latitude = fake()->latitude(55.6, 55.7);
+        $longitude = fake()->longitude(12.5, 12.6);
 
         return [
             'campaign_id' => Campaign::factory(),
@@ -39,6 +39,16 @@ class DataPointFactory extends Factory
             'calibration_at' => fake()->optional()->dateTimeBetween('-3 months', 'now'),
             'protocol_version' => '1.0',
         ];
+    }
+
+    /**
+     * Set specific coordinates for the data point.
+     */
+    public function withCoordinates(float $latitude, float $longitude): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$longitude}, {$latitude}), 4326)"),
+        ]);
     }
 
     /**

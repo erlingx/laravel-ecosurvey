@@ -135,6 +135,25 @@ select:focus[data-flux-control] {
 } */
 
 /* Custom cluster marker colors based on data quality */
+/* Pie chart cluster styling */
+.marker-cluster-pie {
+    background: transparent !important;
+}
+
+.marker-cluster-pie div {
+    background: transparent !important;
+}
+
+/* Satellite map cluster styling */
+.satellite-marker-cluster {
+    background: transparent !important;
+}
+
+.satellite-marker-cluster div {
+    background: transparent !important;
+}
+
+/* Legacy single-color clusters (kept for backwards compatibility) */
 .marker-cluster-green div {
     background-color: rgba(16, 185, 129, 0.6) !important;
     border: 2px solid #059669 !important;
@@ -161,6 +180,16 @@ select:focus[data-flux-control] {
 }
 
 .marker-cluster-red div span {
+    color: white !important;
+    font-weight: 600;
+}
+
+.marker-cluster-gray div {
+    background-color: rgba(107, 114, 128, 0.6) !important;
+    border: 2px solid #374151 !important;
+}
+
+.marker-cluster-gray div span {
     color: white !important;
     font-weight: 600;
 }

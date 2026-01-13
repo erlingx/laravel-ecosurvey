@@ -2,6 +2,7 @@
 
 use App\Models\Campaign;
 use App\Services\CopernicusDataSpaceService;
+use App\Services\GeospatialService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -15,6 +16,7 @@ state([
     'selectedLat' => 55.7072, // Fælledparken (Copenhagen's park with vegetation)
     'selectedLon' => 12.5704,
     'updateRevision' => 0, // Track updates to force re-render
+    'showDataPoints' => true, // Show/hide data points overlay
 ]);
 
 // Update location when campaign changes
@@ -26,25 +28,62 @@ $updatedCampaignId = function (): void {
 
     $lat = $defaultLat;
     $lon = $defaultLon;
+    $source = 'default';
 
     if ($this->campaignId) {
-        $campaign = Campaign::with('dataPoints')->find($this->campaignId);
+        $campaign = Campaign::with(['surveyZones', 'dataPoints'])->find($this->campaignId);
 
-        if ($campaign && $campaign->dataPoints->isNotEmpty()) {
-            $dataPoint = $campaign->dataPoints()
-                ->select([
-                    'data_points.*',
-                    DB::raw('ST_X(location::geometry) as longitude'),
-                    DB::raw('ST_Y(location::geometry) as latitude'),
-                ])
-                ->first();
+        if ($campaign) {
+            // Priority 1: Use survey zone centroid if exists
+            if ($campaign->surveyZones->isNotEmpty()) {
+                $zone = $campaign->surveyZones->first();
+                $zone->refresh(); // Ensure geometry is loaded
+                $centroid = $zone->getCentroid();
 
-            if ($dataPoint && $dataPoint->latitude !== null && $dataPoint->longitude !== null) {
-                $lat = (float) $dataPoint->latitude;
-                $lon = (float) $dataPoint->longitude;
+                if ($centroid && count($centroid) === 2) {
+                    $lon = (float) $centroid[0]; // longitude
+                    $lat = (float) $centroid[1]; // latitude
+                    $source = 'survey_zone';
+
+                    Log::info('✅ Using survey zone centroid', [
+                        'zone_id' => $zone->id,
+                        'zone_name' => $zone->name,
+                        'lat' => $lat,
+                        'lon' => $lon,
+                    ]);
+                }
+            }
+            // Priority 2: Use first datapoint location
+            elseif ($campaign->dataPoints->isNotEmpty()) {
+                $dataPoint = $campaign->dataPoints()
+                    ->select([
+                        'data_points.*',
+                        DB::raw('ST_X(location::geometry) as longitude'),
+                        DB::raw('ST_Y(location::geometry) as latitude'),
+                    ])
+                    ->first();
+
+                if ($dataPoint && $dataPoint->latitude !== null && $dataPoint->longitude !== null) {
+                    $lat = (float) $dataPoint->latitude;
+                    $lon = (float) $dataPoint->longitude;
+                    $source = 'datapoint';
+
+                    Log::info('✅ Using datapoint location', [
+                        'datapoint_id' => $dataPoint->id,
+                        'lat' => $lat,
+                        'lon' => $lon,
+                    ]);
+                }
             }
         }
     }
+
+    // Log final decision
+    Log::info('📍 Location selected', [
+        'source' => $source,
+        'lat' => $lat,
+        'lon' => $lon,
+    ]);
 
     $this->selectedLat = $lat;
     $this->selectedLon = $lon;
@@ -68,6 +107,34 @@ $updatedOverlayType = function (): void {
 $updatedSelectedDate = function (): void {
     Log::info('📅 Date changed', ['date' => $this->selectedDate]);
     $this->updateRevision = (int) $this->updateRevision + 1;
+};
+
+// Jump to data point (called from map click)
+// Always syncs date for temporal correlation analysis (scientific best practice)
+$jumpToDataPoint = function (float $latitude, float $longitude, string $date): void {
+    Log::info('🎯 Jumping to data point for temporal correlation', [
+        'lat' => $latitude,
+        'lon' => $longitude,
+        'date' => $date,
+    ]);
+
+    // Update coordinates
+    $this->selectedLat = $latitude;
+    $this->selectedLon = $longitude;
+
+    // Always update date for temporal correlation (scientific best practice)
+    $this->selectedDate = $date;
+    Log::info('📅 Date synced to field data collection date for temporal analysis', ['date' => $date]);
+
+    // Force revision update to trigger map refresh
+    $this->updateRevision = (int) $this->updateRevision + 1;
+
+    Log::info('✅ Jump completed - ready for temporal correlation analysis', [
+        'newLat' => $this->selectedLat,
+        'newLon' => $this->selectedLon,
+        'newDate' => $this->selectedDate,
+        'revision' => $this->updateRevision,
+    ]);
 };
 
 $campaigns = computed(function () {
@@ -175,6 +242,27 @@ $analysisData = computed(function () {
     };
 });
 
+// Load data points GeoJSON for selected campaign
+$dataPointsGeoJSON = computed(function () {
+    if (!$this->campaignId || !$this->showDataPoints) {
+        Log::info('🗺️ Satellite Viewer: Not loading data points', [
+            'campaignId' => $this->campaignId,
+            'showDataPoints' => $this->showDataPoints,
+        ]);
+        return null;
+    }
+
+    $geospatialService = app(GeospatialService::class);
+    $geoJSON = $geospatialService->getDataPointsAsGeoJSON($this->campaignId);
+
+    Log::info('🗺️ Satellite Viewer: Loaded data points', [
+        'campaignId' => $this->campaignId,
+        'totalFeatures' => count($geoJSON['features'] ?? []),
+    ]);
+
+    return $geoJSON;
+});
+
 // Save satellite analysis to database
 $saveSatelliteAnalysis = function (): void {
     $satelliteData = $this->satelliteData;
@@ -217,7 +305,9 @@ $saveSatelliteAnalysis = function (): void {
 
 ?>
 
-<div class="min-h-screen">
+<div class="min-h-screen"
+     x-data
+     @jump-to-datapoint.window="$wire.jumpToDataPoint($event.detail.latitude, $event.detail.longitude, $event.detail.date)">
     <div class="h-[calc(100vh-8rem)]">
         <x-card class="h-full flex flex-col">
             <div class="flex items-center justify-between mb-4">
@@ -253,31 +343,50 @@ $saveSatelliteAnalysis = function (): void {
             </div>
 
             {{-- Filters --}}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <x-select
-                    label="Campaign Location"
-                    wire:model.live="campaignId"
-                >
-                    <option value="">Fælledparken (Default - 55.7072°N, 12.5704°E)</option>
-                    @foreach($this->campaigns as $campaign)
-                        <option value="{{ $campaign->id }}">
-                            {{ $campaign->name }} ({{ $campaign->location_preview }})
-                        </option>
-                    @endforeach
-                </x-select>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                    <label for="campaign-select" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                        Campaign Location
+                        <flux:tooltip content="Filter view to specific research campaign">
+                            <span class="ml-1 text-zinc-400 cursor-help">ⓘ</span>
+                        </flux:tooltip>
+                    </label>
+                    <x-select
+                        id="campaign-select"
+                        wire:model.live="campaignId"
+                    >
+                        <option value="">Fælledparken (Default - 55.7072°N, 12.5704°E)</option>
+                        @foreach($this->campaigns as $campaign)
+                            <option value="{{ $campaign->id }}">
+                                {{ $campaign->name }} ({{ $campaign->location_preview }})
+                            </option>
+                        @endforeach
+                    </x-select>
+                </div>
 
-                <x-select
-                    label="Data Overlay"
-                    wire:model.live="overlayType"
-                >
-                    <option value="ndvi">🌿 NDVI - Vegetation Index</option>
-                    <option value="moisture">💧 Moisture Index</option>
-                    <option value="truecolor">🌍 True Color</option>
-                </x-select>
+                <div>
+                    <label for="overlay-select" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                        Data Overlay
+                        <flux:tooltip content="Choose satellite visualization type: vegetation health, soil moisture, or natural color">
+                            <span class="ml-1 text-zinc-400 cursor-help">ⓘ</span>
+                        </flux:tooltip>
+                    </label>
+                    <x-select
+                        id="overlay-select"
+                        wire:model.live="overlayType"
+                    >
+                        <option value="ndvi">🌿 NDVI - Vegetation Index</option>
+                        <option value="moisture">💧 Moisture Index</option>
+                        <option value="truecolor">🌍 True Color</option>
+                    </x-select>
+                </div>
 
                 <div>
                     <label for="satellite-date" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
                         Imagery Date
+                        <flux:tooltip content="Select satellite image acquisition date (cloud-free images may be limited)">
+                            <span class="ml-1 text-zinc-400 cursor-help">ⓘ</span>
+                        </flux:tooltip>
                     </label>
                     <flux:input
                         type="date"
@@ -285,6 +394,25 @@ $saveSatelliteAnalysis = function (): void {
                         wire:model.live="selectedDate"
                         max="{{ now()->format('Y-m-d') }}"
                     />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                        Display Options
+                    </label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 p-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                            <input
+                                type="checkbox"
+                                wire:model.live="showDataPoints"
+                                class="rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span class="text-sm text-zinc-700 dark:text-zinc-300">Show Field Data</span>
+                            <flux:tooltip content="Overlay manual measurements on satellite imagery. Click 'View satellite on [DATE]' in marker popup to compare field data with satellite from that day.">
+                                <span class="ml-auto text-zinc-400 cursor-help text-xs">ⓘ</span>
+                            </flux:tooltip>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -340,6 +468,36 @@ $saveSatelliteAnalysis = function (): void {
             {{-- Map Container --}}
             <div class="flex-1 relative min-h-125" wire:ignore>
                 <div id="satellite-map" class="absolute inset-0 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700"></div>
+
+                {{-- Temporal Proximity Legend - Shows when data points are visible --}}
+                @if($showDataPoints && $this->dataPointsGeoJSON)
+                    <div class="absolute top-4 right-4 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 p-3 z-[1000] max-w-xs">
+                        <div class="flex items-center gap-2 mb-2">
+                            <h4 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Temporal Alignment</h4>
+                            <flux:tooltip content="Shows how close satellite observation is to field measurement (closer = better correlation)">
+                                <span class="text-zinc-400 cursor-help text-xs">ⓘ</span>
+                            </flux:tooltip>
+                        </div>
+                        <div class="space-y-1.5 text-xs">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full" style="background-color: #10b981; border: 2px solid #059669;"></div>
+                                <span class="text-zinc-700 dark:text-zinc-300">0-3 days (Excellent)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full" style="background-color: #fbbf24; border: 2px solid #f59e0b;"></div>
+                                <span class="text-zinc-700 dark:text-zinc-300">4-7 days (Good)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full" style="background-color: #fb923c; border: 2px solid #f97316;"></div>
+                                <span class="text-zinc-700 dark:text-zinc-300">8-14 days (Acceptable)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full" style="background-color: #ef4444; border: 2px solid #dc2626;"></div>
+                                <span class="text-zinc-700 dark:text-zinc-300">15+ days (Poor)</span>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
 
             {{-- Analysis Panel - Shows based on overlay type --}}
@@ -420,8 +578,10 @@ $saveSatelliteAnalysis = function (): void {
     <div id="satellite-data-container" style="display: none;"
          data-imagery="{{ json_encode($this->satelliteData) }}"
          data-analysis="{{ json_encode($this->analysisData) }}"
+         data-datapoints="{{ json_encode($this->dataPointsGeoJSON) }}"
          data-lat="{{ $selectedLat }}"
          data-lon="{{ $selectedLon }}"
+         data-date="{{ $selectedDate }}"
          data-overlay-type="{{ $overlayType }}"
          data-revision="{{ $updateRevision }}"
          wire:key="satellite-update-{{ $updateRevision }}">

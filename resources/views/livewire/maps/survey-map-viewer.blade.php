@@ -78,7 +78,15 @@ $dataPoints = computed(function () {
     $campaignId = $this->campaignId ? (int) $this->campaignId : null;
     $metricId = $this->metricId ? (int) $this->metricId : null;
 
-    return $service->getDataPointsAsGeoJSON($campaignId, $metricId);
+    $geoJSON = $service->getDataPointsAsGeoJSON($campaignId, $metricId);
+
+    \Log::info('🗺️ Survey Map: Loaded data points', [
+        'campaignId' => $campaignId,
+        'metricId' => $metricId,
+        'totalFeatures' => count($geoJSON['features'] ?? []),
+    ]);
+
+    return $geoJSON;
 });
 
 $boundingBox = computed(function () {
@@ -149,22 +157,31 @@ $boundingBox = computed(function () {
                 </div>
 
                 {{-- Map Legend --}}
-                <div class="flex gap-4 text-xs text-zinc-600 dark:text-zinc-400">
-                    <div class="flex items-center gap-1">
-                        <div class="w-3 h-3 rounded-full bg-red-500 border-2 border-red-700"></div>
-                        <span>QA Flags</span>
+                <div class="flex flex-col gap-2">
+                    <div class="flex gap-4 text-xs text-zinc-600 dark:text-zinc-400">
+                        <div class="flex items-center gap-1">
+                            <div class="w-3 h-3 rounded-full bg-red-500 border-2 border-red-700"></div>
+                            <span>QA Flags</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <div class="w-3 h-3 rounded-full bg-gray-500 border-2 border-gray-700" style="border-style: dashed;"></div>
+                            <span>Rejected</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <div class="w-3 h-3 rounded-full bg-yellow-400 border-2 border-yellow-600" style="border-style: dashed;"></div>
+                            <span>Low Accuracy</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <div class="w-3 h-3 rounded-full bg-green-500 border-2 border-green-700"></div>
+                            <span>Approved</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <div class="w-3 h-3 rounded-full bg-blue-500 border-2 border-blue-800"></div>
+                            <span>Pending</span>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <div class="w-3 h-3 rounded-full bg-yellow-400 border-2 border-yellow-600" style="border-style: dashed;"></div>
-                        <span>Low Accuracy</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <div class="w-3 h-3 rounded-full bg-green-500 border-2 border-green-700"></div>
-                        <span>Approved</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <div class="w-3 h-3 rounded-full bg-blue-500 border-2 border-blue-800"></div>
-                        <span>Pending</span>
+                    <div class="text-xs text-zinc-500 dark:text-zinc-500 italic">
+                        Clusters show proportional data quality distribution
                     </div>
                 </div>
             </div>

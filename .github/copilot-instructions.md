@@ -1,6 +1,18 @@
 
 **IMPORTANT:** This file contains Laravel Boost guidelines (auto-generated, do not edit).
 
+Running `ddev artisan boost:update` will update your Laravel Boost AI guidelines in `/.github/copilot-instructions.md`.
+
+**What gets updated:**
+- Content between `<laravel-boost-guidelines>` and `</laravel-boost-guidelines>`
+- All the `===` sections (foundation rules, boost rules, php rules, etc.)
+
+**What is NOT updated:**
+- The top of the file (before `<laravel-boost-guidelines>`)
+- Content after `</laravel-boost-guidelines>` (if you added any)
+- Your `.github/custom-instructions/` directory (completely separate)
+
+
 **Load custom instructions from:** `custom-instructions/project-config.md` (references all active modules)
 
 <laravel-boost-guidelines>

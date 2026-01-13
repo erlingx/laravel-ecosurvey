@@ -21,12 +21,16 @@ Let me cut down to the most **impressive portfolio features** that showcase adva
 ### **1. Interactive Geospatial Data Collection (Livewire + Maps)**
 - **Live Map Dashboard:**
     - Leaflet.js map with real-time data point markers
-    - Cluster markers for performance
+    - **Proportional pie chart clustering** shows data quality distribution:
+      - Cluster segments show % of flagged/rejected/low-accuracy/approved/pending points
+      - Single-quality clusters show solid color circles with count
+      - Prevents visual overlap at same locations
     - **Color-coded markers** based on data quality:
-      - 🟢 Green solid = Approved high-quality (accuracy ≤50m)
-      - 🟡 Yellow dashed = Low confidence (accuracy >50m)
       - 🔴 Red dashed = Flagged data (QA issues)
-      - 🔵 Blue solid = Normal/pending data
+      - ⚫ Gray dashed = Rejected
+      - 🟡 Yellow dashed = Low confidence (accuracy >50m)
+      - 🟢 Green solid = Approved high-quality (accuracy ≤50m)
+      - 🔵 Blue solid = Pending/draft data
     - Click marker to see reading details in draggable popup
     - **Edit link (✏️) in popup** to modify data points
     - Draw polygon/circle tools to define survey zones
@@ -67,6 +71,219 @@ Let me cut down to the most **impressive portfolio features** that showcase adva
     - Fetch satellite imagery for survey area
     - Display NDVI (vegetation index) overlay
     - Show terrain/elevation context
+
+#### **Satellite Viewer Architecture - Two Independent Data Layers:**
+
+**Layer 1: Satellite Imagery (Date-Specific)**
+- Changes when you change the "Imagery Date" picker
+- Only shows if satellite data exists for that date
+- Shows NDVI/Moisture/TrueColor overlay for the selected date
+- Source: Copernicus Sentinel-2 satellite (10m resolution, free unlimited)
+
+**Layer 2: Data Points (Campaign-Specific, Date-Independent)**
+- Shows ALL data points from the selected campaign
+- **Marker clustering** groups overlapping points (e.g., 128 points at 5 locations)
+- Clusters display count badges, click to zoom/expand
+- Does NOT change when you change the imagery date
+- Remains visible regardless of satellite coverage
+- Allows comparing field measurements across entire campaign with any satellite date
+
+**Four Date Scenarios:**
+1. **Only Satellite Data:** Overlay displays, all campaign data points show
+2. **Only Manual Data:** No overlay (base map only), all campaign data points show
+3. **Both Available:** Overlay shows for that date, all campaign data points show
+4. **Neither:** No overlay, data points depend on campaign selection
+
+**Key Interaction Behaviors:**
+- **Data points DON'T filter by date** - Intentional design to let users explore satellite data across different dates while seeing all field measurements for context
+- **Satellite overlay IS date-specific** - Only shows imagery/analysis for dates with coverage (typically every 5 days for Sentinel-2)
+- **Temporal correlation analysis** - Clicking "📅 View satellite on [DATE]" button in data point popup:
+  - Shows target date in button text (e.g., "View satellite on Aug 10, 2025")
+  - Always syncs satellite date to field measurement date (ignores Sync Mode toggle)
+  - Scientific best practice: enables ground-truth validation by comparing same-day conditions
+  - Smooth flyTo animation, prevents erratic zoom behavior
+  - Console logging for debugging temporal correlation workflow
+
+**Portfolio Value:**
+- Demonstrates understanding of complex UI state management
+- Shows thoughtful UX design for scientific data exploration
+- Illustrates proper handling of asynchronous data sources (satellite API vs local database)
+
+---
+
+### **Scientific Best Practices & UX Analysis:**
+
+#### **✅ Current Approach Strengths (Aligns with Scientific Standards):**
+
+1. **Temporal Resolution Awareness**
+   - **Scientific Standard:** Satellite data has fixed revisit intervals (Sentinel-2: 5 days)
+   - **Our Implementation:** Date-specific satellite layer correctly reflects temporal constraints
+   - **Best Practice:** ✅ Matches how scientists work with remote sensing data
+
+2. **Multi-Temporal Analysis Support**
+   - **Scientific Standard:** Researchers compare field measurements with satellite conditions at different times
+   - **Our Implementation:** Shows all field data while exploring different satellite dates
+   - **Best Practice:** ✅ Enables temporal change detection and trend analysis
+
+3. **Data Source Independence**
+   - **Scientific Standard:** Field data and satellite data are collected by different instruments/methods
+   - **Our Implementation:** Two independent layers reflect this reality
+   - **Best Practice:** ✅ Avoids misleading data fusion, maintains data provenance
+
+4. **Click-to-Analyze Workflow (Temporal Correlation)**
+   - **Scientific Standard:** Ground truthing requires comparing field observations with satellite conditions on same date
+   - **Our Implementation:** 
+     - Button shows target date: "📅 View satellite on Aug 10, 2025"
+     - Always forces date sync (ignores Sync Mode toggle)
+     - Provides immediate visual feedback of what will happen
+     - Tooltip: "Compare field data with satellite conditions from that day"
+   - **Best Practice:** ✅ Facilitates validation and calibration workflows with clear scientific intent
+
+#### **⚠️ Potential UX Concerns & Solutions:**
+
+**Concern 1: User Confusion About Date Filtering**
+- **Issue:** Users might expect data points to filter by selected date
+- **Current Mitigation:** 
+  - Toggle labeled "Show Field Data" (not "Show Data for Selected Date")
+  - Documentation explains behavior in Test Suite 4
+- **Improvement Options:**
+  - Add visual indicator: "Showing ALL 100+ field measurements (entire campaign)"
+  - Add optional date range filter separate from satellite date picker
+  - Tooltip on toggle: "Shows all campaign data (not filtered by satellite date)"
+
+**Concern 2: Temporal Mismatch Recognition**
+- **Issue:** Satellite showing Aug 15, but field data from Aug 1-30 all visible
+- **Current Mitigation:** 
+  - ✅ **Temporal proximity color-coding implemented:**
+    - 🟢 Green: 0-3 days (excellent alignment)
+    - 🟡 Yellow: 4-7 days (good alignment)  
+    - 🟠 Orange: 8-14 days (acceptable)
+    - 🔴 Red: 15+ days (poor alignment)
+  - ✅ Temporal alignment shown in data point popups
+  - ✅ Click-to-analyze jumps to correct date with clear button text
+- **Future Improvements:**
+  - Optional: Add "Temporal Proximity" filter slider (±1 day, ±7 days, All)
+
+**Concern 3: Cognitive Load**
+- **Issue:** Managing two independent time dimensions requires mental effort
+- **Current Mitigation:** 
+  - ✅ Clear layer separation, toggle control
+  - ✅ **Always-on temporal correlation** via analyze button (no toggle confusion)
+  - ✅ Educational tooltips on all controls
+  - ✅ Temporal proximity legend with color scale
+  - ✅ Button text shows target date for clarity
+- **Future Improvements:**
+  - Add preset workflows:
+    - "Ground Truth Mode" → Temporal correlation analysis
+    - "Exploration Mode" → Browse different dates
+    - "Change Detection" → Compare two satellite dates
+
+#### **🔬 Scientific Use Cases That Work Well:**
+
+1. **Vegetation Phenology Studies**
+   - View NDVI changes across growing season (change satellite dates)
+   - Compare with all field-measured biomass samples (scattered across summer)
+   - ✅ Perfect fit for current design
+
+2. **Disaster Response**
+   - View satellite imagery before/during/after event (change dates)
+   - See all field damage assessments (collected over weeks)
+   - ✅ Works well
+
+3. **Long-Term Monitoring**
+   - Track environmental changes over months/years (satellite)
+   - Compare with periodic field measurements (campaign duration)
+   - ✅ Good match
+
+#### **🎯 Scientific Use Cases - Current Status:**
+
+1. **Validation Studies (Ground Truthing)** ✅ IMPLEMENTED
+   - **Goal:** Compare field data collected on Day X with satellite data from Day X
+   - **Implementation:** 
+     - ✅ Click "📅 View satellite on [DATE]" button
+     - ✅ Date automatically syncs (forced sync, ignores toggle)
+     - ✅ Temporal proximity shown with color-coded markers
+     - ✅ Smooth animation, no erratic zoom behavior
+   - **Status:** Fully functional temporal correlation analysis
+
+2. **Real-Time Monitoring** - FUTURE ENHANCEMENT
+   - **Goal:** "Show me what was measured TODAY"
+   - **Current:** All historical data points shown
+   - **Future Improvement:** Add date range filter for field data (separate from satellite date)
+
+3. **Anomaly Detection** - FUTURE ENHANCEMENT
+   - **Goal:** Find field measurements that deviate significantly from satellite predictions
+   - **Current:** Visual comparison only
+   - **Future Improvement:** Add analysis layer showing field vs satellite residuals
+
+#### **📊 Comparison with Industry Standards:**
+
+**Google Earth Engine Approach:**
+- Shows satellite imagery for selected date
+- Vector data (field points) shown without date filtering
+- ✅ **Same as our approach**
+
+**ArcGIS Online Approach:**
+- Separate time sliders for each layer
+- Can sync or unsync temporal controls
+- ⚠️ **More flexible than ours** (but more complex)
+
+**QGIS Desktop Approach:**
+- Independent layer visibility controls
+- Temporal controller can filter any time-enabled layer
+- ⚠️ **More powerful** (but desktop software has different UX expectations)
+
+**iNaturalist/GBIF Web Maps:**
+- Observations shown with date filters
+- Satellite basemaps don't change by date
+- ⚠️ **Opposite of our approach** (but simpler use case)
+
+#### **✅ Recommended Enhancements (Maintain Scientific Rigor):**
+
+1. **Add "Temporal Proximity Indicator"** (Non-Breaking)
+   - Visual cue showing which field points are temporally close to satellite date
+   - Helps users quickly identify relevant comparisons
+   - Doesn't force filtering, preserves exploratory capability
+
+2. **Add Optional "Sync Mode"** (Power User Feature)
+   - Toggle: "Filter field data by satellite date ±3 days"
+   - OFF by default (preserves current behavior)
+   - Addresses validation/ground-truthing workflows
+
+3. **Improve UI Labels** (Quick Win)
+   - Change "Show Field Data" → "Show Campaign Field Data (All Dates)"
+   - Add tooltip: "Field measurements remain visible while exploring satellite dates"
+   - Add info icon with explanation modal
+
+4. **Add Date Context to Popups** (Quick Win)
+   - Show: "Collected: Aug 12, 2025 (3 days before satellite image)"
+   - Helps users understand temporal relationship
+   - Reinforces that layers are time-independent
+
+#### **🎓 Educational Value (Portfolio Perspective):**
+
+**Current Approach Demonstrates:**
+- ✅ Understanding of geospatial temporal dimensions
+- ✅ Proper separation of concerns (different data sources)
+- ✅ Scientific workflow knowledge (ground truthing, validation)
+- ✅ Complex state management in UI
+
+**With Recommended Enhancements:**
+- ✅ All of the above PLUS
+- ✅ Adaptive UX for different user expertise levels
+- ✅ Data visualization best practices (temporal proximity coding)
+- ✅ Advanced filtering and analysis capabilities
+
+#### **📝 Final Recommendation:**
+
+**Keep the dual-layer architecture** - it's scientifically sound and matches industry standards (Google Earth Engine, ArcGIS). 
+
+**Add three enhancements for production-ready UX:**
+1. **Temporal proximity color-coding** on markers
+2. **Optional sync mode** for advanced users
+3. **Clearer labeling** with educational tooltips
+
+This balances scientific rigor (maintains data provenance, enables multi-temporal analysis) with user-friendly design (clear visual cues, adaptive filtering options).
 
 ### **4. QA/QC Workflow (Data Quality Management)**
 - **Automated Quality Control:**
@@ -262,6 +479,7 @@ payments (Stripe)
 components/
 ├── Maps/
 │ ├── SurveyMapViewer.php // Real-time map with markers
+│ ├── SatelliteViewer.php // Dual-layer: date-specific satellite + campaign data points
 │ ├── HeatmapGenerator.php // Generate/display heatmap
 │ └── PolygonDrawer.php // Draw survey zones
 ├── DataCollection/

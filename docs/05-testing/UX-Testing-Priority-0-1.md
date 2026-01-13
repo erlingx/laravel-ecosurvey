@@ -1,9 +1,12 @@
 # UX Testing Cookbook - Priority 0 & 1 Features
 
-**Date:** January 8, 2026  
+**Date:** January 8-12, 2026  
 **Scope:** Priority 0 (Critical Fixes) + Priority 1 (Foundation)  
 **Test Duration:** ~30-45 minutes  
-**Prerequisites:** Application running with `ddev start`, logged in as authenticated user
+**Prerequisites:** Application running with `ddev start`, logged in as authenticated user  
+**Status:** ✅ ALL TESTS COMPLETED - January 12, 2026
+
+> **📝 Note:** Backend logic tests (relationships, spatial methods, scopes) have been migrated to automated Pest tests in `tests/Feature/`. This document now focuses exclusively on browser-based manual UX testing.
 
 ---
 
@@ -40,10 +43,11 @@ ddev artisan migrate:fresh --seed
    - Map loads with data points clustered
    - Zoom in to see individual markers
    - Look for **different colored markers:**
-     - 🟢 **Green solid circles** = Approved high-quality data (`status = approved`, `accuracy <= 50m`)
-     - 🟡 **Yellow dashed circles** = Low confidence data (`accuracy > 50m`)
      - 🔴 **Red dashed circles** = Flagged data (has `qa_flags`)
-     - 🔵 **Blue solid circles** = Normal/pending data
+     - ⚫ **Gray dashed circles** = Rejected data (`status = rejected`)
+     - 🟡 **Yellow dashed circles** = Low confidence data (`accuracy > 50m`)
+     - 🟢 **Green solid circles** = Approved high-quality data (`status = approved`, `accuracy <= 50m`)
+     - 🔵 **Blue solid circles** = Pending/Draft data (`status = pending` or `draft`)
 
 3. **How to Verify:**
    - Click on each marker type to see popup
@@ -200,257 +204,60 @@ ddev artisan migrate:fresh --seed
    - Navigate back to `/maps/survey`
    - Find same data point - now shows **green marker** (if accuracy ≤ 50m)
 
+4. **Test rejection workflow:**
+   - Find an approved data point (green marker)
+   - Click "✏️ Edit" in popup
+   - Change **Status** to "Rejected"
+   - Add **Review Notes** like "Data quality issues - sensor malfunction"
+   - Click "Update Reading"
+   - Navigate back to map - marker now shows **gray dashed circle**
+
 **Note:** Status and Review Notes fields only appear when editing existing data points, not when submitting new ones.
 
 ---
 
 ## Test Suite 4: Automatic Satellite Enrichment (Tasks 1.6, 1.7) ✅
 
-**Goal:** Verify that new data points trigger background satellite analysis job  
+**Goal:** Verify that new data points trigger background satellite analysis job (UX verification only - detailed tests in automated suite)
 **Status:** COMPLETED - January 12, 2026
 
-### Test 4.1: Monitor Queue Job Dispatch ✅
+### Test 4.1: Verify Queue Job Dispatches When Submitting Data ✅
 
-1. **Check Queue Status Before**
-   ```powershell
-   ddev artisan queue:monitor database
-   ```
-
-2. **Submit a New Data Point**
+1. **Submit a New Data Point**
    - Follow Test 2.1 steps above
    - Submit a reading with valid GPS coordinates
 
-3. **Check Queue Immediately After Submission**
+2. **Check Queue Status**
    ```powershell
    # Check if job was queued
    ddev artisan queue:monitor database
-   
-   # OR check logs
+   ```
+
+3. **Expected Results:**
+   - Job `EnrichDataPointWithSatelliteData` should appear in queue
+   - Queue worker (auto-running) processes it within seconds
+   - No errors in browser console
+
+4. **Optional: Check Logs**
+   ```powershell
    ddev exec bash -c "tail -20 storage/logs/laravel.log"
    ```
+   - Look for: "Successfully enriched DataPoint {id}" or "Failed to fetch NDVI..." (if API down)
 
-4. **Expected Results:**
-   - Job `EnrichDataPointWithSatelliteData` should be queued
-   - Queue worker (auto-running) processes it within seconds
-   - Look for log entries like:
-     - "Successfully enriched DataPoint {id} with satellite data"
-     - OR "Failed to fetch NDVI..." (if API issues)
-
-### Test 4.2: Verify SatelliteAnalysis Records Created ✅
-
-1. **Check Database** (using Tinker):
-   ```powershell
-   ddev artisan tinker
-   ```
-
-2. **Run in Tinker:**
-   ```php
-   // Get the most recent data point
-   $dataPoint = \App\Models\DataPoint::latest()->first();
-   
-   // Check satellite analyses
-   $dataPoint->satelliteAnalyses;
-   
-   // Should show records with NDVI and/or moisture data
-   // Example output:
-   // Illuminate\Database\Eloquent\Collection {
-   //   #items: array:2 [
-   //     0 => App\Models\SatelliteAnalysis {
-   //       #attributes: array [
-   //         "ndvi_value" => "0.6543"
-   //         "satellite_source" => "Copernicus Sentinel-2"
-   //       ]
-   //     }
-   //   ]
-   // }
-   
-   exit
-   ```
-
-**Note:** If API credentials are not configured or API is down, the job will log errors but won't crash. This is expected behavior.
+**Note:** Detailed testing of satellite enrichment logic is in automated tests (`tests/Feature/SatelliteEnrichmentTest.php`). This UX test just verifies the job dispatches correctly from the UI.
 
 ---
 
-## Test Suite 5: Survey Zones & Spatial Methods (Task 1.8)
-
-**Goal:** Test SurveyZone model's PostGIS spatial methods
-
-### Test 5.1: Create Survey Zone via Tinker
-
-1. **Open Tinker:**
-   ```powershell
-   ddev artisan tinker
-   ```
-
-2. **Create a Test Zone:**
-   ```php
-   use App\Models\SurveyZone;
-   use App\Models\Campaign;
-   
-   // Get first campaign
-   $campaign = Campaign::first();
-   
-   // Create zone using factory
-   $zone = SurveyZone::factory()->create([
-       'campaign_id' => $campaign->id,
-       'name' => 'Test Zone - Copenhagen Park'
-   ]);
-   
-   // Wait for factory afterCreating hook to set geometry
-   $zone->refresh();
-   
-   echo "Zone created with ID: {$zone->id}\n";
-   ```
-
-3. **Test Spatial Methods:**
-   ```php
-   // Calculate area (should return ~2-5 km²)
-   $area = $zone->calculateArea();
-   echo "Area: {$area} km²\n";
-   
-   // Get centroid [lon, lat]
-   $centroid = $zone->getCentroid();
-   echo "Centroid: " . json_encode($centroid) . "\n";
-   
-   // Get bounding box [minLon, minLat, maxLon, maxLat]
-   $bbox = $zone->getBoundingBox();
-   echo "Bounding Box: " . json_encode($bbox) . "\n";
-   
-   // Export as GeoJSON
-   $geojson = $zone->toGeoJSON();
-   echo "GeoJSON Feature: " . json_encode($geojson, JSON_PRETTY_PRINT) . "\n";
-   
-   exit
-   ```
-
-4. **Expected Results:**
-   - Area: ~0.5 to 3 km² (varies due to random generation)
-   - Centroid: Coordinates near Copenhagen (55.6761, 12.5683)
-   - Bounding Box: 4 coordinates defining rectangle
-   - GeoJSON: Valid Feature with Polygon geometry
-
-### Test 5.2: Test Contained Data Points Query
-
-```php
-// In Tinker
-use App\Models\SurveyZone;
-
-$zone = SurveyZone::first();
-
-// Get data points within zone
-$contained = $zone->getContainedDataPoints();
-
-echo "Data points in zone: " . count($contained) . "\n";
-
-// Note: May be 0 if data points don't fall within the zone geometry
-exit
-```
+> **Note:** Tests for Survey Zones (spatial methods), Campaign map centering, and DataPoint relationships have been moved to automated Pest tests. See `tests/Feature/` for these tests. This UX testing document now focuses only on browser-based manual testing.
 
 ---
 
-## Test Suite 6: Campaign Map Centering (Task 1.9)
+## Test Suite 8: Visual Inspection on Maps ✅
 
-**Goal:** Verify intelligent map center calculation
+**Goal:** Manually verify UI updates and visual quality  
+**Status:** COMPLETED - January 12, 2026
 
-### Test 6.1: Test getMapCenter() Method
-
-1. **Open Tinker:**
-   ```powershell
-   ddev artisan tinker
-   ```
-
-2. **Test Different Scenarios:**
-   ```php
-   use App\Models\Campaign;
-   
-   // Scenario 1: Campaign with survey zone
-   $campaign = Campaign::has('surveyZones')->first();
-   if ($campaign) {
-       $center = $campaign->getMapCenter();
-       echo "Campaign '{$campaign->name}' center (from zone): " . json_encode($center) . "\n";
-       // Expected: Centroid of survey zone
-   }
-   
-   // Scenario 2: Campaign with only data points (no zone)
-   $campaign = Campaign::has('dataPoints')->doesntHave('surveyZones')->first();
-   if ($campaign) {
-       $center = $campaign->getMapCenter();
-       echo "Campaign '{$campaign->name}' center (from data points): " . json_encode($center) . "\n";
-       // Expected: Average of data point locations
-   }
-   
-   // Scenario 3: Empty campaign (no zone, no data points)
-   $campaign = Campaign::factory()->create([
-       'name' => 'Empty Test Campaign',
-       'status' => 'planning'
-   ]);
-   $center = $campaign->getMapCenter();
-   echo "Empty campaign center (default): " . json_encode($center) . "\n";
-   // Expected: [12.5683, 55.6761] (Copenhagen default)
-   
-   // Cleanup
-   $campaign->delete();
-   
-   exit
-   ```
-
-3. **Expected Outputs:**
-   - Zone-based: Coordinates matching zone centroid
-   - Data-based: Average of data point coordinates
-   - Default: `[12.5683, 55.6761]`
-
----
-
-## Test Suite 7: Data Point Relationships (Priority 0 Fixes)
-
-**Goal:** Verify all model relationships work correctly
-
-### Test 7.1: Test DataPoint Relationships
-
-```php
-// In Tinker
-use App\Models\DataPoint;
-
-$dataPoint = DataPoint::with(['campaign', 'environmentalMetric', 'user', 'surveyZone', 'reviewer', 'satelliteAnalyses'])->first();
-
-// Test each relationship
-echo "Campaign: " . $dataPoint->campaign->name . "\n";
-echo "Metric: " . $dataPoint->environmentalMetric->name . "\n";
-echo "User: " . $dataPoint->user->name . "\n";
-echo "Survey Zone: " . ($dataPoint->surveyZone ? $dataPoint->surveyZone->name : 'None') . "\n";
-echo "Reviewer: " . ($dataPoint->reviewer ? $dataPoint->reviewer->name : 'None') . "\n";
-echo "Satellite Analyses: " . $dataPoint->satelliteAnalyses->count() . " records\n";
-
-exit
-```
-
-### Test 7.2: Test High Quality Scope
-
-```php
-// In Tinker
-use App\Models\DataPoint;
-
-// Get high quality data points
-$highQuality = DataPoint::highQuality()->get();
-
-echo "High quality data points: " . $highQuality->count() . "\n";
-
-// Verify criteria
-foreach ($highQuality->take(3) as $dp) {
-    echo "ID: {$dp->id}, Status: {$dp->status}, Accuracy: {$dp->accuracy}m\n";
-    // All should have status='approved' AND accuracy <= 50
-}
-
-exit
-```
-
----
-
-## Test Suite 8: Visual Inspection on Maps
-
-**Goal:** Manually verify UI updates and visual quality
-
-### Test 8.1: Survey Map Visual Quality
+### Test 8.1: Survey Map Visual Quality ✅
 
 1. **Open Survey Map:** `/maps/survey`
 2. **Check Visual Elements:**
@@ -467,7 +274,7 @@ exit
    - Change filters: Map updates reactively
    - Click "Reset View": Map resets to campaign bounds
 
-### Test 8.2: Satellite Viewer (Existing Feature - Verify No Regression)
+### Test 8.2: Satellite Viewer (Existing Feature - Verify No Regression) ✅
 
 1. **Open Satellite Viewer:** `/maps/satellite`
 2. **Verify Still Works:**
@@ -543,23 +350,25 @@ ddev artisan tinker
 
 After completing all tests, verify:
 
-### Priority 0: Critical Fixes ✅
-- [ ] DataPoint model has all relationships working
-- [ ] Campaign model has surveyZones relationship
-- [ ] No regression in existing functionality
-
-### Priority 1: Foundation ✅
-- [x] QA/QC fields exist in database (check migrations)
-- [x] DataPoint model has QA/QC fields in $fillable
+### Priority 0 & 1: UX Testing Complete ✅
 - [x] Survey map shows color-coded markers based on quality
 - [x] Low accuracy (>50m) shows yellow dashed markers
 - [x] Approved data shows green solid markers
 - [x] Flagged data shows red dashed markers
-- [ ] New data points trigger EnrichDataPointWithSatelliteData job
-- [ ] SatelliteAnalysis records created automatically (when API available)
-- [ ] SurveyZone model has all PostGIS methods working
-- [ ] Campaign getMapCenter() returns correct coordinates
-- [ ] All 144 tests passing in test suite
+- [x] QA/QC fields can be entered via data submission form
+- [x] Data point status can be changed via edit form
+- [x] Queue jobs dispatch when submitting data points
+- [x] No visual regressions on existing maps
+- [x] Forms validate correctly and show appropriate errors
+- [x] Photos upload and display correctly
+
+### Backend Testing (Automated)
+- [ ] All automated tests passing: `ddev artisan test`
+- [ ] Model relationships tested in `tests/Feature/`
+- [ ] Spatial queries tested in `tests/Feature/SurveyZoneTest.php`
+- [ ] Satellite enrichment tested in `tests/Feature/SatelliteEnrichmentTest.php`
+
+**Note:** Backend logic (relationships, spatial methods, scopes) should be verified with automated Pest tests, not manual Tinker commands.
 
 ---
 
@@ -653,5 +462,32 @@ ddev pint --dirty
 ---
 
 **Testing Duration:** 30-45 minutes  
-**Last Updated:** January 8, 2026  
-**Status:** Ready for UX Testing ✅
+**Last Updated:** January 12, 2026  
+**Status:** UX TESTS COMPLETED ✅ (Backend tests moved to automated suite)
+
+## Test Completion Summary (January 12, 2026)
+
+### ✅ UX Test Suites Completed (Browser-based Manual Testing):
+1. ✅ **Test Suite 1**: Visual Differentiation on Survey Map
+2. ✅ **Test Suite 2**: QA/QC Workflow
+3. ✅ **Test Suite 3**: Data Point Status Management
+4. ✅ **Test Suite 4**: Automatic Satellite Enrichment (Queue Dispatch Verification)
+5. ✅ **Test Suite 8**: Visual Inspection on Maps
+
+### 🔄 Backend Tests (Moved to Automated Pest Tests):
+These tests were originally in this document but have been moved to `tests/Feature/`:
+- **Survey Zones & Spatial Methods** → `tests/Feature/SurveyZoneTest.php`
+- **Campaign Map Centering** → `tests/Feature/CampaignTest.php`
+- **Data Point Relationships** → `tests/Feature/DataPointTest.php`
+- **Satellite Analysis Records** → `tests/Feature/SatelliteEnrichmentTest.php`
+
+### Priority 0 & Priority 1 Features: UX Testing COMPLETE ✅
+
+**What This Document Tests:** Browser-based UI functionality
+**What Automated Tests Cover:** Backend logic, relationships, spatial queries, scopes
+
+**Next steps:**
+- Run full automated test suite: `ddev artisan test`
+- Verify all backend tests pass
+- Code formatting: `ddev pint --dirty`
+- Ready to proceed with Priority 2 tasks

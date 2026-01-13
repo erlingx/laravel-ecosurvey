@@ -5,6 +5,91 @@ import L from 'leaflet';
  * Handles the satellite imagery viewer with Copernicus Data Space / Sentinel-2 overlays
  */
 
+/**
+ * Calculate temporal proximity color based on days difference between field data collection and satellite observation
+ *
+ * This function provides visual feedback about data quality correlation by color-coding markers.
+ * The closer the field measurement date is to the satellite observation date, the higher the
+ * confidence in correlating the two datasets (green = best, red = worst).
+ *
+ * **Color Scale:**
+ * - Green (Excellent): 0-3 days difference
+ * - Yellow (Good): 4-7 days difference
+ * - Orange (Acceptable): 8-14 days difference
+ * - Red (Poor): 15+ days difference
+ *
+ * **Scientific Rationale:**
+ * Environmental conditions (vegetation health, soil moisture, temperature) change over time.
+ * A field measurement taken on Day X is most reliable for validating satellite data from Day X±3.
+ * Beyond 14 days, seasonal changes or weather events may reduce correlation validity.
+ *
+ * **Technical Notes:**
+ * - Date calculation uses JavaScript Date objects (assumes UTC)
+ * - Days difference is calculated as absolute value (direction doesn't matter)
+ * - Thresholds (3, 7, 14 days) are based on Sentinel-2 revisit interval (5 days) and
+ *   environmental change rates in temperate climates
+ *
+ * @param {string} dataPointDate - ISO 8601 date when field data was collected (YYYY-MM-DD)
+ * @param {string} satelliteDate - ISO 8601 date of satellite imagery (YYYY-MM-DD)
+ * @returns {object} Color configuration object with properties:
+ *   - {string} fill - Hex color for marker fill (#10b981 for green, etc.)
+ *   - {string} border - Hex color for marker border (darker shade of fill)
+ *   - {string} label - Human-readable quality label ('Excellent', 'Good', 'Acceptable', 'Poor')
+ *   - {number} days - Absolute days difference between dates
+ *
+ * @example
+ * // Field data from Aug 12, satellite from Aug 15 (3 days difference)
+ * const color = getTemporalProximityColor('2025-08-12', '2025-08-15');
+ * // Returns: { fill: '#10b981', border: '#059669', label: 'Excellent', days: 3 }
+ *
+ * @example
+ * // Field data from Aug 1, satellite from Aug 15 (14 days difference)
+ * const color = getTemporalProximityColor('2025-08-01', '2025-08-15');
+ * // Returns: { fill: '#fb923c', border: '#f97316', label: 'Acceptable', days: 14 }
+ */
+function getTemporalProximityColor(dataPointDate, satelliteDate) {
+    // Calculate difference in days
+    const dpDate = new Date(dataPointDate);
+    const satDate = new Date(satelliteDate);
+    const diffMs = Math.abs(satDate - dpDate);
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    // Color-code based on temporal proximity
+    if (diffDays <= 3) {
+        // Excellent alignment (0-3 days)
+        return {
+            fill: '#10b981', // Green
+            border: '#059669',
+            label: 'Excellent',
+            days: diffDays
+        };
+    } else if (diffDays <= 7) {
+        // Good alignment (4-7 days)
+        return {
+            fill: '#fbbf24', // Yellow
+            border: '#f59e0b',
+            label: 'Good',
+            days: diffDays
+        };
+    } else if (diffDays <= 14) {
+        // Acceptable (8-14 days)
+        return {
+            fill: '#fb923c', // Orange
+            border: '#f97316',
+            label: 'Acceptable',
+            days: diffDays
+        };
+    } else {
+        // Poor alignment (15+ days)
+        return {
+            fill: '#ef4444', // Red
+            border: '#dc2626',
+            label: 'Poor',
+            days: diffDays
+        };
+    }
+}
+
 export function initSatelliteMap() {
     console.log('Starting initSatelliteMap()...');
 
@@ -37,6 +122,8 @@ export function initSatelliteMap() {
         window.satelliteMap = map;
         window.satelliteImageLayer = null;
         window.satelliteMarker = null;
+        window.dataPointsLayer = null;
+        window.dataPointsClusterGroup = null;
 
         // Load initial data (marker) from DOM
         const dataContainer = document.getElementById('satellite-data-container');
@@ -107,6 +194,7 @@ export function updateSatelliteImagery() {
     const overlayType = dataContainer.getAttribute('data-overlay-type');
     const imageryData = dataContainer.getAttribute('data-imagery');
     const analysisData = dataContainer.getAttribute('data-analysis');
+    const dataPointsData = dataContainer.getAttribute('data-datapoints');
     const revision = dataContainer.getAttribute('data-revision');
 
     console.log('📊 DOM Attributes:', {
@@ -116,6 +204,7 @@ export function updateSatelliteImagery() {
         'data-overlay-type': overlayType,
         'has-imagery': !!imageryData,
         'has-analysis': !!analysisData,
+        'has-datapoints': !!dataPointsData,
         'wire-key': dataContainer.getAttribute('wire:key')
     });
 
@@ -200,6 +289,148 @@ export function updateSatelliteImagery() {
         console.log('ℹ️ No imagery data - overlay removed');
     }
 
+    // Handle data points overlay
+    // Remove existing data points layer/cluster
+    if (window.dataPointsClusterGroup) {
+        window.satelliteMap.removeLayer(window.dataPointsClusterGroup);
+        window.dataPointsClusterGroup = null;
+        console.log('♻️ Removed old data points cluster group');
+    }
+    if (window.dataPointsLayer) {
+        window.satelliteMap.removeLayer(window.dataPointsLayer);
+        window.dataPointsLayer = null;
+        console.log('♻️ Removed old data points layer');
+    }
+
+    // Add data points with clustering if available
+    if (dataPointsData && dataPointsData !== 'null' && dataPointsData !== 'false') {
+        try {
+            const dataPoints = JSON.parse(dataPointsData);
+
+            if (dataPoints && dataPoints.features && dataPoints.features.length > 0) {
+                console.log(`📍 Adding ${dataPoints.features.length} data points to map with clustering`);
+
+                // Get current satellite date for temporal proximity calculation
+                const satelliteDate = dataContainer.getAttribute('data-date') || new Date().toISOString().split('T')[0];
+
+                // Create marker cluster group
+                window.dataPointsClusterGroup = L.markerClusterGroup({
+                    chunkedLoading: true,
+                    maxClusterRadius: 50,
+                    spiderfyOnMaxZoom: true,
+                    showCoverageOnHover: false,
+                    zoomToBoundsOnClick: false, // Disable auto-zoom on cluster click
+                    animate: true,
+                    animateAddingMarkers: false, // Disable animation when adding markers
+                    disableClusteringAtZoom: 16, // Show individual markers at zoom 16+
+                    iconCreateFunction: function(cluster) {
+                        const count = cluster.getChildCount();
+                        return L.divIcon({
+                            html: `<div style="background: rgba(59, 130, 246, 0.8); border: 2px solid white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                                <span style="color: white; font-weight: 600; font-size: 14px;">${count}</span>
+                            </div>`,
+                            className: 'satellite-marker-cluster',
+                            iconSize: L.point(40, 40)
+                        });
+                    }
+                });
+
+                // Add custom cluster click handler for controlled zooming
+                window.dataPointsClusterGroup.on('clusterclick', function(e) {
+                    const cluster = e.layer;
+                    const childCount = cluster.getChildCount();
+
+                    // If small cluster (≤5 markers), spiderfy instead of zoom
+                    if (childCount <= 5) {
+                        cluster.spiderfy();
+                    } else {
+                        // For larger clusters, zoom in moderately (not to max zoom)
+                        const bounds = cluster.getBounds();
+                        window.satelliteMap.fitBounds(bounds, {
+                            padding: [50, 50],
+                            maxZoom: 15 // Limit zoom to level 15
+                        });
+                    }
+                });
+
+                // Add markers to cluster group
+                dataPoints.features.forEach(function(feature) {
+                    const props = feature.properties;
+                    const latlng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
+                    const collectionDate = props.collected_at.split(' ')[0]; // Extract date part
+
+                    // Calculate temporal proximity color
+                    const proximity = getTemporalProximityColor(collectionDate, satelliteDate);
+
+                    const marker = L.circleMarker(latlng, {
+                        radius: 6,
+                        fillColor: proximity.fill,
+                        color: proximity.border,
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+
+                    // Format date for display
+                    const dateObj = new Date(collectionDate);
+                    const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                    const popupContent = `
+                        <div class="p-2">
+                            <strong class="text-sm font-semibold">${props.metric}</strong>
+                            <div class="text-sm mt-1">
+                                <strong>Value:</strong> ${props.value} ${props.unit}
+                            </div>
+                            <div class="text-xs text-gray-600 mt-1">
+                                ${props.collected_at}<br>
+                                Accuracy: ±${props.accuracy}m
+                            </div>
+                            <div class="text-xs mt-2 p-1.5 rounded" style="background-color: ${proximity.fill}20; border-left: 3px solid ${proximity.fill};">
+                                <strong>Temporal Alignment:</strong> ${proximity.label}<br>
+                                <span class="text-gray-600">${proximity.days} day(s) from satellite image</span>
+                            </div>
+                            <button
+                                onclick="event.stopPropagation(); window.jumpToDataPoint(${props.latitude}, ${props.longitude}, '${collectionDate}'); return false;"
+                                class="mt-2 w-full px-2 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors"
+                                title="Jump to satellite imagery from ${dateStr} (when this measurement was taken)"
+                            >
+                                📅 View satellite on ${dateStr}
+                            </button>
+                            <div class="text-xs text-gray-500 mt-1 text-center">
+                                Compare field data with satellite conditions
+                            </div>
+                        </div>
+                    `;
+                    marker.bindPopup(popupContent);
+
+                    // Add click event for jump-to-analyze - prevent cluster interference
+                    marker.on('click', function(e) {
+                        // Stop event from bubbling to cluster
+                        L.DomEvent.stopPropagation(e);
+
+                        console.log('📍 Data point clicked:', {
+                            lat: props.latitude,
+                            lon: props.longitude,
+                            date: collectionDate,
+                            proximity: proximity
+                        });
+                    });
+
+                    window.dataPointsClusterGroup.addLayer(marker);
+                });
+
+                window.satelliteMap.addLayer(window.dataPointsClusterGroup);
+                console.log('✅ Data points cluster group added with temporal proximity colors');
+            } else {
+                console.log('ℹ️ No data points features to display');
+            }
+        } catch (e) {
+            console.error('❌ Error parsing data points:', e);
+        }
+    } else {
+        console.log('ℹ️ No data points data - overlay removed');
+    }
+
     // Force map to recalculate its size
     setTimeout(() => {
         if (window.satelliteMap) {
@@ -208,6 +439,53 @@ export function updateSatelliteImagery() {
         }
     }, 100);
 }
+
+/**
+ * Jump to a specific data point location and date
+ * Called when user clicks "View satellite on [DATE]" in data point popup
+ * Always syncs date for temporal correlation analysis (scientific best practice)
+ */
+window.jumpToDataPoint = function(latitude, longitude, date) {
+    console.log('🎯 Jumping to data point for temporal correlation:', { latitude, longitude, date });
+
+    if (!window.satelliteMap) {
+        console.error('Satellite map not initialized');
+        return;
+    }
+
+    // Close any open popups to prevent interference
+    window.satelliteMap.closePopup();
+
+    // Disable cluster animations temporarily
+    if (window.dataPointsClusterGroup) {
+        window.dataPointsClusterGroup.options.animate = false;
+    }
+
+    // Center map on the clicked location with smooth animation
+    window.satelliteMap.flyTo([latitude, longitude], 15, {
+        animate: true,
+        duration: 0.8,
+        easeLinearity: 0.25
+    });
+
+    // Re-enable cluster animations after jump completes
+    setTimeout(() => {
+        if (window.dataPointsClusterGroup) {
+            window.dataPointsClusterGroup.options.animate = true;
+        }
+    }, 1000);
+
+    // Dispatch event to update satellite viewer (always syncs date)
+    window.dispatchEvent(new CustomEvent('jump-to-datapoint', {
+        detail: {
+            latitude: latitude,
+            longitude: longitude,
+            date: date
+        }
+    }));
+
+    console.log('✅ Jump event dispatched for temporal correlation analysis');
+};
 
 /**
  * Set up Livewire event listener for satellite data changes

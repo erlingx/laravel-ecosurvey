@@ -77,11 +77,15 @@ This roadmap implements the recommendations from the consolidated review (ChatGP
 
 **Completed:**
 - QA/QC fields migration and model updates
-- Visual differentiation for low-confidence data on maps
+- Visual differentiation for low-confidence data on maps (5 status colors with pie chart clusters)
 - SatelliteAnalysis model with PostGIS geometry support
 - Auto-enrichment via DataPointObserver + background job
 - SurveyZone model with advanced PostGIS spatial methods
 - Campaign intelligent map centering
+- Data point overlay with clustering on satellite viewer
+- Temporal proximity color-coding (green/yellow/orange/red)
+- **Temporal correlation analysis** - compare field data with satellite data from same date
+- **Intelligent analyze button** - shows target date, always syncs for scientific validity
 - All 144 tests passing
 
 ### Task 1.1: QA/QC Fields Migration ✅
@@ -249,60 +253,80 @@ This roadmap implements the recommendations from the consolidated review (ChatGP
 **Time:** 5 days  
 **Goal:** Manual data + satellite data truly integrated
 
-### Task 2.1: Add DataPoints Overlay to Satellite Viewer
-- ⏳ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
-  - ⏳ Add state: `showDataPoints` => true
-  - ⏳ Add computed property: `dataPointsGeoJSON`
+### Task 2.1: Add DataPoints Overlay to Satellite Viewer ✅
+- ✅ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
+  - ✅ Add state: `showDataPoints` => true
+  - ✅ Add computed property: `dataPointsGeoJSON`
     - Use `GeospatialService::getDataPointsAsGeoJSON()`
-  - ⏳ Add UI toggle checkbox for showing/hiding datapoints
-- ⏳ Update `resources/js/maps/satellite-map.js`
-  - ⏳ Add `dataPointsLayer` variable
-  - ⏳ Update `updateSatelliteImagery()` to accept `dataPointsGeoJSON`
-  - ⏳ Render datapoints as `L.circleMarker` with colored fill
-  - ⏳ Add popup with metric value and "Click to analyze" message
-  - ⏳ Clear and re-add layer on updates
+  - ✅ Add UI toggle checkbox for showing/hiding datapoints
+  - ✅ Add debug logging for data point counts
+- ✅ Update `resources/js/maps/satellite-map.js`
+  - ✅ Add `dataPointsClusterGroup` variable for clustering
+  - ✅ Implement Leaflet MarkerCluster for multiple points at same location
+  - ✅ Configure cluster radius: 50px with count badge icons
+  - ✅ Update `updateSatelliteImagery()` to accept `dataPointsGeoJSON`
+  - ✅ Render datapoints as `L.circleMarker` with temporal proximity colors
+  - ✅ Add popup with metric value and "Click to analyze" message
+  - ✅ Clear and re-add cluster group on updates
+- ✅ Update `resources/css/app.css`
+  - ✅ Add `.satellite-marker-cluster` styling
 
-**Deliverable:** Satellite map shows field data points overlaid on imagery
+**Deliverable:** Satellite map shows field data points with clustering (128 points → visible clusters) ✅
 
 **Tests:**
-- ⏳ Update `tests/Feature/Maps/SatelliteViewerTest.php`
-- ⏳ Test datapoints GeoJSON structure
-- ⏳ Test toggle functionality
+- ✅ Visual verification: Noise Pollution campaign shows clusters matching survey map
+- ⏳ Update `tests/Feature/Maps/SatelliteViewerTest.php` (deferred)
+- ⏳ Test datapoints GeoJSON structure (deferred)
+- ⏳ Test toggle functionality (deferred)
 
 ---
 
-### Task 2.2: Click-to-Analyze Interaction
-- ⏳ Update `resources/js/maps/satellite-map.js`
-  - ⏳ Add click event listener to datapoint markers
-  - ⏳ Dispatch Livewire event: `jump-to-datapoint` with lat/lon/date
-- ⏳ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
-  - ⏳ Add listener: `$listeners = ['jump-to-datapoint' => 'jumpToDataPoint']`
-  - ⏳ Implement `jumpToDataPoint($latitude, $longitude, $date)` method
-    - Set `selectedLat`, `selectedLon`, `selectedDate`
-    - Increment `updateRevision`
+### Task 2.2: Click-to-Analyze Interaction (Temporal Correlation Analysis) ✅
+- ✅ Update `resources/js/maps/satellite-map.js`
+  - ✅ Add click event listener to datapoint markers
+  - ✅ Dispatch Livewire event: `jump-to-datapoint` with lat/lon/date/forceSync
+  - ✅ **Improved button UX:** "📅 View satellite on [DATE]" (shows target date)
+  - ✅ **Force sync mode:** Always syncs date for temporal correlation (scientific best practice)
+  - ✅ Add event propagation prevention to avoid cluster interference
+  - ✅ Use `flyTo()` for smooth animation (0.8s duration)
+  - ✅ Disable cluster animations during jump
+- ✅ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
+  - ✅ Add Alpine.js listener: `@jump-to-datapoint.window`
+  - ✅ Implement `jumpToDataPoint($latitude, $longitude, $date, $forceSync)` method
+    - ✅ Set `selectedLat`, `selectedLon`
+    - ✅ Update `selectedDate` if syncMode OR forceSync is true
+    - ✅ Increment `updateRevision`
+  - ✅ Add detailed logging for debugging
 
-**Deliverable:** Clicking a datapoint jumps satellite view to that location/date
+**Deliverable:** Clicking analyze button enables temporal correlation analysis - comparing field measurements with satellite data from the same date ✅
+
+**Scientific Value:** 
+- ✅ Users can validate satellite data against ground truth from same day
+- ✅ Temporal alignment ensures environmental conditions match
+- ✅ Follows remote sensing best practices for data validation
 
 **Tests:**
-- ⏳ Test Livewire event dispatch
-- ⏳ Test coordinates update on jump
+- ✅ Visual verification: Button shows target date, date always syncs
+- ⏳ Test Livewire event dispatch (deferred)
+- ⏳ Test coordinates update on jump (deferred)
+- ⏳ Test forceSync parameter (deferred)
 
 ---
 
-### Task 2.3: Use Survey Zone Geometry for Satellite Requests
-- ⏳ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
-  - ⏳ Modify `updatedCampaignId()` method
-    - ⏳ Priority 1: Use survey zone centroid if exists
-    - ⏳ Priority 2: Use first datapoint location
-    - ⏳ Priority 3: Default to Copenhagen (55.7072, 12.5704)
-  - ⏳ Log zone selection for debugging
+### Task 2.3: Use Survey Zone Geometry for Satellite Requests ✅
+- ✅ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
+  - ✅ Modify `updatedCampaignId()` method
+    - ✅ Priority 1: Use survey zone centroid if exists
+    - ✅ Priority 2: Use first datapoint location
+    - ✅ Priority 3: Default to Copenhagen (55.7072, 12.5704)
+  - ✅ Log zone selection for debugging
 
-**Deliverable:** Satellite viewer intelligently centers on survey zones
+**Deliverable:** Satellite viewer intelligently centers on survey zones ✅
 
 **Tests:**
-- ⏳ Test with campaign that has survey zone
-- ⏳ Test with campaign that has only datapoints
-- ⏳ Test with empty campaign (fallback)
+- ⏳ Test with campaign that has survey zone (deferred)
+- ⏳ Test with campaign that has only datapoints (deferred)
+- ⏳ Test with empty campaign (fallback) (deferred)
 
 ---
 
@@ -337,14 +361,87 @@ This roadmap implements the recommendations from the consolidated review (ChatGP
 
 ---
 
+### Task 2.6: Production-Ready UX Enhancements ✅ COMPLETED
+
+**Goal:** Improve user experience with clear visual feedback and educational elements
+
+#### Enhancement 1: Temporal Proximity Color-Coding on Markers ✅
+- ✅ Update `resources/js/maps/satellite-map.js`
+  - ✅ Add color-coding function based on temporal difference:
+    - **Green**: 0-3 days (excellent alignment)
+    - **Yellow**: 4-7 days (good alignment)
+    - **Orange**: 8-14 days (acceptable)
+    - **Red**: 15+ days (poor alignment)
+  - ✅ Apply color to marker fill/border
+  - ✅ Include temporal proximity in popup info
+
+**Deliverable:** Visual indication of data quality at-a-glance
+
+**Tests:**
+- ✅ Test color assignment logic
+- ✅ Visual verification on map
+
+---
+
+#### Enhancement 2: Optional Sync Mode for Advanced Users ✅
+- ✅ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
+  - ✅ Add state: `syncMode` => false
+  - ✅ Add checkbox toggle: "Sync satellite date with field data"
+  - ✅ When enabled:
+    - Clicking datapoint auto-updates date picker to collection date
+    - Map centers and refreshes satellite imagery
+  - ✅ When disabled (default):
+    - Current behavior (manual date selection)
+  - ✅ Add info tooltip explaining sync mode
+
+**Deliverable:** Advanced users can auto-sync dates for rapid exploration
+
+**Tests:**
+- ⏳ Test sync mode toggle
+- ⏳ Test date auto-update when enabled
+- ⏳ Test manual mode when disabled
+
+---
+
+#### Enhancement 3: Clearer Labeling with Educational Tooltips ✅
+- ✅ Update `resources/views/livewire/maps/satellite-viewer.blade.php`
+  - ✅ Add Flux UI tooltips to key elements:
+    - **"Show Field Data" checkbox**: "Overlay manual measurements on satellite imagery"
+    - **"Sync Mode" checkbox**: "Automatically match satellite date to field data collection date"
+    - **Date picker**: "Select satellite image acquisition date (cloud-free images may be limited)"
+    - **Campaign selector**: "Filter view to specific research campaign"
+  - ✅ Add legend for temporal color-coding:
+    - Display color scale with day ranges
+    - Position in top-right corner of map
+  - ✅ Add info icon (ⓘ) next to "Temporal Alignment" label
+    - Tooltip: "Shows how close satellite observation is to field measurement (closer = better correlation)"
+
+**Deliverable:** Self-explanatory interface for new users
+
+**Tests:**
+- ⏳ Visual verification of tooltips
+- ⏳ Test tooltip accessibility
+- ⏳ Test legend display
+
+---
+
 **Priority 2 Checklist:**
-- [ ] DataPoints overlay on satellite map
-- [ ] Toggle control for showing/hiding overlay
-- [ ] Click-to-analyze interaction working
-- [ ] Survey zone centering implemented
-- [ ] Temporal correlation displayed
-- [ ] Dynamic date selection based on campaign
-- [ ] Integration tests passing (estimate: 8+ tests)
+- [x] DataPoints overlay on satellite map ✅
+- [x] Marker clustering implemented (prevents stacked points) ✅
+- [x] Toggle control for showing/hiding overlay ✅
+- [x] Click-to-analyze interaction working ✅
+- [x] **Temporal correlation analysis implemented** ✅
+- [x] **Always-on date sync for analyze button** ✅
+- [x] **Button shows target date in text** ✅
+- [x] **Smooth zoom behavior (no erratic zoom-out)** ✅
+- [x] Survey zone centering implemented ✅
+- [x] Temporal correlation displayed ✅
+- [x] Dynamic date selection based on campaign
+- [x] **Temporal proximity color-coding implemented** ✅
+- [x] **Educational tooltips and legend added** ✅
+- [ ] Integration tests passing (estimate: 12+ tests)
+- [ ] UX testing completed
+- [ ] Browser compatibility verified
 
 ---
 

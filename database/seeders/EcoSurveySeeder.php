@@ -4,15 +4,15 @@ namespace Database\Seeders;
 
 use App\Models\Campaign;
 use App\Models\EnvironmentalMetric;
+use App\Models\SurveyZone;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Carbon\Carbon;
 
 class EcoSurveySeeder extends Seeder
 {
     /**
      * Nature photo paths for demo data
-     * These are stored in public/files/seed-photos/ and accessible via /files/seed-photos/
-     * Manually uploaded photos go to public/files/data-points/
      */
     private array $naturePhotos = [
         'files/seed-photos/forest-path.jpg',
@@ -24,6 +24,11 @@ class EcoSurveySeeder extends Seeder
 
     /**
      * Run the database seeds.
+     *
+     * Creates 3 campaigns with data centered around August 15, 2025 (known good Sentinel-2 coverage):
+     * 1. Fælledparken Green Space Study - Vegetation monitoring
+     * 2. Noise Pollution Study - Urban noise measurements
+     * 3. Copenhagen Air Quality 2025 - Air quality across city
      */
     public function run(): void
     {
@@ -36,592 +41,592 @@ class EcoSurveySeeder extends Seeder
             ['name' => 'PM2.5', 'unit' => 'µg/m³', 'description' => 'Fine particulate matter concentration', 'is_active' => true],
             ['name' => 'PM10', 'unit' => 'µg/m³', 'description' => 'Coarse particulate matter concentration', 'is_active' => true],
             ['name' => 'CO2', 'unit' => 'ppm', 'description' => 'Carbon dioxide concentration', 'is_active' => true],
-            ['name' => 'Water pH', 'unit' => 'pH', 'description' => 'Water acidity/alkalinity level', 'is_active' => true],
         ];
 
         foreach ($metrics as $metric) {
-            EnvironmentalMetric::firstOrCreate(
-                ['name' => $metric['name']],
-                $metric
-            );
+            EnvironmentalMetric::firstOrCreate(['name' => $metric['name']], $metric);
         }
 
-        // Get the first user (created by UserSeeder)
         $user = User::first();
 
-        // Create Sample Campaigns
-        $campaigns = [
-            [
-                'name' => 'Copenhagen Air Quality 2026',
-                'description' => 'Monitoring air quality across Copenhagen neighborhoods',
-                'status' => 'active',
-                'user_id' => $user->id,
-                'start_date' => now()->subDays(30),
-                'end_date' => now()->addDays(60),
-            ],
-            [
-                'name' => 'Urban Noise Pollution Study',
-                'description' => 'Measuring noise levels in high-traffic areas',
-                'status' => 'active',
-                'user_id' => $user->id,
-                'start_date' => now()->subDays(14),
-                'end_date' => now()->addDays(90),
-            ],
-            [
-                'name' => 'Water Quality Assessment',
-                'description' => 'Testing water quality in local lakes and streams',
-                'status' => 'active',
-                'user_id' => $user->id,
-                'start_date' => now()->subDays(7),
-                'end_date' => now()->addDays(120),
-            ],
-            [
-                'name' => 'Fælledparken Green Space Study',
-                'description' => 'Vegetation and air quality monitoring in Copenhagen\'s largest park',
-                'status' => 'active',
-                'user_id' => $user->id,
-                'start_date' => now()->subDays(15),
-                'end_date' => now()->addDays(75),
-            ],
-        ];
+        // CAMPAIGN 1: Fælledparken Green Space Study
+        $this->createFalledparkenCampaign($user);
 
-        foreach ($campaigns as $campaign) {
-            Campaign::firstOrCreate(
-                ['name' => $campaign['name']],
-                $campaign
-            );
-        }
+        // CAMPAIGN 2: Noise Pollution Study
+        $this->createNoisePollutionCampaign($user);
 
-        // Add sample data points to Fælledparken campaign
-        $parkCampaign = Campaign::where('name', 'Fælledparken Green Space Study')->first();
-        if ($parkCampaign) {
-            $temperatureMetric = EnvironmentalMetric::where('name', 'Temperature')->first();
-            $humidityMetric = EnvironmentalMetric::where('name', 'Humidity')->first();
-            $airQualityMetric = EnvironmentalMetric::where('name', 'Air Quality Index')->first();
+        // CAMPAIGN 3: Copenhagen Air Quality 2025
+        $this->createCopenhagenAirQualityCampaign($user);
 
-            // Sample points across Fælledparken (Copenhagen's park)
-            // Location: 55.7072° N, 12.5704° E (center of Fælledparken)
-            $locations = [
-                ['lat' => 55.7072, 'lon' => 12.5704, 'name' => 'Park center'],
-                ['lat' => 55.7085, 'lon' => 12.5680, 'name' => 'North section'],
-                ['lat' => 55.7060, 'lon' => 12.5720, 'name' => 'South section'],
-                ['lat' => 55.7078, 'lon' => 12.5650, 'name' => 'West edge'],
-                ['lat' => 55.7065, 'lon' => 12.5740, 'name' => 'East edge'],
-            ];
-
-            // Create data points over the last 30 days for better trend visualization
-            $startDate = now()->subDays(30);
-            $endDate = now();
-
-            for ($day = 0; $day <= 30; $day++) {
-                $date = $startDate->copy()->addDays($day);
-
-                // Create 3-5 temperature readings per day at different locations
-                // n >= 3 ensures meaningful confidence intervals
-                $dailyReadings = rand(3, 5);
-                for ($i = 0; $i < $dailyReadings; $i++) {
-                    $location = $locations[array_rand($locations)];
-
-                    // Temperature varies by season and time (15-25°C range)
-                    $baseTemp = 18 + sin($day / 30 * pi()) * 5; // Seasonal variation
-                    $temp = $baseTemp + rand(-40, 40) / 10; // Wider randomness to create more outliers
-
-                    // Vary accuracy to demonstrate yellow markers (some > 50m)
-                    $accuracy = rand(30, 800) / 10; // 3m to 80m
-
-                    // Vary status to demonstrate different marker colors
-                    // 50% approved, 25% pending, 15% draft, 10% rejected
-                    $statusRoll = rand(1, 100);
-                    if ($statusRoll <= 50) {
-                        $status = 'approved';
-                    } elseif ($statusRoll <= 75) {
-                        $status = 'pending';
-                    } elseif ($statusRoll <= 90) {
-                        $status = 'draft';
-                    } else {
-                        $status = 'rejected';
-                    }
-
-                    // Flag outliers: temperature >2.5°C away from base (unusual deviation)
-                    $qaFlags = [];
-                    $deviation = abs($temp - $baseTemp);
-                    if ($deviation > 2.5) {
-                        $qaFlags[] = 'outlier';
-                    }
-                    // Flag suspicious values: temperature outside realistic range (-10 to 40°C)
-                    if ($temp < -10 || $temp > 40) {
-                        if (! in_array('suspicious_value', $qaFlags)) {
-                            $qaFlags[] = 'suspicious_value';
-                        }
-                    }
-                    // Add location_uncertainty for poor GPS accuracy
-                    if ($accuracy > 80) {
-                        $qaFlags[] = 'location_uncertainty';
-                    }
-
-                    // Assign random nature photo to all data points
-                    $photoPath = $this->naturePhotos[array_rand($this->naturePhotos)];
-
-                    \App\Models\DataPoint::create([
-                        'campaign_id' => $parkCampaign->id,
-                        'environmental_metric_id' => $temperatureMetric->id,
-                        'user_id' => $user->id,
-                        'value' => round($temp, 1),
-                        'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
-                        'accuracy' => round($accuracy, 1),
-                        'collected_at' => $date->copy()->addHours(rand(8, 18)),
-                        'status' => $status,
-                        'qa_flags' => $qaFlags,
-                        'photo_path' => $photoPath,
-                        'created_at' => $date,
-                        'updated_at' => $date,
-                    ]);
-                }
-
-                // Create 3-4 humidity readings per day (at least 3 for CI)
-                $humidityReadings = rand(3, 4);
-                for ($i = 0; $i < $humidityReadings; $i++) {
-                    $location = $locations[array_rand($locations)];
-                    $humidity = 60 + rand(-200, 200) / 10; // 40-80% range
-
-                    // Vary accuracy to demonstrate yellow markers
-                    $accuracy = rand(30, 800) / 10; // 3m to 80m
-
-                    // Vary status
-                    $statusRoll = rand(1, 100);
-                    if ($statusRoll <= 50) {
-                        $status = 'approved';
-                    } elseif ($statusRoll <= 75) {
-                        $status = 'pending';
-                    } elseif ($statusRoll <= 90) {
-                        $status = 'draft';
-                    } else {
-                        $status = 'rejected';
-                    }
-
-                    // Flag calibration overdue: randomly set a calibration date, flag if >90 days old
-                    // Range: 20-110 days ago (so only ~18% will be >90 days = overdue)
-                    $qaFlags = [];
-                    $calibrationDate = $date->copy()->subDays(rand(20, 110));
-                    $daysSinceCalibration = $calibrationDate->diffInDays($date);
-                    if ($daysSinceCalibration > 90) {
-                        $qaFlags[] = 'calibration_overdue';
-                    }
-                    // Add location_uncertainty for poor GPS accuracy
-                    if ($accuracy > 80) {
-                        $qaFlags[] = 'location_uncertainty';
-                    }
-                    // Flag suspicious humidity values outside realistic range (0-100%)
-                    $finalHumidity = max(30, min(90, $humidity));
-                    if ($finalHumidity < 10 || $finalHumidity > 95) {
-                        $qaFlags[] = 'suspicious_value';
-                    }
-
-                    // Assign random nature photo to all data points
-                    $photoPath = $this->naturePhotos[array_rand($this->naturePhotos)];
-
-                    \App\Models\DataPoint::create([
-                        'campaign_id' => $parkCampaign->id,
-                        'environmental_metric_id' => $humidityMetric->id,
-                        'user_id' => $user->id,
-                        'value' => round(max(30, min(90, $humidity)), 1),
-                        'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
-                        'accuracy' => round($accuracy, 1),
-                        'collected_at' => $date->copy()->addHours(rand(8, 18)),
-                        'calibration_at' => $calibrationDate,
-                        'status' => $status,
-                        'qa_flags' => $qaFlags,
-                        'photo_path' => $photoPath,
-                        'created_at' => $date,
-                        'updated_at' => $date,
-                    ]);
-                }
-
-                // Create 3 air quality readings per day (minimum for CI)
-                for ($i = 0; $i < 3; $i++) {
-                    $location = $locations[array_rand($locations)];
-                    $aqi = 40 + rand(-100, 100) / 10; // 30-50 AQI (good to moderate)
-
-                    // Vary accuracy
-                    $accuracy = rand(30, 800) / 10;
-
-                    // Vary status
-                    $statusRoll = rand(1, 100);
-                    if ($statusRoll <= 50) {
-                        $status = 'approved';
-                    } elseif ($statusRoll <= 75) {
-                        $status = 'pending';
-                    } elseif ($statusRoll <= 90) {
-                        $status = 'draft';
-                    } else {
-                        $status = 'rejected';
-                    }
-
-                    // Flag suspicious AQI values outside expected range (0-150 for good to unhealthy)
-                    $qaFlags = [];
-                    $finalAqi = max(20, min(80, $aqi));
-                    if ($finalAqi < 0 || $finalAqi > 150) {
-                        $qaFlags[] = 'suspicious_value';
-                    }
-                    // Add location_uncertainty for poor GPS accuracy
-                    if ($accuracy > 80) {
-                        $qaFlags[] = 'location_uncertainty';
-                    }
-
-                    // Note: duplicate_reading would require checking existing records
-                    // In production, this would be done via database query or observer
-
-                    // Assign random nature photo to all data points
-                    $photoPath = $this->naturePhotos[array_rand($this->naturePhotos)];
-
-                    \App\Models\DataPoint::create([
-                        'campaign_id' => $parkCampaign->id,
-                        'environmental_metric_id' => $airQualityMetric->id,
-                        'user_id' => $user->id,
-                        'value' => round(max(20, min(80, $aqi)), 1),
-                        'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
-                        'accuracy' => round($accuracy, 1),
-                        'collected_at' => $date->copy()->addHours(rand(8, 18)),
-                        'status' => $status,
-                        'qa_flags' => $qaFlags,
-                        'photo_path' => $photoPath,
-                        'created_at' => $date,
-                        'updated_at' => $date,
-                    ]);
-                }
-            }
-
-            $this->command->info('✓ Created sample data points in Fælledparken (30 days of data)');
-
-            // Create specific examples of each QA flag type for demonstration
-            $demonstrationDate = now()->subDays(5);
-
-            // Example 1: Pure outlier (temperature spike)
-            \App\Models\DataPoint::create([
-                'campaign_id' => $parkCampaign->id,
-                'environmental_metric_id' => $temperatureMetric->id,
-                'user_id' => $user->id,
-                'value' => 35.0, // Unusually high for the season
-                'location' => \DB::raw('ST_SetSRID(ST_MakePoint(12.5704, 55.7072), 4326)'),
-                'accuracy' => 15.0,
-                'collected_at' => $demonstrationDate->copy()->addHours(12),
-                'status' => 'pending',
-                'qa_flags' => ['outlier'],
-                'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
-                'notes' => 'Demonstration: Outlier flag only',
-                'created_at' => $demonstrationDate,
-                'updated_at' => $demonstrationDate,
-            ]);
-
-            // Example 2: Pure location_uncertainty (poor GPS)
-            \App\Models\DataPoint::create([
-                'campaign_id' => $parkCampaign->id,
-                'environmental_metric_id' => $temperatureMetric->id,
-                'user_id' => $user->id,
-                'value' => 18.5,
-                'location' => \DB::raw('ST_SetSRID(ST_MakePoint(12.5720, 55.7060), 4326)'),
-                'accuracy' => 95.0, // Very poor accuracy
-                'collected_at' => $demonstrationDate->copy()->addHours(14),
-                'status' => 'pending',
-                'qa_flags' => ['location_uncertainty'],
-                'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
-                'notes' => 'Demonstration: Location uncertainty only',
-                'created_at' => $demonstrationDate,
-                'updated_at' => $demonstrationDate,
-            ]);
-
-            // Example 3: Pure calibration_overdue
-            \App\Models\DataPoint::create([
-                'campaign_id' => $parkCampaign->id,
-                'environmental_metric_id' => $humidityMetric->id,
-                'user_id' => $user->id,
-                'value' => 65.0,
-                'location' => \DB::raw('ST_SetSRID(ST_MakePoint(12.5680, 55.7085), 4326)'),
-                'accuracy' => 10.0,
-                'collected_at' => $demonstrationDate->copy()->addHours(15),
-                'calibration_at' => $demonstrationDate->copy()->subDays(120), // 120 days old
-                'status' => 'pending',
-                'qa_flags' => ['calibration_overdue'],
-                'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
-                'notes' => 'Demonstration: Calibration overdue only',
-                'created_at' => $demonstrationDate,
-                'updated_at' => $demonstrationDate,
-            ]);
-
-            // Example 4: Multiple flags (outlier + location_uncertainty)
-            \App\Models\DataPoint::create([
-                'campaign_id' => $parkCampaign->id,
-                'environmental_metric_id' => $temperatureMetric->id,
-                'user_id' => $user->id,
-                'value' => 32.0, // Outlier
-                'location' => \DB::raw('ST_SetSRID(ST_MakePoint(12.5650, 55.7078), 4326)'),
-                'accuracy' => 110.0, // Poor accuracy
-                'collected_at' => $demonstrationDate->copy()->addHours(16),
-                'status' => 'pending',
-                'qa_flags' => ['outlier', 'location_uncertainty'],
-                'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
-                'notes' => 'Demonstration: Multiple flags',
-                'created_at' => $demonstrationDate,
-                'updated_at' => $demonstrationDate,
-            ]);
-
-            // Example 5: Manual review flag
-            \App\Models\DataPoint::create([
-                'campaign_id' => $parkCampaign->id,
-                'environmental_metric_id' => $airQualityMetric->id,
-                'user_id' => $user->id,
-                'value' => 55.0,
-                'location' => \DB::raw('ST_SetSRID(ST_MakePoint(12.5740, 55.7065), 4326)'),
-                'accuracy' => 8.0,
-                'collected_at' => $demonstrationDate->copy()->addHours(17),
-                'status' => 'pending',
-                'qa_flags' => ['manual_review'],
-                'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
-                'notes' => 'Demonstration: Manually flagged for review',
-                'created_at' => $demonstrationDate,
-                'updated_at' => $demonstrationDate,
-            ]);
-
-            $this->command->info('✓ Created demonstration data points for each QA flag type');
-        }
-
-        // Add sample data points to Urban Noise Pollution Study campaign
-        $noiseCampaign = Campaign::where('name', 'Urban Noise Pollution Study')->first();
-        if ($noiseCampaign) {
-            $noiseMetric = EnvironmentalMetric::where('name', 'Noise Level')->first();
-
-            // High-traffic locations in Copenhagen
-            $locations = [
-                ['lat' => 55.6761, 'lon' => 12.5683, 'name' => 'Copenhagen Central Station'],
-                ['lat' => 55.6867, 'lon' => 12.5700, 'name' => 'Nørreport Station'],
-                ['lat' => 55.6828, 'lon' => 12.5878, 'name' => 'Østerport area'],
-                ['lat' => 55.6759, 'lon' => 12.5655, 'name' => 'Tivoli Gardens area'],
-                ['lat' => 55.6736, 'lon' => 12.5681, 'name' => 'Vesterbrogade'],
-            ];
-
-            // Create data points over the last 14 days (campaign started 14 days ago)
-            $startDate = now()->subDays(14);
-
-            for ($day = 0; $day <= 14; $day++) {
-                $date = $startDate->copy()->addDays($day);
-
-                // Create 3-4 noise readings per day at different locations and times
-                $dailyReadings = rand(3, 4);
-                for ($i = 0; $i < $dailyReadings; $i++) {
-                    $location = $locations[array_rand($locations)];
-                    $hour = rand(6, 22); // 6 AM to 10 PM
-
-                    // Noise varies by time of day and location (40-85 dB range)
-                    // Higher during rush hours (7-9 AM, 4-7 PM)
-                    $isRushHour = ($hour >= 7 && $hour <= 9) || ($hour >= 16 && $hour <= 19);
-                    $baseNoise = $isRushHour ? 70 : 55;
-                    $noise = $baseNoise + rand(-100, 100) / 10;
-
-                    // Vary accuracy
-                    $accuracy = rand(30, 800) / 10;
-
-                    // Vary status
-                    $statusRoll = rand(1, 100);
-                    if ($statusRoll <= 50) {
-                        $status = 'approved';
-                    } elseif ($statusRoll <= 75) {
-                        $status = 'pending';
-                    } elseif ($statusRoll <= 90) {
-                        $status = 'draft';
-                    } else {
-                        $status = 'rejected';
-                    }
-
-                    // Only flag location_uncertainty if accuracy is genuinely poor (>80m)
-                    $qaFlags = [];
-                    if ($accuracy > 80) {
-                        $qaFlags[] = 'location_uncertainty';
-                    }
-                    // Flag suspicious noise values outside realistic urban range (30-100 dB)
-                    $finalNoise = max(40, min(85, $noise));
-                    if ($finalNoise < 30 || $finalNoise > 100) {
-                        $qaFlags[] = 'suspicious_value';
-                    }
-                    // Occasionally add manual_review flag (5% chance) for demonstration
-                    if (rand(1, 100) <= 5 && empty($qaFlags)) {
-                        $qaFlags[] = 'manual_review';
-                    }
-
-                    // Assign random nature photo to all data points
-                    $photoPath = $this->naturePhotos[array_rand($this->naturePhotos)];
-
-                    \App\Models\DataPoint::create([
-                        'campaign_id' => $noiseCampaign->id,
-                        'environmental_metric_id' => $noiseMetric->id,
-                        'user_id' => $user->id,
-                        'value' => round(max(40, min(85, $noise)), 1),
-                        'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
-                        'accuracy' => round($accuracy, 1),
-                        'collected_at' => $date->copy()->addHours($hour)->addMinutes(rand(0, 59)),
-                        'status' => $status,
-                        'qa_flags' => $qaFlags,
-                        'photo_path' => $photoPath,
-                        'created_at' => $date,
-                        'updated_at' => $date,
-                    ]);
-                }
-            }
-
-            $this->command->info('✓ Created sample data points for Urban Noise Pollution Study (14 days of data)');
-
-            // Add Valby Parken cluster - all approved with good accuracy (green cluster)
-            $valbyParkenLocations = [
-                ['lat' => 55.6596, 'lon' => 12.5107, 'name' => 'Valby Park center'],
-                ['lat' => 55.6601, 'lon' => 12.5095, 'name' => 'Valby Park north'],
-                ['lat' => 55.6590, 'lon' => 12.5120, 'name' => 'Valby Park south'],
-                ['lat' => 55.6598, 'lon' => 12.5088, 'name' => 'Valby Park west'],
-                ['lat' => 55.6594, 'lon' => 12.5125, 'name' => 'Valby Park east'],
-            ];
-
-            // Create approved, high-quality noise readings in Valby Parken (last 7 days)
-            for ($day = 0; $day <= 7; $day++) {
-                $date = $startDate->copy()->addDays($day);
-
-                // Create 2-3 readings per day
-                $dailyReadings = rand(2, 3);
-                for ($i = 0; $i < $dailyReadings; $i++) {
-                    $location = $valbyParkenLocations[array_rand($valbyParkenLocations)];
-                    $hour = rand(8, 20); // 8 AM to 8 PM
-
-                    // Park noise levels are moderate (45-65 dB)
-                    $baseNoise = 55;
-                    $noise = $baseNoise + rand(-80, 80) / 10;
-
-                    // High accuracy (< 50m for green markers)
-                    $accuracy = rand(30, 450) / 10; // 3m to 45m
-
-                    // Assign random nature photo
-                    $photoPath = $this->naturePhotos[array_rand($this->naturePhotos)];
-
-                    \App\Models\DataPoint::create([
-                        'campaign_id' => $noiseCampaign->id,
-                        'environmental_metric_id' => $noiseMetric->id,
-                        'user_id' => $user->id,
-                        'value' => round(max(45, min(65, $noise)), 1),
-                        'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
-                        'accuracy' => round($accuracy, 1),
-                        'collected_at' => $date->copy()->addHours($hour)->addMinutes(rand(0, 59)),
-                        'status' => 'approved', // All approved
-                        'qa_flags' => [], // No QA flags
-                        'photo_path' => $photoPath,
-                        'created_at' => $date,
-                        'updated_at' => $date,
-                    ]);
-                }
-            }
-
-            $this->command->info('✓ Created green cluster in Valby Parken (approved high-quality data)');
-
-            // Add Fælledparken cluster - low accuracy (yellow cluster)
-            $fælledparkenLocations = [
-                ['lat' => 55.7072, 'lon' => 12.5704, 'name' => 'Fælledparken center'],
-                ['lat' => 55.7080, 'lon' => 12.5690, 'name' => 'Fælledparken north'],
-                ['lat' => 55.7065, 'lon' => 12.5718, 'name' => 'Fælledparken south'],
-                ['lat' => 55.7075, 'lon' => 12.5680, 'name' => 'Fælledparken west'],
-                ['lat' => 55.7068, 'lon' => 12.5728, 'name' => 'Fælledparken east'],
-            ];
-
-            // Create low accuracy noise readings in Fælledparken (last 7 days)
-            for ($day = 0; $day <= 7; $day++) {
-                $date = $startDate->copy()->addDays($day);
-
-                // Create 2-3 readings per day
-                $dailyReadings = rand(2, 3);
-                for ($i = 0; $i < $dailyReadings; $i++) {
-                    $location = $fælledparkenLocations[array_rand($fælledparkenLocations)];
-                    $hour = rand(8, 20); // 8 AM to 8 PM
-
-                    // Park noise levels are moderate (48-68 dB)
-                    $baseNoise = 58;
-                    $noise = $baseNoise + rand(-90, 90) / 10;
-
-                    // Low accuracy (> 50m for yellow markers)
-                    $accuracy = rand(510, 1200) / 10; // 51m to 120m
-
-                    // Assign random nature photo
-                    $photoPath = $this->naturePhotos[array_rand($this->naturePhotos)];
-
-                    \App\Models\DataPoint::create([
-                        'campaign_id' => $noiseCampaign->id,
-                        'environmental_metric_id' => $noiseMetric->id,
-                        'user_id' => $user->id,
-                        'value' => round(max(48, min(68, $noise)), 1),
-                        'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
-                        'accuracy' => round($accuracy, 1),
-                        'collected_at' => $date->copy()->addHours($hour)->addMinutes(rand(0, 59)),
-                        'status' => 'pending', // Pending status
-                        'qa_flags' => [], // No QA flags (would make it red)
-                        'photo_path' => $photoPath,
-                        'created_at' => $date,
-                        'updated_at' => $date,
-                    ]);
-                }
-            }
-
-            $this->command->info('✓ Created yellow cluster in Fælledparken (low accuracy data)');
-        }
-
-        // Add sample satellite analyses for Fælledparken campaign
-        if ($parkCampaign) {
-            $this->command->info('Creating satellite analyses for Fælledparken...');
-
-            // Create satellite analyses for the park center location
-            $parkCenter = ['lat' => 55.7072, 'lon' => 12.5704];
-
-            // Create analyses for the last 30 days (every 5 days to match Sentinel-2 revisit time)
-            for ($day = 0; $day <= 30; $day += 5) {
-                $date = now()->subDays(30 - $day);
-
-                // NDVI value varies by season (higher in summer)
-                $seasonalFactor = 0.6 + (sin($day / 30 * pi()) * 0.2); // 0.4 to 0.8 range
-                $ndviValue = round($seasonalFactor + (rand(-5, 5) / 100), 4);
-
-                \App\Models\SatelliteAnalysis::create([
-                    'campaign_id' => $parkCampaign->id,
-                    'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$parkCenter['lon']}, {$parkCenter['lat']}), 4326)"),
-                    'ndvi_value' => $ndviValue,
-                    'ndvi_interpretation' => $this->interpretNDVI($ndviValue),
-                    'moisture_index' => round(rand(30, 70) / 100, 4),
-                    'temperature_kelvin' => round(273.15 + rand(15, 25), 2),
-                    'acquisition_date' => $date,
-                    'satellite_source' => 'Copernicus',
-                    'processing_level' => 'L2A',
-                    'cloud_coverage_percent' => round(rand(0, 30), 2),
-                    'metadata' => [
-                        'platform' => 'Sentinel-2A',
-                        'instrument' => 'MSI',
-                        'resolution' => '10m',
-                    ],
-                ]);
-            }
-
-            $this->command->info('✓ Created satellite analyses for Fælledparken (7 analyses)');
-        }
-
-        $this->command->info('✓ Created '.count($metrics).' environmental metrics');
-        $this->command->info('✓ Created '.count($campaigns).' campaigns');
+        $this->command->info('✅ Created 3 campaigns with survey zones and data points around August 15, 2025');
     }
 
     /**
-     * Interpret NDVI value
+     * Campaign 1: Fælledparken Green Space Study
+     * Location: Copenhagen's largest park (55.7072°N, 12.5704°E)
+     * Focus: Vegetation health, temperature, humidity
      */
-    private function interpretNDVI(float $ndvi): string
+    private function createFalledparkenCampaign(User $user): void
     {
-        if ($ndvi < 0) {
-            return 'Water or snow';
-        } elseif ($ndvi < 0.2) {
-            return 'Bare soil or urban area';
-        } elseif ($ndvi < 0.4) {
-            return 'Sparse vegetation';
-        } elseif ($ndvi < 0.6) {
-            return 'Moderate vegetation';
-        } else {
-            return 'Dense vegetation';
+        $campaign = Campaign::firstOrCreate(
+            ['name' => 'Fælledparken Green Space Study'],
+            [
+                'description' => 'Vegetation and air quality monitoring in Copenhagen\'s largest park',
+                'status' => 'active',
+                'user_id' => $user->id,
+                'start_date' => '2025-08-01',
+                'end_date' => '2025-08-31',
+            ]
+        );
+
+        // Create survey zone for Fælledparken
+        SurveyZone::firstOrCreate(
+            [
+                'campaign_id' => $campaign->id,
+                'name' => 'Fælledparken Core Area'
+            ],
+            [
+                'description' => 'Central park area with dense vegetation',
+                'area' => \DB::raw("ST_GeomFromText('POLYGON((12.5650 55.7085, 12.5750 55.7085, 12.5750 55.7055, 12.5650 55.7055, 12.5650 55.7085))', 4326)"),
+                'area_km2' => 0.84,
+            ]
+        );
+
+        $tempMetric = EnvironmentalMetric::where('name', 'Temperature')->first();
+        $humidityMetric = EnvironmentalMetric::where('name', 'Humidity')->first();
+        $aqiMetric = EnvironmentalMetric::where('name', 'Air Quality Index')->first();
+
+        $locations = [
+            ['lat' => 55.7072, 'lon' => 12.5704, 'name' => 'Park center'],
+            ['lat' => 55.7080, 'lon' => 12.5690, 'name' => 'North section'],
+            ['lat' => 55.7065, 'lon' => 12.5718, 'name' => 'South section'],
+            ['lat' => 55.7075, 'lon' => 12.5680, 'name' => 'West edge'],
+            ['lat' => 55.7068, 'lon' => 12.5728, 'name' => 'East edge'],
+        ];
+
+        // Create data points from Aug 1-30, 2025 (centered on Aug 15 with known satellite coverage)
+        for ($day = 1; $day <= 30; $day++) {
+            $date = Carbon::parse("2025-08-{$day}");
+
+            // 3-5 temperature readings per day with varied statuses
+            for ($i = 0; $i < rand(3, 5); $i++) {
+                $location = $locations[array_rand($locations)];
+                $temp = 20 + sin($day / 30 * pi()) * 3 + rand(-20, 20) / 10;
+
+                // Vary status: 60% approved, 20% pending, 10% draft, 10% rejected
+                $statusRoll = rand(1, 100);
+                if ($statusRoll <= 60) {
+                    $status = 'approved';
+                } elseif ($statusRoll <= 80) {
+                    $status = 'pending';
+                } elseif ($statusRoll <= 90) {
+                    $status = 'draft';
+                } else {
+                    $status = 'rejected';
+                }
+
+                // Add QA flags for testing
+                $qaFlags = [];
+                if (abs($temp - 20) > 5) {
+                    $qaFlags[] = 'outlier';
+                }
+
+                $accuracy = rand(30, 150) / 10; // 3m to 15m
+                if ($accuracy > 10) {
+                    $qaFlags[] = 'location_uncertainty';
+                }
+
+                \App\Models\DataPoint::create([
+                    'campaign_id' => $campaign->id,
+                    'environmental_metric_id' => $tempMetric->id,
+                    'user_id' => $user->id,
+                    'value' => round($temp, 1),
+                    'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
+                    'accuracy' => round($accuracy, 1),
+                    'collected_at' => $date->copy()->addHours(rand(8, 18)),
+                    'status' => $status,
+                    'qa_flags' => $qaFlags,
+                    'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
+                    'created_at' => $date,
+                    'updated_at' => $date,
+                ]);
+            }
+
+            // 3-4 humidity readings per day with varied statuses
+            for ($i = 0; $i < rand(3, 4); $i++) {
+                $location = $locations[array_rand($locations)];
+                $humidity = 60 + rand(-15, 15);
+
+                // Vary status
+                $statusRoll = rand(1, 100);
+                if ($statusRoll <= 60) {
+                    $status = 'approved';
+                } elseif ($statusRoll <= 80) {
+                    $status = 'pending';
+                } elseif ($statusRoll <= 90) {
+                    $status = 'draft';
+                } else {
+                    $status = 'rejected';
+                }
+
+                // Add calibration_overdue flag occasionally
+                $qaFlags = [];
+                $calibrationDate = null;
+                if (rand(1, 100) <= 30) {
+                    $calibrationDate = $date->copy()->subDays(rand(91, 150));
+                    $qaFlags[] = 'calibration_overdue';
+                }
+
+                \App\Models\DataPoint::create([
+                    'campaign_id' => $campaign->id,
+                    'environmental_metric_id' => $humidityMetric->id,
+                    'user_id' => $user->id,
+                    'value' => round($humidity, 1),
+                    'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
+                    'accuracy' => rand(30, 80) / 10,
+                    'collected_at' => $date->copy()->addHours(rand(8, 18)),
+                    'calibration_at' => $calibrationDate,
+                    'status' => $status,
+                    'qa_flags' => $qaFlags,
+                    'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
+                    'created_at' => $date,
+                    'updated_at' => $date,
+                ]);
+            }
         }
+
+        // Add specific test cases for each status on August 15, 2025
+        $testDate = Carbon::parse('2025-08-15');
+
+        // Test: Draft status
+        \App\Models\DataPoint::create([
+            'campaign_id' => $campaign->id,
+            'environmental_metric_id' => $tempMetric->id,
+            'user_id' => $user->id,
+            'value' => 21.5,
+            'location' => \DB::raw("ST_SetSRID(ST_MakePoint(12.5704, 55.7072), 4326)"),
+            'accuracy' => 5.0,
+            'collected_at' => $testDate->copy()->setTime(10, 0),
+            'status' => 'draft',
+            'notes' => 'TEST: Draft status example',
+            'photo_path' => $this->naturePhotos[0],
+        ]);
+
+        // Test: Pending status with outlier flag
+        \App\Models\DataPoint::create([
+            'campaign_id' => $campaign->id,
+            'environmental_metric_id' => $tempMetric->id,
+            'user_id' => $user->id,
+            'value' => 32.0,
+            'location' => \DB::raw("ST_SetSRID(ST_MakePoint(12.5690, 55.7080), 4326)"),
+            'accuracy' => 7.0,
+            'collected_at' => $testDate->copy()->setTime(14, 0),
+            'status' => 'pending',
+            'qa_flags' => ['outlier'],
+            'notes' => 'TEST: Pending with outlier flag',
+            'photo_path' => $this->naturePhotos[1],
+        ]);
+
+        // Test: Rejected status with multiple flags
+        \App\Models\DataPoint::create([
+            'campaign_id' => $campaign->id,
+            'environmental_metric_id' => $humidityMetric->id,
+            'user_id' => $user->id,
+            'value' => 95.0,
+            'location' => \DB::raw("ST_SetSRID(ST_MakePoint(12.5718, 55.7065), 4326)"),
+            'accuracy' => 25.0,
+            'collected_at' => $testDate->copy()->setTime(16, 0),
+            'status' => 'rejected',
+            'reviewed_by' => $user->id,
+            'reviewed_at' => $testDate->copy()->setTime(17, 0),
+            'review_notes' => 'Value outside realistic range for this season',
+            'qa_flags' => ['suspicious_value', 'location_uncertainty'],
+            'notes' => 'TEST: Rejected with multiple QA flags',
+            'photo_path' => $this->naturePhotos[2],
+        ]);
+
+        // Test: Approved with manual_review flag
+        \App\Models\DataPoint::create([
+            'campaign_id' => $campaign->id,
+            'environmental_metric_id' => $aqiMetric->id,
+            'user_id' => $user->id,
+            'value' => 45.0,
+            'location' => \DB::raw("ST_SetSRID(ST_MakePoint(12.5680, 55.7075), 4326)"),
+            'accuracy' => 6.0,
+            'collected_at' => $testDate->copy()->setTime(12, 0),
+            'status' => 'approved',
+            'reviewed_by' => $user->id,
+            'reviewed_at' => $testDate->copy()->setTime(13, 0),
+            'review_notes' => 'Manually reviewed and approved',
+            'qa_flags' => ['manual_review'],
+            'notes' => 'TEST: Approved after manual review',
+            'photo_path' => $this->naturePhotos[3],
+        ]);
+
+        // Add MORE YELLOW DOTS (low accuracy >50m on Aug 15)
+        for ($i = 0; $i < 15; $i++) {
+            $location = $locations[array_rand($locations)];
+            \App\Models\DataPoint::create([
+                'campaign_id' => $campaign->id,
+                'environmental_metric_id' => $tempMetric->id,
+                'user_id' => $user->id,
+                'value' => rand(180, 240) / 10,
+                'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
+                'accuracy' => rand(510, 1500) / 10, // 51m to 150m = YELLOW
+                'collected_at' => $testDate->copy()->addHours(rand(8, 18)),
+                'status' => 'approved',
+                'notes' => 'TEST: Low accuracy (yellow marker)',
+                'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
+            ]);
+        }
+
+        // Add MORE RED DOTS (rejected status on Aug 15)
+        for ($i = 0; $i < 12; $i++) {
+            $location = $locations[array_rand($locations)];
+            \App\Models\DataPoint::create([
+                'campaign_id' => $campaign->id,
+                'environmental_metric_id' => $humidityMetric->id,
+                'user_id' => $user->id,
+                'value' => rand(400, 850) / 10,
+                'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
+                'accuracy' => rand(30, 80) / 10,
+                'collected_at' => $testDate->copy()->addHours(rand(8, 18)),
+                'status' => 'rejected',
+                'reviewed_by' => $user->id,
+                'reviewed_at' => $testDate->copy()->addHours(rand(18, 20)),
+                'review_notes' => 'Data quality issues - rejected',
+                'qa_flags' => rand(0, 1) ? ['outlier'] : ['suspicious_value'],
+                'notes' => 'TEST: Rejected status (red marker)',
+                'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
+            ]);
+        }
+
+        $this->command->info("✓ Created Fælledparken campaign with survey zone and data points (Aug 1-30, 2025)");
+    }
+
+    /**
+     * Campaign 2: Noise Pollution Study
+     * Location: Central Copenhagen high-traffic areas
+     * Focus: Urban noise levels
+     */
+    private function createNoisePollutionCampaign(User $user): void
+    {
+        $campaign = Campaign::firstOrCreate(
+            ['name' => 'Noise Pollution Study'],
+            [
+                'description' => 'Measuring urban noise levels across Copenhagen high-traffic areas',
+                'status' => 'active',
+                'user_id' => $user->id,
+                'start_date' => '2025-08-01',
+                'end_date' => '2025-08-31',
+            ]
+        );
+
+        // Create survey zone for Central Copenhagen
+        SurveyZone::firstOrCreate(
+            [
+                'campaign_id' => $campaign->id,
+                'name' => 'Central Copenhagen Zone'
+            ],
+            [
+                'description' => 'High-traffic urban area including Central Station and Nørreport',
+                'area' => \DB::raw("ST_GeomFromText('POLYGON((12.5650 55.6870, 12.5730 55.6870, 12.5730 55.6750, 12.5650 55.6750, 12.5650 55.6870))', 4326)"),
+                'area_km2' => 1.12,
+            ]
+        );
+
+        $noiseMetric = EnvironmentalMetric::where('name', 'Noise Level')->first();
+
+        $locations = [
+            ['lat' => 55.6761, 'lon' => 12.5683, 'name' => 'Copenhagen Central Station'],
+            ['lat' => 55.6867, 'lon' => 12.5700, 'name' => 'Nørreport Station'],
+            ['lat' => 55.6828, 'lon' => 12.5878, 'name' => 'Østerport area'],
+            ['lat' => 55.6759, 'lon' => 12.5655, 'name' => 'Tivoli Gardens area'],
+            ['lat' => 55.6736, 'lon' => 12.5681, 'name' => 'Vesterbrogade'],
+        ];
+
+        // Create data points from Aug 1-30, 2025
+        for ($day = 1; $day <= 30; $day++) {
+            $date = Carbon::parse("2025-08-{$day}");
+
+            // 3-4 noise readings per day at different times with varied statuses
+            for ($i = 0; $i < rand(3, 4); $i++) {
+                $location = $locations[array_rand($locations)];
+                $hour = rand(6, 22);
+                $isRushHour = ($hour >= 7 && $hour <= 9) || ($hour >= 16 && $hour <= 19);
+                $noise = $isRushHour ? 70 + rand(-5, 5) : 55 + rand(-5, 5);
+
+                // Vary status: 60% approved, 20% pending, 10% draft, 10% rejected
+                $statusRoll = rand(1, 100);
+                if ($statusRoll <= 60) {
+                    $status = 'approved';
+                } elseif ($statusRoll <= 80) {
+                    $status = 'pending';
+                } elseif ($statusRoll <= 90) {
+                    $status = 'draft';
+                } else {
+                    $status = 'rejected';
+                }
+
+                // Add QA flags
+                $qaFlags = [];
+                if ($noise > 95 || $noise < 35) {
+                    $qaFlags[] = 'suspicious_value';
+                }
+
+                \App\Models\DataPoint::create([
+                    'campaign_id' => $campaign->id,
+                    'environmental_metric_id' => $noiseMetric->id,
+                    'user_id' => $user->id,
+                    'value' => round($noise, 1),
+                    'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
+                    'accuracy' => rand(30, 80) / 10,
+                    'collected_at' => $date->copy()->addHours($hour),
+                    'status' => $status,
+                    'qa_flags' => $qaFlags,
+                    'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
+                    'created_at' => $date,
+                    'updated_at' => $date,
+                ]);
+            }
+        }
+
+        // Add MORE YELLOW DOTS (low accuracy on Aug 15)
+        $testDate = Carbon::parse('2025-08-15');
+        for ($i = 0; $i < 10; $i++) {
+            $location = $locations[array_rand($locations)];
+            \App\Models\DataPoint::create([
+                'campaign_id' => $campaign->id,
+                'environmental_metric_id' => $noiseMetric->id,
+                'user_id' => $user->id,
+                'value' => rand(500, 800) / 10,
+                'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
+                'accuracy' => rand(510, 2000) / 10, // 51m to 200m = YELLOW
+                'collected_at' => $testDate->copy()->addHours(rand(8, 18)),
+                'status' => 'approved',
+                'notes' => 'TEST: Low accuracy (yellow marker)',
+                'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
+            ]);
+        }
+
+        // Add MORE RED DOTS (rejected status on Aug 15)
+        for ($i = 0; $i < 8; $i++) {
+            $location = $locations[array_rand($locations)];
+            \App\Models\DataPoint::create([
+                'campaign_id' => $campaign->id,
+                'environmental_metric_id' => $noiseMetric->id,
+                'user_id' => $user->id,
+                'value' => rand(400, 900) / 10,
+                'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
+                'accuracy' => rand(30, 80) / 10,
+                'collected_at' => $testDate->copy()->addHours(rand(8, 18)),
+                'status' => 'rejected',
+                'reviewed_by' => $user->id,
+                'reviewed_at' => $testDate->copy()->addHours(rand(18, 20)),
+                'review_notes' => 'Invalid reading - equipment malfunction suspected',
+                'qa_flags' => ['suspicious_value'],
+                'notes' => 'TEST: Rejected status (red marker)',
+                'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
+            ]);
+        }
+
+        $this->command->info("✓ Created Noise Pollution campaign with survey zone and data points (Aug 1-30, 2025)");
+    }
+
+    /**
+     * Campaign 3: Copenhagen Air Quality 2025
+     * Location: Multiple neighborhoods across Copenhagen
+     * Focus: PM2.5, PM10, CO2, AQI
+     */
+    private function createCopenhagenAirQualityCampaign(User $user): void
+    {
+        $campaign = Campaign::firstOrCreate(
+            ['name' => 'Copenhagen Air Quality 2025'],
+            [
+                'description' => 'Monitoring air quality across Copenhagen neighborhoods',
+                'status' => 'active',
+                'user_id' => $user->id,
+                'start_date' => '2025-08-01',
+                'end_date' => '2025-08-31',
+            ]
+        );
+
+        // Create survey zone covering multiple Copenhagen neighborhoods
+        SurveyZone::firstOrCreate(
+            [
+                'campaign_id' => $campaign->id,
+                'name' => 'Greater Copenhagen Area'
+            ],
+            [
+                'description' => 'Urban and suburban areas covering key monitoring stations',
+                'area' => \DB::raw("ST_GeomFromText('POLYGON((12.5200 55.7000, 12.6000 55.7000, 12.6000 55.6600, 12.5200 55.6600, 12.5200 55.7000))', 4326)"),
+                'area_km2' => 3.52,
+            ]
+        );
+
+        $pm25Metric = EnvironmentalMetric::where('name', 'PM2.5')->first();
+        $pm10Metric = EnvironmentalMetric::where('name', 'PM10')->first();
+        $co2Metric = EnvironmentalMetric::where('name', 'CO2')->first();
+        $aqiMetric = EnvironmentalMetric::where('name', 'Air Quality Index')->first();
+
+        $locations = [
+            ['lat' => 55.6761, 'lon' => 12.5683, 'name' => 'City Center'],
+            ['lat' => 55.6867, 'lon' => 12.5700, 'name' => 'Nørrebro'],
+            ['lat' => 55.6596, 'lon' => 12.5107, 'name' => 'Valby'],
+            ['lat' => 55.6828, 'lon' => 12.5878, 'name' => 'Østerbro'],
+            ['lat' => 55.6950, 'lon' => 12.5500, 'name' => 'Bispebjerg'],
+            ['lat' => 55.6720, 'lon' => 12.5900, 'name' => 'Christianshavn'],
+        ];
+
+        // Create data points from Aug 1-30, 2025
+        for ($day = 1; $day <= 30; $day++) {
+            $date = Carbon::parse("2025-08-{$day}");
+
+            // 3-4 readings per metric per day with varied statuses
+            foreach ([$pm25Metric, $pm10Metric, $co2Metric, $aqiMetric] as $metric) {
+                for ($i = 0; $i < rand(3, 4); $i++) {
+                    $location = $locations[array_rand($locations)];
+
+                    // Generate realistic values based on metric
+                    $value = match($metric->name) {
+                        'PM2.5' => 12 + rand(-5, 15),
+                        'PM10' => 20 + rand(-8, 20),
+                        'CO2' => 400 + rand(-20, 50),
+                        'Air Quality Index' => 35 + rand(-10, 25),
+                        default => 50,
+                    };
+
+                    // Vary status: 60% approved, 20% pending, 10% draft, 10% rejected
+                    $statusRoll = rand(1, 100);
+                    if ($statusRoll <= 60) {
+                        $status = 'approved';
+                    } elseif ($statusRoll <= 80) {
+                        $status = 'pending';
+                    } elseif ($statusRoll <= 90) {
+                        $status = 'draft';
+                    } else {
+                        $status = 'rejected';
+                    }
+
+                    // Add QA flags based on metric
+                    $qaFlags = [];
+                    if ($metric->name === 'PM2.5' && $value > 35) {
+                        $qaFlags[] = 'outlier';
+                    }
+                    if ($metric->name === 'Air Quality Index' && $value > 100) {
+                        $qaFlags[] = 'suspicious_value';
+                    }
+
+                    \App\Models\DataPoint::create([
+                        'campaign_id' => $campaign->id,
+                        'environmental_metric_id' => $metric->id,
+                        'user_id' => $user->id,
+                        'value' => round($value, 1),
+                        'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
+                        'accuracy' => rand(30, 80) / 10,
+                        'collected_at' => $date->copy()->addHours(rand(8, 18)),
+                        'status' => $status,
+                        'qa_flags' => $qaFlags,
+                        'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
+                        'created_at' => $date,
+                        'updated_at' => $date,
+                    ]);
+                }
+            }
+        }
+
+        // Add specific test cases on August 15, 2025 for different QA scenarios
+        $testDate = Carbon::parse('2025-08-15');
+
+        // Test: Duplicate reading scenario
+        $duplicateLocation = ['lat' => 55.6761, 'lon' => 12.5683];
+        \App\Models\DataPoint::create([
+            'campaign_id' => $campaign->id,
+            'environmental_metric_id' => $pm25Metric->id,
+            'user_id' => $user->id,
+            'value' => 18.5,
+            'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$duplicateLocation['lon']}, {$duplicateLocation['lat']}), 4326)"),
+            'accuracy' => 5.0,
+            'collected_at' => $testDate->copy()->setTime(10, 30),
+            'status' => 'pending',
+            'qa_flags' => ['duplicate_reading'],
+            'notes' => 'TEST: Duplicate reading at same location and time',
+            'photo_path' => $this->naturePhotos[0],
+        ]);
+
+        // Test: High pollution outlier
+        \App\Models\DataPoint::create([
+            'campaign_id' => $campaign->id,
+            'environmental_metric_id' => $aqiMetric->id,
+            'user_id' => $user->id,
+            'value' => 125.0,
+            'location' => \DB::raw("ST_SetSRID(ST_MakePoint(12.5700, 55.6867), 4326)"),
+            'accuracy' => 8.0,
+            'collected_at' => $testDate->copy()->setTime(15, 0),
+            'status' => 'pending',
+            'qa_flags' => ['outlier', 'manual_review'],
+            'notes' => 'TEST: Unusually high AQI reading requiring review',
+            'photo_path' => $this->naturePhotos[1],
+        ]);
+
+        // Add MORE YELLOW DOTS (low accuracy on Aug 15)
+        for ($i = 0; $i < 20; $i++) {
+            $location = $locations[array_rand($locations)];
+            $metric = [$pm25Metric, $pm10Metric, $co2Metric, $aqiMetric][array_rand([$pm25Metric, $pm10Metric, $co2Metric, $aqiMetric])];
+
+            $value = match($metric->name) {
+                'PM2.5' => rand(80, 200) / 10,
+                'PM10' => rand(150, 350) / 10,
+                'CO2' => rand(3800, 4500) / 10,
+                'Air Quality Index' => rand(250, 550) / 10,
+                default => 50,
+            };
+
+            \App\Models\DataPoint::create([
+                'campaign_id' => $campaign->id,
+                'environmental_metric_id' => $metric->id,
+                'user_id' => $user->id,
+                'value' => $value,
+                'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
+                'accuracy' => rand(510, 3000) / 10, // 51m to 300m = YELLOW
+                'collected_at' => $testDate->copy()->addHours(rand(8, 18)),
+                'status' => 'approved',
+                'notes' => 'TEST: Low accuracy (yellow marker)',
+                'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
+            ]);
+        }
+
+        // Add MORE RED DOTS (rejected status on Aug 15)
+        for ($i = 0; $i < 15; $i++) {
+            $location = $locations[array_rand($locations)];
+            $metric = [$pm25Metric, $pm10Metric, $co2Metric, $aqiMetric][array_rand([$pm25Metric, $pm10Metric, $co2Metric, $aqiMetric])];
+
+            $value = match($metric->name) {
+                'PM2.5' => rand(50, 250) / 10,
+                'PM10' => rand(100, 400) / 10,
+                'CO2' => rand(3500, 5000) / 10,
+                'Air Quality Index' => rand(200, 600) / 10,
+                default => 50,
+            };
+
+            \App\Models\DataPoint::create([
+                'campaign_id' => $campaign->id,
+                'environmental_metric_id' => $metric->id,
+                'user_id' => $user->id,
+                'value' => $value,
+                'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$location['lon']}, {$location['lat']}), 4326)"),
+                'accuracy' => rand(30, 80) / 10,
+                'collected_at' => $testDate->copy()->addHours(rand(8, 18)),
+                'status' => 'rejected',
+                'reviewed_by' => $user->id,
+                'reviewed_at' => $testDate->copy()->addHours(rand(18, 22)),
+                'review_notes' => 'Failed quality check - sensor calibration issue',
+                'qa_flags' => rand(0, 1) ? ['outlier', 'calibration_overdue'] : ['suspicious_value'],
+                'notes' => 'TEST: Rejected status (red marker)',
+                'photo_path' => $this->naturePhotos[array_rand($this->naturePhotos)],
+            ]);
+        }
+
+        $this->command->info("✓ Created Copenhagen Air Quality campaign with survey zone and data points (Aug 1-30, 2025)");
     }
 }

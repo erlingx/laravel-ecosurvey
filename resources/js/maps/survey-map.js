@@ -82,11 +82,12 @@ export function initSurveyMap() {
             maxClusterRadius: 80,
             spiderfyDistanceMultiplier: 1.5,
             iconCreateFunction: function(cluster) {
-                // ...existing code...
                 const markers = cluster.getAllChildMarkers();
+                const total = markers.length;
 
                 // Count marker types by quality
                 let flaggedCount = 0;
+                let rejectedCount = 0;
                 let lowAccuracyCount = 0;
                 let approvedCount = 0;
                 let normalCount = 0;
@@ -96,11 +97,14 @@ export function initSurveyMap() {
                     if (!props) return;
 
                     const hasQAFlags = props.qa_flags && props.qa_flags.length > 0;
+                    const isRejected = props.status === 'rejected';
                     const lowAccuracy = props.accuracy && props.accuracy > 50;
                     const isApproved = props.status === 'approved' && (!props.accuracy || props.accuracy <= 50);
 
                     if (hasQAFlags) {
                         flaggedCount++;
+                    } else if (isRejected) {
+                        rejectedCount++;
                     } else if (lowAccuracy) {
                         lowAccuracyCount++;
                     } else if (isApproved) {
@@ -110,20 +114,82 @@ export function initSurveyMap() {
                     }
                 });
 
-                // Determine cluster color based on priority: flagged > low accuracy > approved > normal
-                let colorClass = 'marker-cluster-blue';
+                // Generate pie chart SVG
+                const size = 40;
+                const radius = size / 2;
+                let cumulativePercent = 0;
+
+                // Build segments in priority order
+                const segments = [];
+
                 if (flaggedCount > 0) {
-                    colorClass = 'marker-cluster-red';
-                } else if (lowAccuracyCount > 0) {
-                    colorClass = 'marker-cluster-yellow';
-                } else if (approvedCount > 0) {
-                    colorClass = 'marker-cluster-green';
+                    segments.push({ count: flaggedCount, color: '#dc2626', label: 'Flagged' });
+                }
+                if (rejectedCount > 0) {
+                    segments.push({ count: rejectedCount, color: '#374151', label: 'Rejected' });
+                }
+                if (lowAccuracyCount > 0) {
+                    segments.push({ count: lowAccuracyCount, color: '#f59e0b', label: 'Low Accuracy' });
+                }
+                if (approvedCount > 0) {
+                    segments.push({ count: approvedCount, color: '#059669', label: 'Approved' });
+                }
+                if (normalCount > 0) {
+                    segments.push({ count: normalCount, color: '#1d4ed8', label: 'Pending' });
+                }
+
+                // Create SVG pie chart
+                let pathsHTML = '';
+                segments.forEach(segment => {
+                    const percent = segment.count / total;
+                    const startAngle = cumulativePercent * 360;
+                    const endAngle = (cumulativePercent + percent) * 360;
+
+                    // Convert angles to radians
+                    const startRad = (startAngle - 90) * Math.PI / 180;
+                    const endRad = (endAngle - 90) * Math.PI / 180;
+
+                    // Calculate arc path
+                    const x1 = radius + radius * Math.cos(startRad);
+                    const y1 = radius + radius * Math.sin(startRad);
+                    const x2 = radius + radius * Math.cos(endRad);
+                    const y2 = radius + radius * Math.sin(endRad);
+
+                    const largeArc = percent > 0.5 ? 1 : 0;
+
+                    // Create path for this segment
+                    pathsHTML += `<path d="M ${radius},${radius} L ${x1},${y1} A ${radius},${radius} 0 ${largeArc} 1 ${x2},${y2} Z" fill="${segment.color}" stroke="white" stroke-width="1"/>`;
+
+                    cumulativePercent += percent;
+                });
+
+                // Single color fallback if only one type
+                let iconHTML;
+                if (segments.length === 1) {
+                    iconHTML = `
+                        <div style="background: ${segments[0].color}; border: 2px solid white; border-radius: 50%; width: ${size}px; height: ${size}px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                            <span style="color: white; font-weight: 600; font-size: 14px;">${total}</span>
+                        </div>
+                    `;
+                } else {
+                    // Pie chart with count in center
+                    iconHTML = `
+                        <div style="position: relative; width: ${size}px; height: ${size}px;">
+                            <svg width="${size}" height="${size}" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+                                ${pathsHTML}
+                                <circle cx="${radius}" cy="${radius}" r="${radius * 0.5}" fill="white" stroke="white" stroke-width="1"/>
+                            </svg>
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #1f2937; font-weight: 600; font-size: 12px; pointer-events: none;">
+                                ${total}
+                            </div>
+                        </div>
+                    `;
                 }
 
                 return L.divIcon({
-                    html: '<div><span>' + markers.length + '</span></div>',
-                    className: 'marker-cluster ' + colorClass,
-                    iconSize: L.point(40, 40)
+                    html: iconHTML,
+                    className: 'marker-cluster-pie',
+                    iconSize: L.point(size, size)
                 });
             }
         });
@@ -307,14 +373,17 @@ export function createPopupContent(props) {
 
 /**
  * Get marker style based on data quality indicators
- * - Yellow dashed outline for accuracy > 50m (low confidence)
  * - Red outline for points with QA flags (flagged issues)
- * - Normal black outline for approved/high quality data
+ * - Yellow dashed outline for accuracy > 50m (low confidence)
+ * - Green for approved data
+ * - Gray for rejected data (excluded from analysis)
+ * - Blue for pending/draft data
  */
 export function getMarkerStyle(props) {
     const hasQAFlags = props.qa_flags && props.qa_flags.length > 0;
     const lowAccuracy = props.accuracy && props.accuracy > 50;
     const isApproved = props.status === 'approved';
+    const isRejected = props.status === 'rejected';
 
     if (hasQAFlags) {
         // Red outline for flagged data
@@ -326,6 +395,17 @@ export function getMarkerStyle(props) {
             opacity: 1,
             fillOpacity: 0.6,
             dashArray: '5, 5'
+        };
+    } else if (isRejected) {
+        // Gray with X pattern for rejected data
+        return {
+            radius: 8,
+            fillColor: '#6b7280',
+            color: '#374151',
+            weight: 2,
+            opacity: 0.8,
+            fillOpacity: 0.5,
+            dashArray: '3, 3'
         };
     } else if (lowAccuracy) {
         // Yellow dashed outline for low confidence
@@ -349,7 +429,7 @@ export function getMarkerStyle(props) {
             fillOpacity: 0.7
         };
     } else {
-        // Default blue for pending/normal data
+        // Default blue for pending/draft data
         return {
             radius: 8,
             fillColor: '#3b82f6',
@@ -529,6 +609,7 @@ export function showCustomPopup(props) {
 
     // Determine marker color and quality issues
     const hasQAFlags = props.qa_flags && props.qa_flags.length > 0;
+    const isRejected = props.status === 'rejected';
     const lowAccuracy = props.accuracy && props.accuracy > 50;
     const isApproved = props.status === 'approved' && !hasQAFlags && !lowAccuracy;
 
@@ -540,6 +621,10 @@ export function showCustomPopup(props) {
         markerColor = '#dc2626'; // red
         markerIcon = '🔴';
         markerExplanation = 'Quality issues detected';
+    } else if (isRejected) {
+        markerColor = '#374151'; // gray
+        markerIcon = '⚫';
+        markerExplanation = 'Rejected';
     } else if (lowAccuracy) {
         markerColor = '#f59e0b'; // yellow
         markerIcon = '🟡';
