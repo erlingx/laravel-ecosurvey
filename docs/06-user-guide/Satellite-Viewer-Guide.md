@@ -403,10 +403,19 @@ Hover over any **ⓘ icon** for contextual help:
 **Sync Mode:** Auto-update satellite date when clicking field data markers  
 **Centroid:** Geographic center point of a survey zone  
 **Ground-truthing:** Validating satellite data with field measurements  
+**Survey Zone:** Defined geographic boundary for a research campaign area  
+**Polygon:** Closed shape defined by connected points (used for survey zones)  
 
 ---
 
 ## Changelog
+
+**January 15, 2026:**
+- Added survey zone management interface
+- Visual polygon drawing tools for creating zones
+- Zone editing and deletion capabilities
+- Auto-calculated zone areas in km²
+- Survey zones displayed on satellite viewer
 
 **January 13, 2026:**
 - Added temporal proximity color-coding

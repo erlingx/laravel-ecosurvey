@@ -431,6 +431,60 @@ export function updateSatelliteImagery() {
         console.log('ℹ️ No data points data - overlay removed');
     }
 
+    // Handle survey zones overlay
+    // Remove existing survey zones layer
+    if (window.surveyZonesLayer) {
+        window.satelliteMap.removeLayer(window.surveyZonesLayer);
+        window.surveyZonesLayer = null;
+        console.log('♻️ Removed old survey zones layer');
+    }
+
+    // Add survey zones if available
+    const surveyZonesData = dataContainer.getAttribute('data-surveyzones');
+    if (surveyZonesData && surveyZonesData !== 'null' && surveyZonesData !== 'false') {
+        try {
+            const surveyZones = JSON.parse(surveyZonesData);
+
+            if (surveyZones && surveyZones.features && surveyZones.features.length > 0) {
+                console.log(`🏞️ Adding ${surveyZones.features.length} survey zone(s) to map`);
+
+                window.surveyZonesLayer = L.geoJSON(surveyZones, {
+                    style: function(feature) {
+                        return {
+                            color: '#3b82f6',        // Blue border
+                            weight: 3,
+                            opacity: 0.8,
+                            fillColor: '#3b82f6',    // Blue fill
+                            fillOpacity: 0.1,
+                            dashArray: '5, 5'        // Dashed line
+                        };
+                    },
+                    onEachFeature: function(feature, layer) {
+                        if (feature.properties) {
+                            const props = feature.properties;
+                            const popupContent = `
+                                <div class="p-2">
+                                    <strong class="text-sm font-semibold">📍 ${props.name}</strong>
+                                    ${props.description ? `<div class="text-xs text-gray-600 mt-1">${props.description}</div>` : ''}
+                                    ${props.area_km2 ? `<div class="text-xs mt-1"><strong>Area:</strong> ${props.area_km2} km²</div>` : ''}
+                                </div>
+                            `;
+                            layer.bindPopup(popupContent);
+                        }
+                    }
+                }).addTo(window.satelliteMap);
+
+                console.log('✅ Survey zones added to map');
+            } else {
+                console.log('ℹ️ No survey zones features to display');
+            }
+        } catch (e) {
+            console.error('❌ Error parsing survey zones:', e);
+        }
+    } else {
+        console.log('ℹ️ No survey zones data');
+    }
+
     // Force map to recalculate its size
     setTimeout(() => {
         if (window.satelliteMap) {

@@ -6,6 +6,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationItem;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -31,7 +32,9 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Emerald,
             ])
             ->darkMode()
-            ->brandName('EcoSurvey Admin')
+            ->brandName('EcoSurvey')
+            ->brandLogo(fn () => view('filament.admin.brand'))
+            ->spa()
             ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
             ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\\Filament\\Admin\\Pages')
             ->pages([
@@ -40,6 +43,13 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\\Filament\\Admin\\Widgets')
             ->widgets([
                 AccountWidget::class,
+            ])
+            ->navigationItems([
+                NavigationItem::make('Dashboard')
+                    ->url('/dashboard')
+                    ->icon('heroicon-o-home')
+                    ->group('Overview')
+                    ->sort(0),
             ])
             ->middleware([
                 EncryptCookies::class,

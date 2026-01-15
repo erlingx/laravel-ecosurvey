@@ -1,7 +1,32 @@
 # Environment: DDEV
 
 **Type:** Docker-based local development (DDEV)  
-**OS:** Windows 11 + PowerShell
+**OS:** Windows 11  
+**Recommended Shell:** Git Bash (preferred over PowerShell for better DDEV compatibility)
+
+---
+
+## Shell Configuration
+
+### PhpStorm Terminal Setup (IMPORTANT)
+For best DDEV experience, configure PhpStorm to use Git Bash:
+
+1. Open PhpStorm Settings: `File → Settings → Tools → Terminal`
+2. Set Shell path to: `C:\Program Files\Git\bin\bash.exe`
+3. Restart PhpStorm
+
+**Why Git Bash is preferred:**
+- ✅ No output buffering issues (see test results immediately)
+- ✅ Native Unix command support (`tail`, `grep`, `sed`, etc.)
+- ✅ Command chaining works (`&&`, `||`, `;`)
+- ✅ Better DDEV compatibility (DDEV expects Unix-like environment)
+- ✅ Clean terminal output without DDEV startup messages
+
+**PowerShell Issues:**
+- ❌ Output buffering causes delayed/missing test results
+- ❌ Unix commands don't exist (`tail`, `head`, `grep`)
+- ❌ Command chaining (`&&`, `||`) fails or behaves unexpectedly
+- ❌ DDEV output gets mixed with container logs
 
 ---
 
@@ -9,7 +34,7 @@
 
 ### All Commands MUST Use DDEV Prefix
 
-```powershell
+```bash
 # ✅ Correct
 ddev artisan migrate
 ddev composer install
@@ -25,7 +50,11 @@ vendor/bin/pest
 
 ---
 
-## PowerShell Limitations with DDEV
+## PowerShell Limitations (Use Git Bash Instead)
+
+**⚠️ Recommendation: Use Git Bash terminal instead of PowerShell (see Shell Configuration above)**
+
+If you must use PowerShell, be aware of these limitations:
 
 ### Cannot Chain Commands with && or ||
 PowerShell doesn't support these operators properly:
@@ -34,11 +63,14 @@ PowerShell doesn't support these operators properly:
 # ❌ Wrong - fails in PowerShell
 ddev artisan migrate && ddev artisan db:seed
 
-# ✅ Correct - run separately
+# ✅ In Git Bash - works perfectly
+ddev artisan migrate && ddev artisan db:seed
+
+# ✅ In PowerShell - run separately
 ddev artisan migrate
 ddev artisan db:seed
 
-# ✅ Correct - chain inside bash
+# ✅ In PowerShell - chain inside bash
 ddev exec bash -lc "php artisan migrate; php artisan db:seed"
 ```
 
@@ -49,21 +81,67 @@ ddev exec bash -lc "php artisan migrate; php artisan db:seed"
 ddev exec tail -n 50 storage/logs/laravel.log
 ddev exec cat file.txt | grep "search"
 
-# ✅ Correct - wrap in bash -c
+# ✅ In Git Bash - native support
+ddev exec tail -n 50 storage/logs/laravel.log
+ddev exec cat file.txt | grep "search"
+
+# ✅ In PowerShell - wrap in bash -c
 ddev exec bash -c "tail -n 50 storage/logs/laravel.log"
 ddev exec bash -c "grep 'search' file.txt"
 
-# ✅ Alternative - use PowerShell commands
+# ✅ PowerShell alternatives (less convenient)
 Get-Content storage/logs/laravel.log -Tail 50
 Select-String -Pattern "search" -Path file.txt
 ```
+
+### PowerShell Output Buffering Issue (CRITICAL)
+
+**Problem:** PowerShell buffers output from DDEV commands, causing delayed or missing output in PhpStorm terminal and GitHub Copilot tool responses.
+
+**Symptoms:**
+- Test output not visible until command fully completes
+- `get_terminal_output` returns empty/truncated results
+- Long-running commands appear frozen
+
+**✅ BEST SOLUTION: Use Git Bash (see Shell Configuration above)**
+
+**PowerShell Workarounds (not recommended):**
+
+#### 1. Redirect to File (PowerShell only)
+For Copilot/automation, redirect output to file then read:
+```powershell
+ddev artisan test --filter=MyTest > test-output.txt 2>&1
+Start-Sleep -Seconds 5
+Get-Content test-output.txt
+```
+
+#### 2. Use stdbuf (PowerShell only)
+Force line-buffered output:
+```powershell
+ddev exec bash -c "stdbuf -oL -eL php artisan test --filter=MyTest"
+```
+
+#### 3. PowerShell Helper Functions (PowerShell only)
+Load helper functions (see `.ddev/powershell-fix.ps1`):
+```powershell
+. .\.ddev\powershell-fix.ps1
+ddev-test --filter=MyTest
+```
+
+**For AI Assistants:** 
+- **Prefer Git Bash** - Recommend users switch to Git Bash if using PowerShell
+- When running DDEV commands via `run_in_terminal` in PowerShell, be aware that buffering may cause empty `Output` fields
+- Solutions: Use file redirection method for reliable output capture, or flag to user when terminal output appears empty
+- **Always check if output is empty and flag it to the user**
+
+See `.ddev/POWERSHELL-OUTPUT-FIX.txt` for detailed troubleshooting (PowerShell legacy support).
 
 ---
 
 ## Development Workflow
 
 ### Quick Start
-```powershell
+```bash
 # Start DDEV (auto-starts queue worker + Vite dev server)
 ddev start
 
@@ -82,7 +160,7 @@ ddev npm run build
 ```
 
 ### Start DDEV
-```powershell
+```bash
 ddev start
 ```
 
@@ -92,12 +170,12 @@ This auto-starts (via `web_extra_daemons`):
 - Vite dev server (`npm run dev`)
 
 ### Stop DDEV
-```powershell
+```bash
 ddev stop
 ```
 
 ### After Code Changes
-```powershell
+```bash
 # Queue/Job changes - fast restart (1-3 seconds)
 ddev artisan queue:restart
 
@@ -110,7 +188,7 @@ ddev artisan queue:restart
 ```
 
 ### Check Running Services
-```powershell
+```bash
 # Check queue worker and vite are running
 ddev exec bash -c "ps aux | grep -E 'queue:work|vite' | grep -v grep"
 ```
@@ -120,7 +198,7 @@ ddev exec bash -c "ps aux | grep -E 'queue:work|vite' | grep -v grep"
 ## Queue Management
 
 ### Restart After Code Changes
-```powershell
+```bash
 # Fast restart (recommended):
 ddev artisan queue:restart
 
@@ -130,13 +208,13 @@ ddev artisan queue:restart
 **DO NOT restart entire DDEV** - it's too slow (30+ seconds)!
 
 ### Check Queue Status
-```powershell
+```bash
 ddev artisan queue:monitor database
 ddev artisan queue:failed
 ```
 
 ### Manual Queue Worker (for debugging)
-```powershell
+```bash
 # Stop daemon
 ddev exec pkill -f "queue:work"
 
@@ -153,8 +231,8 @@ ddev exec php artisan queue:work --verbose
 ### Run Tests (Important!)
 Tests **MUST** run through DDEV for proper database/environment:
 
-```powershell
-# Recommended: Use bash -c with tail for clean output
+```bash
+# Git Bash - clean output, no buffering ✅
 ddev exec bash -c "vendor/bin/pest tests/Feature/ListeningPartyTest.php 2>&1 | tail -50"
 
 # Alternative: Use artisan test
@@ -167,22 +245,33 @@ ddev artisan test
 vendor/bin/pest tests/Feature/ListeningPartyTest.php
 ```
 
-### PowerShell Output Issues
-PowerShell shows DDEV startup messages that obscure test results:
+### Git Bash vs PowerShell for Testing
 
-**Solution 1: Use tail** (recommended)
+**Git Bash (Recommended):**
+```bash
+# ✅ Clean output, immediate results
+ddev artisan test --filter=MyTest
+
+# ✅ Unix tools work natively
+ddev exec bash -c "vendor/bin/pest tests/Feature/ArticleTest.php 2>&1 | tail -50"
+```
+
+**PowerShell (Legacy - Not Recommended):**
+PowerShell shows DDEV startup messages that obscure test results. Workarounds:
+
+**Workaround 1: Use tail**
 ```powershell
 ddev exec bash -c "vendor/bin/pest tests/Feature/ArticleTest.php 2>&1 | tail -50"
 ```
 
-**Solution 2: Redirect to file**
+**Workaround 2: Redirect to file**
 ```powershell
 ddev exec bash -lc "vendor/bin/pest tests/Feature/ArticleTest.php" > test-results.txt
 Get-Content test-results.txt
 ```
 
-**Solution 3: SSH into container**
-```powershell
+**Workaround 3: SSH into container**
+```bash
 ddev ssh
 vendor/bin/pest tests/Feature/ArticleTest.php
 exit
@@ -193,7 +282,7 @@ exit
 ## Common DDEV Commands
 
 ### Artisan
-```powershell
+```bash
 ddev artisan migrate
 ddev artisan migrate:fresh --seed
 ddev artisan make:model Podcast -mfs
@@ -202,14 +291,14 @@ ddev artisan queue:restart
 ```
 
 ### Composer
-```powershell
+```bash
 ddev composer install
 ddev composer require package/name
 ddev composer update
 ```
 
 ### NPM
-```powershell
+```bash
 ddev npm install
 ddev npm run dev -- --host
 ddev npm run build  # Only when hot reloading is not available
@@ -222,7 +311,7 @@ ddev npm run build  # Only when hot reloading is not available
 - Vite HMR automatically picks up JS/CSS changes when running
 
 ### Database
-```powershell
+```bash
 # PostgreSQL CLI
 ddev psql
 
@@ -252,7 +341,7 @@ ddev exec psql -c "CREATE EXTENSION IF NOT EXISTS postgis_topology;"
 ## Debugging
 
 ### View Logs
-```powershell
+```bash
 # Application logs
 ddev exec bash -c "tail -n 50 storage/logs/laravel.log"
 
@@ -264,7 +353,7 @@ ddev logs -f
 ```
 
 ### Access Database
-```powershell
+```bash
 # PostgreSQL CLI
 ddev psql
 
@@ -286,7 +375,7 @@ ddev exec psql -c '\dx'
 ```
 
 ### SSH into Container
-```powershell
+```bash
 ddev ssh
 
 # Now you're inside the container, run commands without ddev prefix
@@ -299,7 +388,7 @@ exit
 ```
 
 ### Cache Management
-```powershell
+```bash
 ddev artisan optimize:clear
 ddev artisan config:clear
 ddev artisan cache:clear
@@ -313,7 +402,7 @@ ddev artisan view:clear
 ### Development Mode (Hot Module Replacement)
 Vite **auto-starts** with DDEV via `web_extra_daemons`:
 
-```powershell
+```bash
 # Check if running
 ddev exec bash -c "ps aux | grep vite | grep -v grep"
 
@@ -328,7 +417,7 @@ ddev npm run dev -- --host
 - ⚠️ Only build for production or when Vite is not running
 
 ### Production Build
-```powershell
+```bash
 # Only when deploying or Vite dev server is stopped
 ddev npm run build
 ```
@@ -355,11 +444,12 @@ export default defineConfig({
 | Issue | Solution |
 |-------|----------|
 | Tests fail with DB error | Run through DDEV: `ddev artisan test` |
-| Command chaining fails | Don't use `&&` in PowerShell, run separately |
-| `tail` command fails | Use `ddev exec bash -c "tail ..."` |
+| Command chaining fails | Use Git Bash instead of PowerShell |
+| `tail` command fails | Use Git Bash instead of PowerShell, or wrap: `ddev exec bash -c "tail ..."` |
 | Queue not processing | `ddev artisan queue:restart` |
 | Vite not connecting | Check `ddev npm run dev -- --host` is running |
 | Port already in use | `ddev stop` then `ddev start` |
+| Terminal buffering issues | Switch to Git Bash (see Shell Configuration) |
 
 ---
 
@@ -452,8 +542,9 @@ $location = Location::whereWithin('coordinates', $polygon)->get();
 
 ## Important Notes
 
+- ✅ **Use Git Bash terminal** for best DDEV experience (see Shell Configuration above)
 - ⚠️ **ALL commands must use `ddev` prefix** when working with PHP/Composer/NPM
-- ⚠️ **PowerShell cannot chain with `&&`** - run commands separately or use bash
+- ⚠️ **Avoid PowerShell** - it has output buffering and command compatibility issues
 - ⚠️ **Tests must run through DDEV** - database connection requires it
 - ⚠️ **Use `ddev artisan queue:restart`** not `ddev restart` for queue changes
 - ✅ **Queue worker and Vite auto-start** when you run `ddev start`

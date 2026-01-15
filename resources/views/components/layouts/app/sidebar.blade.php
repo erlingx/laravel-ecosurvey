@@ -27,7 +27,7 @@
 
     <flux:navlist variant="outline">
         <flux:navlist.group
-            :heading="__('Platform')"
+            :heading="__('Overview')"
             class="grid"
         >
             <flux:navlist.item
@@ -39,6 +39,17 @@
         </flux:navlist.group>
 
         <flux:navlist.group
+            :heading="__('Campaigns')"
+            class="grid"
+        >
+            <flux:navlist.item
+                icon="cog"
+                href="/admin/campaigns"
+                :current="request()->is('admin/campaigns*')"
+            >{{ __('Manage Campaigns') }}</flux:navlist.item>
+        </flux:navlist.group>
+
+        <flux:navlist.group
             :heading="__('Data Collection')"
             class="grid"
         >
@@ -47,25 +58,25 @@
                 :href="route('data-points.submit')"
                 :current="request()->routeIs('data-points.submit')"
                 wire:navigate
-            >{{ __('Submit Reading') }}</flux:navlist.item>
+            >{{ __('Submit Data') }}</flux:navlist.item>
             <flux:navlist.item
                 icon="map"
                 :href="route('maps.survey')"
                 :current="request()->routeIs('maps.survey')"
                 wire:navigate
             >{{ __('Survey Map') }}</flux:navlist.item>
+        </flux:navlist.group>
+
+        <flux:navlist.group
+            :heading="__('Satellite & Analysis')"
+            class="grid"
+        >
             <flux:navlist.item
                 icon="globe-alt"
                 :href="route('maps.satellite')"
                 :current="request()->routeIs('maps.satellite')"
                 wire:navigate
-            >{{ __('Satellite Data') }}</flux:navlist.item>
-        </flux:navlist.group>
-
-        <flux:navlist.group
-            :heading="__('Analytics')"
-            class="grid"
-        >
+            >{{ __('Satellite Viewer') }}</flux:navlist.item>
             <flux:navlist.item
                 icon="chart-bar"
                 :href="route('analytics.heatmap')"
@@ -81,23 +92,20 @@
         </flux:navlist.group>
 
         <flux:navlist.group
-            :heading="__('Campaigns')"
+            :heading="__('Administration')"
             class="grid"
         >
             <flux:navlist.item
-                icon="folder"
-                href="#"
-                wire:navigate
-            >{{ __('My Campaigns') }}</flux:navlist.item>
-            <flux:navlist.item
-                icon="plus-circle"
-                href="#"
-                wire:navigate
-            >{{ __('New Campaign') }}</flux:navlist.item>
+                icon="users"
+                href="/admin/users"
+                :current="request()->is('admin/users*')"
+            >{{ __('Manage Users') }}</flux:navlist.item>
         </flux:navlist.group>
     </flux:navlist>
 
     <flux:spacer/>
+
+
 
     <flux:navlist variant="outline">
         <flux:navlist.item

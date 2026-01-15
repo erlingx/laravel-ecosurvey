@@ -34,6 +34,14 @@ Let me cut down to the most **impressive portfolio features** that showcase adva
     - Click marker to see reading details in draggable popup
     - **Edit link (✏️) in popup** to modify data points
     - Draw polygon/circle tools to define survey zones
+    - **Survey Zone Management Interface:**
+      - Visual polygon drawing with Leaflet.draw
+      - Create zones by clicking on map to draw boundaries
+      - Edit zone metadata (name, description)
+      - Auto-calculated area in km²
+      - Delete zones with confirmation
+      - Zones display on satellite viewer with blue dashed borders
+      - Interactive popups showing zone details
     - Filter by date range and metric type
     - Auto-zoom to fit data coverage
 

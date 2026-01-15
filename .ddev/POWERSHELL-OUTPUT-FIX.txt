@@ -1,0 +1,67 @@
+# PowerShell Output Buffering Fix for DDEV
+
+## Problem
+PowerShell buffers output from DDEV commands, causing delayed or missing output when running tests or other commands through DDEV containers.
+
+## Solutions (Choose One)
+
+### Option 1: Use PowerShell Helper Functions (Recommended)
+Load the helper functions in your current session:
+
+```powershell
+. .\.ddev\powershell-fix.ps1
+```
+
+Then use the helper commands:
+```powershell
+# Run tests with immediate output
+ddev-test --filter=DataExportServiceTest
+
+# Run any DDEV exec command with unbuffered output
+ddev-exec php artisan migrate
+```
+
+To make this permanent, add to your PowerShell profile:
+```powershell
+# Edit profile
+notepad $PROFILE
+
+# Add this line:
+. E:\web\laravel-ecosurvey\.ddev\powershell-fix.ps1
+```
+
+### Option 2: Use Git Bash (Best for Development)
+Change PhpStorm's default terminal to Git Bash:
+
+1. **File → Settings → Tools → Terminal**
+2. **Shell path:** `C:\Program Files\Git\bin\bash.exe` (or your Git installation path)
+3. **Restart PhpStorm**
+
+Git Bash handles DDEV output correctly without buffering issues.
+
+### Option 3: Manual Command Prefix
+For one-off commands, use `stdbuf` to disable buffering:
+
+```powershell
+ddev exec bash -c "stdbuf -oL php artisan test --filter=DataExportServiceTest 2>&1"
+```
+
+### Option 4: Use WSL Terminal
+If you have WSL installed, switch PhpStorm terminal to WSL:
+
+1. **File → Settings → Tools → Terminal**
+2. **Shell path:** `wsl.exe`
+3. **Restart PhpStorm**
+
+## Recommended: Git Bash
+For the best development experience with DDEV on Windows, use Git Bash as your PhpStorm terminal. It handles all DDEV commands natively without buffering issues.
+
+## Testing the Fix
+After applying any solution, test with:
+
+```bash
+ddev artisan test --filter=DataExportServiceTest
+```
+
+You should see test output immediately as tests run.
+

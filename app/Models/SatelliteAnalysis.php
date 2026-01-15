@@ -25,6 +25,11 @@ class SatelliteAnalysis extends Model
         'processing_level',
         'cloud_coverage_percent',
         'metadata',
+        'evi_value',
+        'savi_value',
+        'ndre_value',
+        'msi_value',
+        'gndvi_value',
     ];
 
     protected function casts(): array
@@ -36,6 +41,11 @@ class SatelliteAnalysis extends Model
             'cloud_coverage_percent' => 'decimal:2',
             'acquisition_date' => 'date',
             'metadata' => 'array',
+            'evi_value' => 'decimal:3',
+            'savi_value' => 'decimal:3',
+            'ndre_value' => 'decimal:3',
+            'msi_value' => 'decimal:3',
+            'gndvi_value' => 'decimal:3',
         ];
     }
 

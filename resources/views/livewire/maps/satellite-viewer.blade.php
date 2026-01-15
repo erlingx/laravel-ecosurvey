@@ -174,6 +174,7 @@ $satelliteData = computed(function () {
     // Don't load satellite data if no overlay type is selected
     if (empty($overlay)) {
         Log::info('ℹ️ No overlay type selected - skipping satellite data load');
+
         return null;
     }
 
@@ -223,6 +224,7 @@ $analysisData = computed(function () {
     // Don't load analysis data if no overlay type is selected
     if (empty($overlay)) {
         Log::info('ℹ️ No overlay type selected - skipping analysis data load');
+
         return null;
     }
 
@@ -250,17 +252,23 @@ $analysisData = computed(function () {
     return match ($overlay) {
         'ndvi' => $copernicusService->getNDVIData($lat, $lon, $date),
         'moisture' => $copernicusService->getMoistureData($lat, $lon, $date),
+        'ndre' => $copernicusService->getNDREData($lat, $lon, $date),
+        'evi' => $copernicusService->getEVIData($lat, $lon, $date),
+        'msi' => $copernicusService->getMSIData($lat, $lon, $date),
+        'savi' => $copernicusService->getSAVIData($lat, $lon, $date),
+        'gndvi' => $copernicusService->getGNDVIData($lat, $lon, $date),
         default => null,
     };
 });
 
 // Load data points GeoJSON for selected campaign
 $dataPointsGeoJSON = computed(function () {
-    if (!$this->campaignId || !$this->showDataPoints) {
+    if (! $this->campaignId || ! $this->showDataPoints) {
         Log::info('🗺️ Satellite Viewer: Not loading data points', [
             'campaignId' => $this->campaignId,
             'showDataPoints' => $this->showDataPoints,
         ]);
+
         return null;
     }
 
@@ -273,6 +281,41 @@ $dataPointsGeoJSON = computed(function () {
     ]);
 
     return $geoJSON;
+});
+
+// Load survey zones GeoJSON for selected campaign
+$surveyZonesGeoJSON = computed(function () {
+    if (! $this->campaignId) {
+        return null;
+    }
+
+    $campaign = Campaign::with('surveyZones')->find($this->campaignId);
+
+    if (! $campaign || $campaign->surveyZones->isEmpty()) {
+        return null;
+    }
+
+    $features = [];
+    foreach ($campaign->surveyZones as $zone) {
+        $feature = $zone->toGeoJSON();
+        if ($feature && isset($feature['geometry'])) {
+            $features[] = $feature;
+        }
+    }
+
+    if (empty($features)) {
+        return null;
+    }
+
+    Log::info('🗺️ Satellite Viewer: Loaded survey zones', [
+        'campaignId' => $this->campaignId,
+        'zoneCount' => count($features),
+    ]);
+
+    return [
+        'type' => 'FeatureCollection',
+        'features' => $features,
+    ];
 });
 
 // Save satellite analysis to database
@@ -380,7 +423,12 @@ $saveSatelliteAnalysis = function (): void {
                     >
                         <option value="">Select overlay type...</option>
                         <option value="ndvi">🌿 NDVI - Vegetation Index</option>
-                        <option value="moisture">💧 Moisture Index</option>
+                        <option value="moisture">💧 Moisture Index (NDMI)</option>
+                        <option value="ndre">🌱 NDRE - Chlorophyll Content (R²=0.85)</option>
+                        <option value="evi">🌳 EVI - Enhanced Vegetation (Dense Canopy)</option>
+                        <option value="msi">🏜️ MSI - Moisture Stress</option>
+                        <option value="savi">🌾 SAVI - Soil-Adjusted Vegetation</option>
+                        <option value="gndvi">💚 GNDVI - Green Vegetation</option>
                         <option value="truecolor">🌍 True Color</option>
                     </x-select>
                 </div>
@@ -595,6 +643,7 @@ $saveSatelliteAnalysis = function (): void {
          data-imagery="{{ json_encode($this->satelliteData) }}"
          data-analysis="{{ json_encode($this->analysisData) }}"
          data-datapoints="{{ json_encode($this->dataPointsGeoJSON) }}"
+         data-surveyzones="{{ json_encode($this->surveyZonesGeoJSON) }}"
          data-lat="{{ $selectedLat }}"
          data-lon="{{ $selectedLon }}"
          data-date="{{ $selectedDate }}"

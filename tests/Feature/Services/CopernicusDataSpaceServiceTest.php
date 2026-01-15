@@ -378,3 +378,194 @@ test('get moisture data from Copernicus Data Space', function () {
         ->and($result['interpretation'])->toBeString()
         ->and($result['source'])->toBe('Sentinel-2 (Copernicus Data Space)');
 });
+
+// ============================================================================
+// Phase 6: Advanced Satellite Indices Tests
+// ============================================================================
+
+test('get NDRE data from Copernicus Data Space', function () {
+    Http::fake([
+        'identity.dataspace.copernicus.eu/*' => Http::response(['access_token' => 'test_token'], 200),
+        'sh.dataspace.copernicus.eu/*' => Http::response(createFakeCopernicusIndexImage(0.35), 200),
+    ]);
+
+    config([
+        'services.copernicus_dataspace.client_id' => 'test',
+        'services.copernicus_dataspace.client_secret' => 'test',
+    ]);
+
+    $service = new CopernicusDataSpaceService;
+    $result = $service->getNDREData(55.6761, 12.5683, '2024-01-01');
+
+    expect($result)->not->toBeNull()
+        ->and($result['value'])->toBeFloat()
+        ->and($result['value'])->toBeGreaterThanOrEqual(-1.0)
+        ->and($result['value'])->toBeLessThanOrEqual(1.0)
+        ->and($result['date'])->toBe('2024-01-01')
+        ->and($result['metadata']['index'])->toBe('NDRE')
+        ->and($result['metadata']['validates'])->toContain('Chlorophyll Content');
+});
+
+test('get EVI data from Copernicus Data Space', function () {
+    Http::fake([
+        'identity.dataspace.copernicus.eu/*' => Http::response(['access_token' => 'test_token'], 200),
+        'sh.dataspace.copernicus.eu/*' => Http::response(createFakeCopernicusIndexImage(0.58), 200),
+    ]);
+
+    config([
+        'services.copernicus_dataspace.client_id' => 'test',
+        'services.copernicus_dataspace.client_secret' => 'test',
+    ]);
+
+    $service = new CopernicusDataSpaceService;
+    $result = $service->getEVIData(55.6761, 12.5683, '2024-01-01');
+
+    expect($result)->not->toBeNull()
+        ->and($result['value'])->toBeFloat()
+        ->and($result['value'])->toBeGreaterThanOrEqual(-1.0)
+        ->and($result['value'])->toBeLessThanOrEqual(1.0)
+        ->and($result['metadata']['index'])->toBe('EVI')
+        ->and($result['metadata']['validates'])->toContain('Leaf Area Index (LAI)');
+});
+
+test('get MSI data from Copernicus Data Space', function () {
+    Http::fake([
+        'identity.dataspace.copernicus.eu/*' => Http::response(['access_token' => 'test_token'], 200),
+        'sh.dataspace.copernicus.eu/*' => Http::response(createFakeCopernicusMSIImage(1.45), 200),
+    ]);
+
+    config([
+        'services.copernicus_dataspace.client_id' => 'test',
+        'services.copernicus_dataspace.client_secret' => 'test',
+    ]);
+
+    $service = new CopernicusDataSpaceService;
+    $result = $service->getMSIData(55.6761, 12.5683, '2024-01-01');
+
+    expect($result)->not->toBeNull()
+        ->and($result['value'])->toBeFloat()
+        ->and($result['value'])->toBeGreaterThanOrEqual(0.0)
+        ->and($result['value'])->toBeLessThanOrEqual(3.0)
+        ->and($result['metadata']['index'])->toBe('MSI')
+        ->and($result['metadata']['validates'])->toContain('Soil Moisture');
+});
+
+test('get SAVI data from Copernicus Data Space', function () {
+    Http::fake([
+        'identity.dataspace.copernicus.eu/*' => Http::response(['access_token' => 'test_token'], 200),
+        'sh.dataspace.copernicus.eu/*' => Http::response(createFakeCopernicusIndexImage(0.68), 200),
+    ]);
+
+    config([
+        'services.copernicus_dataspace.client_id' => 'test',
+        'services.copernicus_dataspace.client_secret' => 'test',
+    ]);
+
+    $service = new CopernicusDataSpaceService;
+    $result = $service->getSAVIData(55.6761, 12.5683, '2024-01-01');
+
+    expect($result)->not->toBeNull()
+        ->and($result['value'])->toBeFloat()
+        ->and($result['value'])->toBeGreaterThanOrEqual(-1.0)
+        ->and($result['value'])->toBeLessThanOrEqual(1.0)
+        ->and($result['metadata']['index'])->toBe('SAVI')
+        ->and($result['metadata']['note'])->toContain('sparse canopy');
+});
+
+test('get GNDVI data from Copernicus Data Space', function () {
+    Http::fake([
+        'identity.dataspace.copernicus.eu/*' => Http::response(['access_token' => 'test_token'], 200),
+        'sh.dataspace.copernicus.eu/*' => Http::response(createFakeCopernicusIndexImage(0.75), 200),
+    ]);
+
+    config([
+        'services.copernicus_dataspace.client_id' => 'test',
+        'services.copernicus_dataspace.client_secret' => 'test',
+    ]);
+
+    $service = new CopernicusDataSpaceService;
+    $result = $service->getGNDVIData(55.6761, 12.5683, '2024-01-01');
+
+    expect($result)->not->toBeNull()
+        ->and($result['value'])->toBeFloat()
+        ->and($result['value'])->toBeGreaterThanOrEqual(-1.0)
+        ->and($result['value'])->toBeLessThanOrEqual(1.0)
+        ->and($result['metadata']['index'])->toBe('GNDVI')
+        ->and($result['metadata']['validates'])->toContain('Chlorophyll Content');
+});
+
+test('all new indices handle API errors gracefully', function () {
+    Http::fake([
+        'identity.dataspace.copernicus.eu/*' => Http::response(['access_token' => 'test_token'], 200),
+        'sh.dataspace.copernicus.eu/*' => Http::response('Error', 500),
+    ]);
+
+    config([
+        'services.copernicus_dataspace.client_id' => 'test',
+        'services.copernicus_dataspace.client_secret' => 'test',
+    ]);
+
+    $service = new CopernicusDataSpaceService;
+
+    expect($service->getNDREData(55.6761, 12.5683, '2024-01-01'))->toBeNull()
+        ->and($service->getEVIData(55.6761, 12.5683, '2024-01-01'))->toBeNull()
+        ->and($service->getMSIData(55.6761, 12.5683, '2024-01-01'))->toBeNull()
+        ->and($service->getSAVIData(55.6761, 12.5683, '2024-01-01'))->toBeNull()
+        ->and($service->getGNDVIData(55.6761, 12.5683, '2024-01-01'))->toBeNull();
+});
+
+test('new indices cache responses correctly', function () {
+    Http::fake([
+        'identity.dataspace.copernicus.eu/*' => Http::response(['access_token' => 'test_token'], 200),
+        'sh.dataspace.copernicus.eu/*' => Http::response(createFakeCopernicusIndexImage(0.5), 200),
+    ]);
+
+    config([
+        'services.copernicus_dataspace.client_id' => 'test',
+        'services.copernicus_dataspace.client_secret' => 'test',
+    ]);
+
+    $service = new CopernicusDataSpaceService;
+
+    // First call should hit API
+    $result1 = $service->getNDREData(55.6761, 12.5683, '2024-01-01');
+    // Second call should hit cache
+    $result2 = $service->getNDREData(55.6761, 12.5683, '2024-01-01');
+
+    expect($result1)->toBe($result2);
+
+    // Should only hit API once
+    Http::assertSentCount(2); // 1 for auth, 1 for data
+});
+
+// Helper function to create fake PNG image with normalized index value (-1 to 1)
+function createFakeCopernicusIndexImage(float $indexValue): string
+{
+    $image = imagecreate(50, 50);
+    // Convert index value (-1 to 1) to pixel value (0 to 255)
+    $pixelValue = (int) (($indexValue + 1) * 127.5);
+    $color = imagecolorallocate($image, $pixelValue, $pixelValue, $pixelValue);
+    imagefilledrectangle($image, 0, 0, 50, 50, $color);
+    ob_start();
+    imagepng($image);
+    $png = ob_get_clean();
+    imagedestroy($image);
+
+    return $png;
+}
+
+// Helper function to create fake PNG image with MSI value (0 to 3)
+function createFakeCopernicusMSIImage(float $msiValue): string
+{
+    $image = imagecreate(50, 50);
+    // Convert MSI value (0 to 3) to pixel value (0 to 255)
+    $pixelValue = (int) (($msiValue / 3.0) * 255);
+    $color = imagecolorallocate($image, $pixelValue, $pixelValue, $pixelValue);
+    imagefilledrectangle($image, 0, 0, 50, 50, $color);
+    ob_start();
+    imagepng($image);
+    $png = ob_get_clean();
+    imagedestroy($image);
+
+    return $png;
+}
