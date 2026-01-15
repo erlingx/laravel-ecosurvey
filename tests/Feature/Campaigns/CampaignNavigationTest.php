@@ -85,4 +85,3 @@ test('sidebar shows administration section', function () {
         ->assertSee('Administration')
         ->assertSee('Manage Users');
 });
-

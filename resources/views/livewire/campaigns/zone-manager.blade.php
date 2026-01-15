@@ -39,14 +39,12 @@ $loadZones = function (): void {
         ->orderBy('created_at', 'desc')
         ->get()
         ->map(function (SurveyZone $zone) {
-            $geoJson = $zone->toGeoJSON();
-
             return [
                 'id' => $zone->id,
                 'name' => $zone->name,
                 'description' => $zone->description,
                 'area_km2' => (float) $zone->area_km2,
-                'geojson' => json_decode(json_encode($geoJson), true),
+                'geojson' => $zone->toGeoJSON(),
             ];
         })
         ->toArray();
@@ -82,31 +80,6 @@ $saveZone = function (array $geoJson, string $name, ?string $description = null)
     $this->dispatch('zonesUpdated');
 };
 
-$saveZoneData = function (string $geoJsonString, string $name, string $description = ''): void {
-    $geoJson = json_decode($geoJsonString, true);
-
-    if (! is_array($geoJson)) {
-        return;
-    }
-
-    $this->saveZone($geoJson, $name, $description !== '' ? $description : null);
-};
-
-on(['saveZoneData' => function (array $payload) {
-    $geoJson = $payload['geoJson'] ?? null;
-    $name = (string) ($payload['name'] ?? '');
-    $description = (string) ($payload['description'] ?? '');
-
-    if (is_array($geoJson)) {
-        $this->saveZone($geoJson, $name, $description !== '' ? $description : null);
-    }
-
-    if (is_string($geoJson)) {
-        $this->saveZoneData($geoJson, $name, $description);
-    }
-}]);
-
-// Method called directly from JavaScript via Livewire.call()
 $updateZone = function (int $zoneId, string $name, ?string $description = null): void {
     $zone = SurveyZone::findOrFail($zoneId);
 
@@ -147,12 +120,21 @@ $cancelEditing = function (): void {
     $this->zoneDescription = '';
 };
 
+$confirmDeleteZone = function (int $zoneId): void {
+    $this->selectedZoneForDeletion = $zoneId;
+    $this->showDeleteModal = true;
+};
+
+$cancelDeleteZone = function (): void {
+    $this->showDeleteModal = false;
+    $this->selectedZoneForDeletion = null;
+};
+
 // Get data points GeoJSON for the campaign (to overlay on map)
 $dataPointsGeoJSON = computed(function () {
     $geospatialService = app(\App\Services\GeospatialService::class);
-    $geoJson = $geospatialService->getDataPointsAsGeoJSON($this->campaignId);
-    // Convert to JSON string and back to ensure it's a plain array
-    return json_decode(json_encode($geoJson), true);
+
+    return $geospatialService->getDataPointsAsGeoJSON($this->campaignId);
 });
 
 ?>
@@ -184,10 +166,14 @@ $dataPointsGeoJSON = computed(function () {
 
                 <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
                     <p class="text-sm text-blue-800 dark:text-blue-200">
-                        <strong>How to use:</strong>
-                        Click the <strong>polygon icon</strong> in the toolbar, then click on the map to draw zone boundaries.
-                        Double-click or click the first point again to complete the polygon.
+                        <strong>How to draw a zone:</strong>
                     </p>
+                    <ol class="text-sm text-blue-800 dark:text-blue-200 list-decimal list-inside mt-2 space-y-1">
+                        <li>Click the <strong>polygon icon (⬟)</strong> in the top-right toolbar</li>
+                        <li>Click on the map to place each corner point (add as many as needed)</li>
+                        <li><strong>To finish:</strong> Double-click the last point OR click on the first point</li>
+                        <li>Enter a name for the zone when prompted</li>
+                    </ol>
                 </div>
 
                 {{-- Map Container --}}
@@ -195,8 +181,8 @@ $dataPointsGeoJSON = computed(function () {
 
                 {{-- Hidden data container for zones --}}
                 <div id="zone-data-container" style="display: none;"
-                     data-zones="{{ json_encode($zones) }}"
-                     data-datapoints="{{ json_encode($this->dataPointsGeoJSON) }}"
+                     data-zones="{{ json_encode($zones ?? []) }}"
+                     data-datapoints="{{ json_encode($this->dataPointsGeoJSON ?? ['type' => 'FeatureCollection', 'features' => []]) }}"
                      data-campaign-id="{{ $campaignId }}"
                      wire:key="zones-{{ count($zones) }}">
                 </div>
@@ -272,9 +258,9 @@ $dataPointsGeoJSON = computed(function () {
                                                 Edit
                                             </flux:button>
                                             <flux:button
-                                                size="sm"
+                                                size="xs"
                                                 variant="danger"
-                                                wire:click="$set('selectedZoneForDeletion', {{ $zone['id'] }}); $set('showDeleteModal', true)"
+                                                wire:click="confirmDeleteZone({{ $zone['id'] }})"
                                             >
                                                 Delete
                                             </flux:button>
@@ -306,28 +292,79 @@ $dataPointsGeoJSON = computed(function () {
             </flux:button>
             <flux:button
                 variant="ghost"
-                wire:click="$set('showDeleteModal', false)"
+                wire:click="cancelDeleteZone"
             >
                 Cancel
             </flux:button>
         </div>
     </flux:modal>
+
+    {{-- Zone Creation Modal (custom, not Flux) --}}
+    <div id="zone-creation-modal" class="hidden fixed inset-0 bg-black/50 dark:bg-black/70 z-[9999] flex items-center justify-center">
+        <div class="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6 relative z-[10000]">
+            <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Create Survey Zone</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label for="zone-name-input" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                        Zone Name <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="zone-name-input"
+                        class="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="e.g., Downtown Area"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label for="zone-description-input" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                        Description <span class="text-zinc-500 text-xs">(optional)</span>
+                    </label>
+                    <textarea
+                        id="zone-description-input"
+                        rows="3"
+                        class="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Add any notes about this zone..."
+                    ></textarea>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mt-6">
+                <button
+                    id="save-zone-btn"
+                    class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
+                >
+                    Save Zone
+                </button>
+                <button
+                    id="cancel-zone-btn"
+                    class="flex-1 px-4 py-2 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium rounded-md transition-colors"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 @script
 <script>
-    // Initialize zone editor map when Livewire component loads
-    if (!window.zoneEditorInitialized) {
-        window.initZoneEditorMap();
-        window.zoneEditorInitialized = true;
-    }
-
-    // Listen for Livewire updates to refresh zones
-    Livewire.on('zonesUpdated', () => {
-        if (window.updateZoneEditorMap) {
-            window.updateZoneEditorMap();
+    (function() {
+        // Initialize zone editor map when Livewire component loads
+        if (!window.zoneEditorInitialized) {
+            window.initZoneEditorMap();
+            window.zoneEditorInitialized = true;
         }
-    });
+
+        // Listen for Livewire updates to refresh zones
+        Livewire.on('zonesUpdated', () => {
+            if (window.updateZoneEditorMap) {
+                window.updateZoneEditorMap();
+            }
+        });
+    })();
 </script>
 @endscript
 

@@ -13,6 +13,13 @@ export function initZoneEditorMap() {
         return;
     }
 
+    // Prevent duplicate initialization
+    if (window.zoneEditorMap) {
+        console.log('Zone editor map already initialized');
+        updateZoneEditorMap();
+        return;
+    }
+
     // Find the Livewire component instance for this page
     const componentRoot = mapElement.closest('[wire\\:id]');
     const componentId = componentRoot?.getAttribute('wire:id');
@@ -48,12 +55,31 @@ export function initZoneEditorMap() {
         position: 'topright',
         draw: {
             polygon: {
-                allowIntersection: false,
-                showArea: true,
+                allowIntersection: true, // Allow self-intersecting polygons to prevent auto-complete
+                showArea: false, // DISABLED: Causes strict mode bug "assignment to undeclared variable type"
+                drawError: {
+                    color: '#e74c3c',
+                    message: '<strong>Error:</strong> Shape edges cannot cross!'
+                },
                 shapeOptions: {
                     color: '#3b82f6',
                     fillOpacity: 0.2
-                }
+                },
+                icon: new L.DivIcon({
+                    iconSize: new L.Point(8, 8),
+                    className: 'leaflet-div-icon leaflet-editing-icon'
+                }),
+                touchIcon: new L.DivIcon({
+                    iconSize: new L.Point(20, 20),
+                    className: 'leaflet-div-icon leaflet-editing-icon leaflet-touch-icon'
+                }),
+                guidelineDistance: 20,
+                maxGuideLineLength: 4000,
+                showLength: true,
+                metric: true,
+                feet: false,
+                nautic: false,
+                repeatMode: false // Prevent repeat mode
             },
             polyline: false,
             rectangle: false,
@@ -68,29 +94,104 @@ export function initZoneEditorMap() {
     });
     map.addControl(drawControl);
 
+
     // Handle polygon creation
     map.on(L.Draw.Event.CREATED, function (event) {
         const layer = event.layer;
         const geoJSON = layer.toGeoJSON();
 
-        const name = prompt('Enter a name for this survey zone:');
+        // Show the zone creation modal
+        const modal = document.getElementById('zone-creation-modal');
+        const nameInput = document.getElementById('zone-name-input');
+        const descriptionInput = document.getElementById('zone-description-input');
+        const saveBtn = document.getElementById('save-zone-btn');
+        const cancelBtn = document.getElementById('cancel-zone-btn');
 
-        if (!name) {
-            alert('Zone name is required. Zone not saved.');
+        if (!modal) {
+            console.error('Zone creation modal not found');
             return;
         }
 
-        const description = prompt('Enter an optional description (or leave blank):');
+        // Reset and show modal
+        nameInput.value = '';
+        descriptionInput.value = '';
+        modal.classList.remove('hidden');
+        nameInput.focus();
 
-        const component = getComponent();
-        if (!component) {
-            console.error('Zone manager Livewire component not found');
-            return;
-        }
+        // Handle save
+        const handleSave = () => {
+            const name = nameInput.value.trim();
 
-        component.call('saveZoneData', JSON.stringify(geoJSON), name, description || '');
+            if (!name) {
+                nameInput.classList.add('border-red-500');
+                return;
+            }
 
-        console.log('Zone creation call sent:', { name });
+            const description = descriptionInput.value.trim();
+
+            const component = getComponent();
+            if (!component) {
+                console.error('Zone manager Livewire component not found');
+                modal.classList.add('hidden');
+                return;
+            }
+
+            // Hide modal immediately
+            modal.classList.add('hidden');
+
+            // Call Livewire method
+            component.call('saveZone', geoJSON, name, description || null)
+                .then(() => {
+                    console.log('Zone saved successfully');
+                    updateZoneEditorMap();
+                })
+                .catch((error) => {
+                    console.error('Error saving zone:', error);
+                    alert('Error saving zone. Please try again.');
+                });
+
+            // Cleanup
+            saveBtn.removeEventListener('click', handleSave);
+            cancelBtn.removeEventListener('click', handleCancel);
+        };
+
+        // Handle cancel
+        const handleCancel = () => {
+            modal.classList.add('hidden');
+            saveBtn.removeEventListener('click', handleSave);
+            cancelBtn.removeEventListener('click', handleCancel);
+            nameInput.removeEventListener('keydown', handleEnter);
+            document.removeEventListener('keydown', handleEscape);
+        };
+
+        // Handle Enter key in name input
+        const handleEnter = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSave();
+            } else {
+                nameInput.classList.remove('border-red-500');
+            }
+        };
+
+        // Handle ESC key
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                handleCancel();
+            }
+        };
+
+        saveBtn.addEventListener('click', handleSave);
+        cancelBtn.addEventListener('click', handleCancel);
+        nameInput.addEventListener('keydown', handleEnter);
+        document.addEventListener('keydown', handleEscape);
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                handleCancel();
+            }
+        });
     });
 
     // Load initial zones and data points
@@ -121,36 +222,39 @@ export function updateZoneEditorMap() {
 
     // Load zones
     const zonesData = dataContainer.getAttribute('data-zones');
-    if (zonesData && zonesData !== 'null' && zonesData !== '[]') {
+
+    if (zonesData && zonesData.trim() !== '' && zonesData !== 'null' && zonesData !== '""') {
         try {
             const zones = JSON.parse(zonesData);
 
-            zones.forEach(zone => {
-                if (zone.geojson && zone.geojson.geometry) {
-                    const layer = L.geoJSON(zone.geojson, {
-                        style: {
-                            color: '#3b82f6',
-                            weight: 3,
-                            opacity: 0.8,
-                            fillColor: '#3b82f6',
-                            fillOpacity: 0.2,
-                            dashArray: '5, 5'
-                        }
-                    });
+            if (Array.isArray(zones) && zones.length > 0) {
+                zones.forEach(zone => {
+                    if (zone.geojson && zone.geojson.geometry) {
+                        const layer = L.geoJSON(zone.geojson, {
+                            style: {
+                                color: '#3b82f6',
+                                weight: 3,
+                                opacity: 0.8,
+                                fillColor: '#3b82f6',
+                                fillOpacity: 0.2,
+                                dashArray: '5, 5'
+                            }
+                        });
 
-                    layer.bindPopup(`
-                        <div class="p-2">
-                            <strong class="text-sm font-semibold">${zone.name}</strong>
-                            ${zone.description ? `<div class="text-xs text-gray-600 mt-1">${zone.description}</div>` : ''}
-                            <div class="text-xs mt-1"><strong>Area:</strong> ${zone.area_km2.toFixed(2)} km²</div>
-                        </div>
-                    `);
+                        layer.bindPopup(`
+                            <div class="p-2">
+                                <strong class="text-sm font-semibold">${zone.name}</strong>
+                                ${zone.description ? `<div class="text-xs text-gray-600 mt-1">${zone.description}</div>` : ''}
+                                <div class="text-xs mt-1"><strong>Area:</strong> ${zone.area_km2.toFixed(2)} km²</div>
+                            </div>
+                        `);
 
-                    window.zoneLayerGroup.addLayer(layer);
-                }
-            });
+                        window.zoneLayerGroup.addLayer(layer);
+                    }
+                });
 
-            console.log(`Loaded ${zones.length} survey zone(s)`);
+                console.log(`Loaded ${zones.length} survey zone(s)`);
+            }
         } catch (e) {
             console.error('Error parsing zones:', e);
         }
@@ -158,11 +262,12 @@ export function updateZoneEditorMap() {
 
     // Load data points
     const dataPointsData = dataContainer.getAttribute('data-datapoints');
-    if (dataPointsData && dataPointsData !== 'null' && dataPointsData !== '[]') {
+
+    if (dataPointsData && dataPointsData.trim() !== '' && dataPointsData !== 'null' && dataPointsData !== '""') {
         try {
             const dataPoints = JSON.parse(dataPointsData);
 
-            if (dataPoints && dataPoints.features && dataPoints.features.length > 0) {
+            if (dataPoints && dataPoints.features && Array.isArray(dataPoints.features) && dataPoints.features.length > 0) {
                 dataPoints.features.forEach(feature => {
                     const props = feature.properties;
                     const latlng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);

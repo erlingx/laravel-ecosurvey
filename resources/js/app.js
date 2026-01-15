@@ -70,6 +70,9 @@ window.updateMapMarkers = updateMapMarkers;
 window.initSatelliteMap = initSatelliteMap;
 window.updateSatelliteImagery = updateSatelliteImagery;
 
+window.initZoneEditorMap = initZoneEditorMap;
+window.updateZoneEditorMap = updateZoneEditorMap;
+
 window.initCharts = initCharts;
 window.initHeatmap = initHeatmap;
 window.updateHeatmap = updateHeatmap;
