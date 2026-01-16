@@ -506,11 +506,11 @@ $saveSatelliteAnalysis = function (): void {
                             {{ number_format($selectedLat, 6) }}°N, {{ number_format($selectedLon, 6) }}°E
                         </span>
                     </div>
-                    @if($this->analysisData)
+                    @if($this->analysisData || $this->satelliteData)
                         <div>
                             <span class="font-medium text-zinc-700 dark:text-zinc-300">Source:</span>
                             <span class="ml-2 text-zinc-600 dark:text-zinc-400">
-                                {{ $this->analysisData['source'] ?? 'Satellite Data' }}
+                                {{ $this->analysisData['source'] ?? $this->satelliteData['source'] ?? 'Satellite Data' }}
                             </span>
                         </div>
                     @endif
@@ -623,17 +623,159 @@ $saveSatelliteAnalysis = function (): void {
                     </div>
                 @endif
 
-                {{-- True Color - No analysis panel --}}
-                @if($overlayType === 'truecolor')
-                    <div class="mt-4 p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
-                        <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-                            🌍 True Color RGB
+                {{-- NDRE Analysis Panel --}}
+                @if($overlayType === 'ndre' && isset($this->analysisData['value']))
+                    <div class="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <h3 class="text-sm font-semibold text-green-900 dark:text-green-100 mb-2">
+                            🌱 NDRE Analysis - Chlorophyll Content
                         </h3>
-                        <p class="text-sm text-zinc-600 dark:text-zinc-400">
-                            Displaying natural color satellite imagery from Sentinel-2 (Bands B04, B03, B02).
+
+                        <p class="text-sm text-green-800 dark:text-green-200">
+                            NDRE Value: <span class="font-mono font-semibold">{{ number_format($this->analysisData['value'], 3) }}</span>
                         </p>
+                        <p class="text-sm text-green-800 dark:text-green-200 mt-1">
+                            R² Correlation: <span class="font-medium">0.80-0.90</span>
+                        </p>
+
+                        <div class="mt-3 text-xs text-green-700 dark:text-green-300">
+                            <p class="font-medium mb-1">NDRE Scale Reference:</p>
+                            <ul class="space-y-0.5 ml-4">
+                                <li>• &lt; 0: Low/no chlorophyll</li>
+                                <li>• 0 - 0.3: Moderate chlorophyll</li>
+                                <li>• 0.3 - 0.6: Good chlorophyll content</li>
+                                <li>• &gt; 0.6: High chlorophyll (healthy vegetation)</li>
+                            </ul>
+                            <p class="mt-2 text-xs italic">NDRE = (NIR - RedEdge) / (NIR + RedEdge)</p>
+                            <p class="text-xs">Bands: B05 (Red Edge 705nm), B08 (NIR)</p>
+                        </div>
                     </div>
                 @endif
+
+                {{-- EVI Analysis Panel --}}
+                @if($overlayType === 'evi' && isset($this->analysisData['value']))
+                    <div class="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <h3 class="text-sm font-semibold text-green-900 dark:text-green-100 mb-2">
+                            🌳 EVI Analysis - Enhanced Vegetation Index
+                        </h3>
+
+                        <p class="text-sm text-green-800 dark:text-green-200">
+                            EVI Value: <span class="font-mono font-semibold">{{ number_format($this->analysisData['value'], 3) }}</span>
+                        </p>
+                        <p class="text-sm text-green-800 dark:text-green-200 mt-1">
+                            R² Correlation: <span class="font-medium">0.75-0.85 (LAI, FAPAR)</span>
+                        </p>
+
+                        <div class="mt-3 text-xs text-green-700 dark:text-green-300">
+                            <p class="font-medium mb-1">EVI Scale Reference:</p>
+                            <ul class="space-y-0.5 ml-4">
+                                <li>• &lt; 0: Non-vegetated areas</li>
+                                <li>• 0 - 0.3: Sparse vegetation</li>
+                                <li>• 0.3 - 0.6: Moderate vegetation</li>
+                                <li>• &gt; 0.6: Dense canopy (better than NDVI)</li>
+                            </ul>
+                            <p class="mt-2 text-xs italic">EVI = 2.5 × ((NIR - Red) / (NIR + 6×Red - 7.5×Blue + 1))</p>
+                            <p class="text-xs">Bands: B02 (Blue), B04 (Red), B08 (NIR)</p>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- MSI Analysis Panel --}}
+                @if($overlayType === 'msi' && isset($this->analysisData['value']))
+                    <div class="mt-4 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                        <h3 class="text-sm font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                            🏜️ MSI Analysis - Moisture Stress Index
+                        </h3>
+
+                        <p class="text-sm text-orange-800 dark:text-orange-200">
+                            MSI Value: <span class="font-mono font-semibold">{{ number_format($this->analysisData['value'], 3) }}</span>
+                        </p>
+                        <p class="text-sm text-orange-800 dark:text-orange-200 mt-1">
+                            R² Correlation: <span class="font-medium">0.70-0.80 (Soil Moisture)</span>
+                        </p>
+
+                        <div class="mt-3 text-xs text-orange-700 dark:text-orange-300">
+                            <p class="font-medium mb-1">MSI Scale Reference (inverse of moisture):</p>
+                            <ul class="space-y-0.5 ml-4">
+                                <li>• &lt; 0.4: Low stress (wet)</li>
+                                <li>• 0.4 - 0.8: Moderate stress</li>
+                                <li>• 0.8 - 1.6: High stress</li>
+                                <li>• &gt; 1.6: Severe stress (very dry)</li>
+                            </ul>
+                            <p class="mt-2 text-xs italic">MSI = SWIR1 / NIR (higher = more stress)</p>
+                            <p class="text-xs">Bands: B08 (NIR 842nm), B11 (SWIR1 1610nm)</p>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- SAVI Analysis Panel --}}
+                @if($overlayType === 'savi' && isset($this->analysisData['value']))
+                    <div class="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <h3 class="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-2">
+                            🌾 SAVI Analysis - Soil-Adjusted Vegetation
+                        </h3>
+
+                        <p class="text-sm text-amber-800 dark:text-amber-200">
+                            SAVI Value: <span class="font-mono font-semibold">{{ number_format($this->analysisData['value'], 3) }}</span>
+                        </p>
+                        <p class="text-sm text-amber-800 dark:text-amber-200 mt-1">
+                            R² Correlation: <span class="font-medium">0.70-0.80 (Sparse LAI)</span>
+                        </p>
+
+                        <div class="mt-3 text-xs text-amber-700 dark:text-amber-300">
+                            <p class="font-medium mb-1">SAVI Scale Reference:</p>
+                            <ul class="space-y-0.5 ml-4">
+                                <li>• &lt; 0: Bare soil</li>
+                                <li>• 0 - 0.2: Sparse vegetation</li>
+                                <li>• 0.2 - 0.4: Moderate vegetation</li>
+                                <li>• &gt; 0.4: Dense vegetation</li>
+                            </ul>
+                            <p class="mt-2 text-xs italic">SAVI = ((NIR - Red) / (NIR + Red + 0.5)) × 1.5</p>
+                            <p class="text-xs">Corrects for soil brightness in sparse canopy</p>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- GNDVI Analysis Panel --}}
+                @if($overlayType === 'gndvi' && isset($this->analysisData['value']))
+                    <div class="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                        <h3 class="text-sm font-semibold text-emerald-900 dark:text-emerald-100 mb-2">
+                            💚 GNDVI Analysis - Green Vegetation Index
+                        </h3>
+
+                        <p class="text-sm text-emerald-800 dark:text-emerald-200">
+                            GNDVI Value: <span class="font-mono font-semibold">{{ number_format($this->analysisData['value'], 3) }}</span>
+                        </p>
+                        <p class="text-sm text-emerald-800 dark:text-emerald-200 mt-1">
+                            R² Correlation: <span class="font-medium">0.75-0.85 (Chlorophyll)</span>
+                        </p>
+
+                        <div class="mt-3 text-xs text-emerald-700 dark:text-emerald-300">
+                            <p class="font-medium mb-1">GNDVI Scale Reference:</p>
+                            <ul class="space-y-0.5 ml-4">
+                                <li>• &lt; 0: Low/no chlorophyll</li>
+                                <li>• 0 - 0.3: Low chlorophyll</li>
+                                <li>• 0.3 - 0.6: Moderate chlorophyll</li>
+                                <li>• &gt; 0.6: High chlorophyll content</li>
+                            </ul>
+                            <p class="mt-2 text-xs italic">GNDVI = (NIR - Green) / (NIR + Green)</p>
+                            <p class="text-xs">More sensitive to chlorophyll than NDVI</p>
+                        </div>
+                    </div>
+                @endif
+
+            {{-- Close analysisData condition --}}
+            @endif
+
+            {{-- True Color Info Panel - Outside analysisData condition since it has no analysis data --}}
+            @if($overlayType === 'truecolor')
+                <div class="mt-4 p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                    <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+                        🌍 True Color RGB
+                    </h3>
+                    <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                        Displaying natural color satellite imagery from Sentinel-2 (Bands B04, B03, B02).
+                    </p>
+                </div>
             @endif
         </x-card>
     </div>

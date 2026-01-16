@@ -821,6 +821,246 @@ SCRIPT;
         }
     }
 
+     /**
+     * Evalscript for NDRE visualization overlay
+     */
+    private function getNDREVisualizationScript(): string
+    {
+        return <<<'SCRIPT'
+//VERSION=3
+function setup() {
+    return {
+        input: ["B05", "B08"],
+        output: { bands: 3, sampleType: "AUTO" }
+    };
+}
+
+function evaluatePixel(sample) {
+    // Calculate NDRE
+    let ndre = (sample.B08 - sample.B05) / (sample.B08 + sample.B05);
+
+    // Colorize NDRE for visibility (similar to NDVI but more sensitive to chlorophyll)
+    let r, g, b;
+
+    if (ndre < 0) {
+        // Low chlorophyll: Brown
+        r = 0.6;
+        g = 0.4;
+        b = 0.2;
+    } else if (ndre < 0.3) {
+        // Moderate chlorophyll: Yellow-green
+        r = 0.8 - (ndre * 2);
+        g = 0.8;
+        b = 0.2;
+    } else {
+        // High chlorophyll: Green
+        r = 0;
+        g = 0.5 + (ndre * 0.5);
+        b = 0;
+    }
+
+    return [r, g, b];
+}
+SCRIPT;
+    }
+
+    /**
+     * Evalscript for EVI visualization overlay
+     */
+    private function getEVIVisualizationScript(): string
+    {
+        return <<<'SCRIPT'
+//VERSION=3
+function setup() {
+    return {
+        input: ["B02", "B04", "B08"],
+        output: { bands: 3, sampleType: "AUTO" }
+    };
+}
+
+function evaluatePixel(sample) {
+    // Calculate EVI
+    let evi = 2.5 * ((sample.B08 - sample.B04) / (sample.B08 + 6 * sample.B04 - 7.5 * sample.B02 + 1));
+
+    // Colorize EVI for visibility
+    let r, g, b;
+
+    if (evi < 0) {
+        // Non-vegetated: Brown
+        r = 0.6;
+        g = 0.4;
+        b = 0.2;
+    } else if (evi < 0.3) {
+        // Sparse vegetation: Yellow-green
+        r = 0.7;
+        g = 0.7;
+        b = 0.1;
+    } else if (evi < 0.6) {
+        // Moderate vegetation: Light green
+        r = 0.2;
+        g = 0.7;
+        b = 0.1;
+    } else {
+        // Dense vegetation: Dark green
+        r = 0;
+        g = 0.4 + (Math.min(evi, 1) * 0.3);
+        b = 0;
+    }
+
+    return [r, g, b];
+}
+SCRIPT;
+    }
+
+    /**
+     * Evalscript for MSI visualization overlay
+     */
+    private function getMSIVisualizationScript(): string
+    {
+        return <<<'SCRIPT'
+//VERSION=3
+function setup() {
+    return {
+        input: ["B08", "B11"],
+        output: { bands: 3, sampleType: "AUTO" }
+    };
+}
+
+function evaluatePixel(sample) {
+    // Calculate MSI (inverse of moisture - higher = more stress)
+    let msi = sample.B11 / sample.B08;
+
+    // Colorize MSI for visibility (inverse of moisture)
+    let r, g, b;
+
+    if (msi < 0.4) {
+        // Low stress (wet): Blue
+        r = 0.1;
+        g = 0.5;
+        b = 0.9;
+    } else if (msi < 0.8) {
+        // Moderate stress: Light blue
+        r = 0.5;
+        g = 0.8;
+        b = 0.9;
+    } else if (msi < 1.2) {
+        // Moderate-high stress: Yellow
+        r = 0.9;
+        g = 0.8;
+        b = 0.3;
+    } else if (msi < 1.6) {
+        // High stress: Orange
+        r = 0.9;
+        g = 0.5;
+        b = 0.2;
+    } else {
+        // Severe stress (dry): Red-brown
+        r = 0.8;
+        g = 0.3;
+        b = 0.1;
+    }
+
+    return [r, g, b];
+}
+SCRIPT;
+    }
+
+    /**
+     * Evalscript for SAVI visualization overlay
+     */
+    private function getSAVIVisualizationScript(): string
+    {
+        return <<<'SCRIPT'
+//VERSION=3
+function setup() {
+    return {
+        input: ["B04", "B08"],
+        output: { bands: 3, sampleType: "AUTO" }
+    };
+}
+
+function evaluatePixel(sample) {
+    // Calculate SAVI (Soil-Adjusted Vegetation Index)
+    let savi = ((sample.B08 - sample.B04) / (sample.B08 + sample.B04 + 0.5)) * 1.5;
+
+    // Colorize SAVI for visibility
+    let r, g, b;
+
+    if (savi < 0) {
+        // Bare soil: Brown
+        r = 0.7;
+        g = 0.5;
+        b = 0.3;
+    } else if (savi < 0.2) {
+        // Sparse vegetation: Beige-yellow
+        r = 0.8;
+        g = 0.7;
+        b = 0.4;
+    } else if (savi < 0.4) {
+        // Moderate vegetation: Yellow-green
+        r = 0.6;
+        g = 0.8;
+        b = 0.2;
+    } else {
+        // Dense vegetation: Green
+        r = 0;
+        g = 0.5 + (Math.min(savi, 1) * 0.3);
+        b = 0.1;
+    }
+
+    return [r, g, b];
+}
+SCRIPT;
+    }
+
+    /**
+     * Evalscript for GNDVI visualization overlay
+     */
+    private function getGNDVIVisualizationScript(): string
+    {
+        return <<<'SCRIPT'
+//VERSION=3
+function setup() {
+    return {
+        input: ["B03", "B08"],
+        output: { bands: 3, sampleType: "AUTO" }
+    };
+}
+
+function evaluatePixel(sample) {
+    // Calculate GNDVI (Green NDVI)
+    let gndvi = (sample.B08 - sample.B03) / (sample.B08 + sample.B03);
+
+    // Colorize GNDVI for visibility
+    let r, g, b;
+
+    if (gndvi < 0) {
+        // Low/no chlorophyll: Brown
+        r = 0.6;
+        g = 0.4;
+        b = 0.2;
+    } else if (gndvi < 0.3) {
+        // Low chlorophyll: Yellow
+        r = 0.8;
+        g = 0.8;
+        b = 0.1;
+    } else if (gndvi < 0.6) {
+        // Moderate chlorophyll: Light green
+        r = 0.3;
+        g = 0.7;
+        b = 0.2;
+    } else {
+        // High chlorophyll: Dark green
+        r = 0;
+        g = 0.4 + (Math.min(gndvi, 1) * 0.4);
+        b = 0;
+    }
+
+    return [r, g, b];
+}
+SCRIPT;
+    }
+
     /**
      * Get overlay visualization for specified type
      */
@@ -851,6 +1091,11 @@ SCRIPT;
             $evalscript = match ($overlayType) {
                 'ndvi' => $this->getNDVIVisualizationScript(),
                 'moisture' => $this->getMoistureVisualizationScript(),
+                'ndre' => $this->getNDREVisualizationScript(),
+                'evi' => $this->getEVIVisualizationScript(),
+                'msi' => $this->getMSIVisualizationScript(),
+                'savi' => $this->getSAVIVisualizationScript(),
+                'gndvi' => $this->getGNDVIVisualizationScript(),
                 'truecolor' => $this->getTrueColorRGBScript(),
                 default => $this->getNDVIVisualizationScript(),
             };
