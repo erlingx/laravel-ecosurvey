@@ -24,7 +24,8 @@ class CampaignsTable
                     ->searchable()
                     ->sortable()
                     ->weight('bold')
-                    ->description(fn (Campaign $record): string => $record->description ?? ''),
+                    ->description(fn (Campaign $record): string => str($record->description ?? '')->limit(50))
+                    ->wrap(),
 
                 BadgeColumn::make('status')
                     ->colors([
@@ -40,24 +41,26 @@ class CampaignsTable
                     ->counts('dataPoints')
                     ->sortable()
                     ->badge()
-                    ->color('info'),
+                    ->color('info')
+                    ->toggleable(),
 
                 TextColumn::make('survey_zones_count')
                     ->label('Zones')
                     ->counts('surveyZones')
                     ->sortable()
                     ->badge()
-                    ->color('primary'),
+                    ->color('primary')
+                    ->toggleable(),
 
                 TextColumn::make('start_date')
                     ->date('M d, Y')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('end_date')
                     ->date('M d, Y')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('created_at')
                     ->dateTime('M d, Y H:i')
@@ -77,7 +80,10 @@ class CampaignsTable
                         'completed' => 'Completed',
                         'archived' => 'Archived',
                     ])
-                    ->native(false),
+                    ->native(false)
+                    ->searchable()
+                    ->multiple()
+                    ->indicator('Status'),
 
                 Filter::make('has_data')
                     ->label('Has Data Points')
@@ -100,6 +106,14 @@ class CampaignsTable
                     DeleteBulkAction::make(),
                 ]),
             ])
+            ->filtersTriggerAction(
+                fn (Action $action) => $action
+                    ->modalCloseButton()
+            )
+            ->columnManagerTriggerAction(
+                fn (Action $action) => $action
+                    ->modalCloseButton()
+            )
             ->defaultSort('created_at', 'desc');
     }
 }

@@ -1,15 +1,31 @@
 # Phase 4 Features - Browser Testing Cookbook
 
-**Last Updated:** January 15, 2026  
+**Last Updated:** January 16, 2026  
 **Estimated Time:** 18-20 minutes  
 **Prerequisites:** Logged in as authenticated user
+
+**Testing Status:** Tests 1-2 completed and approved ✅
+
+---
+
+## Testing Notes (January 16, 2026)
+
+**Fixes Applied During Testing:**
+1. ✅ **Campaign Owner Display** - Added visible "Campaign Owner" field showing who created each campaign
+2. ✅ **Zone Metadata Saving** - Fixed bug where zone name wasn't being saved to database when editing
+3. ✅ **Map Auto-Refresh** - Map now updates immediately after saving zone metadata (no page refresh needed)
+4. ✅ **PostCSS Configuration** - Updated for Tailwind CSS v4 compatibility
+
+**Browser Cache Note:**
+- If you see TWO dialogs when creating a zone, clear browser cache (Ctrl+Shift+R)
+- Only ONE modal should appear with both Name and Description fields
 
 ---
 
 ## Quick Test Checklist
 
-- [ ] Campaign CRUD (Filament Admin) (3 min)
-- [ ] Survey Zone Management (5 min)
+- [x] **Campaign CRUD (Filament Admin)** ✅ TESTED & APPROVED (3 min)
+- [x] **Survey Zone Management** ✅ TESTED & APPROVED (5 min)
 - [ ] Satellite Viewer with Zones (3 min)
 - [ ] Data Point Temporal Correlation (3 min)
 - [ ] Scientific Data Export (2 min)
@@ -44,7 +60,7 @@
 **Expected Results:**
 ✅ Redirects to edit page  
 ✅ Campaign saved to database  
-✅ User auto-assigned as owner
+✅ **Campaign Owner** field shows your username (e.g., "Erik Campioni")
 
 ---
 
@@ -97,14 +113,17 @@
 1. Click the **polygon icon** (⬡) in the map toolbar
 2. Click 5-6 points on the map to draw a zone boundary
 3. Double-click to complete the polygon
-4. When prompted, enter:
-   - **Name:** "Test Zone Alpha"
-   - **Description:** "Created during Phase 4 testing"
-5. Zone should appear in the right sidebar
-6. Verify **area is calculated** (e.g., "2.80 km²")
+4. **ONE modal appears** with both fields in the same form:
+   - **Zone Name:** "Test Zone Alpha" (required)
+   - **Description:** "Created during Phase 4 testing" (optional - can leave blank)
+5. Click **Save Zone**
+6. Zone appears in the right sidebar
+7. Verify **area is calculated** (e.g., "2.80 km²")
 
 **Expected Results:**
 ✅ Polygon appears on map with blue dashed border  
+✅ **Only ONE modal/dialog appears** (not two separate prompts)  
+✅ Modal has both Name AND Description fields together  
 ✅ Zone listed in sidebar with name and area  
 ✅ Data points visible as green circles  
 ✅ Success message: "Survey zone 'Test Zone Alpha' created successfully!"
@@ -121,9 +140,10 @@
 5. Click **Save**
 
 **Expected Results:**
-✅ Zone name updates in sidebar  
+✅ Zone name updates in sidebar immediately (no page refresh needed)  
 ✅ Success message appears  
-✅ Zone still visible on map
+✅ Zone still visible on map  
+✅ **Map popup updates automatically** - click the zone polygon to verify new name/description appears
 
 ---
 
@@ -155,10 +175,10 @@
 4. Observe the map
 
 **Expected Results:**
-✅ Survey zones display as **blue dashed polygons**  
-✅ Data points show as **colored circles** (clustered)  
-✅ Zone has **interactive popup** (click to see details)  
-✅ Popup shows: Zone name, description, area in km²
+- Survey zones display as **blue dashed polygons**  
+- Data points show as **colored circles** (clustered)  
+- Zone has **interactive popup** (click to see details)  
+- Popup shows: Zone name, description, area in km²
 
 ---
 
@@ -169,7 +189,7 @@
 2. Read popup content
 
 **Expected Results:**
-✅ Popup displays:
+- Popup displays:
    - Zone name (e.g., "Central Copenhagen Zone")
    - Description (if available)
    - Area: X.XX km²
@@ -189,7 +209,7 @@
 4. Look at marker colors
 
 **Expected Results:**
-✅ Markers are color-coded:
+- Markers are color-coded:
    - 🟢 **Green** = 0-3 days difference (Excellent)
    - 🟡 **Yellow** = 4-7 days (Good)
    - 🟠 **Orange** = 8-14 days (Acceptable)
@@ -204,9 +224,9 @@
 2. Verify legend is visible
 
 **Expected Results:**
-✅ Legend shows color scale with day ranges  
-✅ Info tooltip (ⓘ) explains temporal alignment  
-✅ Legend only shows when data points are visible
+- Legend shows color scale with day ranges  
+- Info tooltip (ⓘ) explains temporal alignment  
+- Legend only shows when data points are visible
 
 ---
 
@@ -217,7 +237,7 @@
 2. Read popup content
 
 **Expected Results:**
-✅ Popup shows:
+- Popup shows:
    - Metric name and value
    - Collection date/time
    - GPS accuracy
@@ -234,9 +254,9 @@
 2. Observe behavior
 
 **Expected Results:**
-✅ Satellite date **auto-updates** to match field data collection date  
-✅ Map **re-centers** (smooth animation, no erratic zoom)  
-✅ Satellite imagery refreshes (if available for that date)
+- Satellite date **auto-updates** to match field data collection date  
+- Map **re-centers** (smooth animation, no erratic zoom)  
+- Satellite imagery refreshes (if available for that date)
 
 ---
 
@@ -251,8 +271,8 @@
 2. Browser downloads a JSON file
 
 **Expected Results:**
-✅ File downloads: `campaign-2-export.json` (or similar)  
-✅ File contains:
+- File downloads: `campaign-2-export.json` (or similar)  
+- File contains:
    - `metadata` object (campaign info, export date, QA stats)
    - `satellite_indices` list (all 7 indices)
    - `data_points` array with approved data
@@ -270,14 +290,14 @@
 3. Open in Excel/Sheets
 
 **Expected Results:**
-✅ File downloads: `campaign-2-export.csv`  
-✅ Headers include:
+- File downloads: `campaign-2-export.csv`  
+- Headers include:
    - `id, collected_at, latitude, longitude, accuracy_meters`
    - `metric_name, metric_unit, measurement_value`
    - `ndvi, ndmi, ndre, evi, msi, savi, gndvi`
    - `satellite_date, temporal_offset_days, temporal_quality`
    - `device_model, sensor_type, notes`
-✅ Data is properly formatted (no malformed CSV)
+- Data is properly formatted (no malformed CSV)
 
 ---
 
@@ -288,7 +308,7 @@
 2. Check satellite_context for a data point
 
 **Expected Results:**
-✅ All 7 satellite indices present (or null if not available):
+- All 7 satellite indices present (or null if not available):
    - `ndvi_value`
    - `ndmi_value`
    - `ndre_value`
@@ -296,7 +316,7 @@
    - `msi_value`
    - `savi_value`
    - `gndvi_value`
-✅ `temporal_quality` is one of: excellent/good/acceptable/poor/no_satellite_data
+- `temporal_quality` is one of: excellent/good/acceptable/poor/no_satellite_data
 
 ---
 
@@ -319,7 +339,7 @@ print_r($stats);
 ```
 
 **Expected Results:**
-✅ Array of zone statistics with:
+- Array of zone statistics with:
    - `zone_name`, `metric_name`, `point_count`
    - `avg_value`, `min_value`, `max_value`, `stddev_value`
 
@@ -335,9 +355,9 @@ print_r($nearest);
 ```
 
 **Expected Results:**
-✅ Array of 5 nearest data points  
-✅ Each has: `id`, `value`, `metric_name`, `latitude`, `longitude`, `distance_meters`  
-✅ Ordered by distance (closest first)
+- Array of 5 nearest data points  
+- Each has: `id`, `value`, `metric_name`, `latitude`, `longitude`, `distance_meters`  
+- Ordered by distance (closest first)
 
 ---
 
@@ -351,9 +371,9 @@ print_r($clusters);
 ```
 
 **Expected Results:**
-✅ Array of detected clusters  
-✅ Each cluster has: `cluster_id`, `point_count`, `avg_value`, `center_latitude`, `center_longitude`, `points`  
-✅ Noise points filtered out
+- Array of detected clusters  
+- Each cluster has: `cluster_id`, `point_count`, `avg_value`, `center_latitude`, `center_longitude`, `points`  
+- Noise points filtered out
 
 ---
 
@@ -367,8 +387,8 @@ print_r($hull);
 ```
 
 **Expected Results:**
-✅ GeoJSON Feature with polygon geometry  
-✅ Properties include: `area_square_meters`, `area_hectares`
+- GeoJSON Feature with polygon geometry  
+- Properties include: `area_square_meters`, `area_hectares`
 
 ---
 
@@ -429,14 +449,14 @@ print_r($hull);
 
 After completing this cookbook, you should have:
 
-✅ Created and managed campaigns via Filament admin  
-✅ Created at least one survey zone visually  
-✅ Seen zones displayed on satellite map  
-✅ Verified temporal correlation color-coding  
-✅ Downloaded JSON and CSV exports  
-✅ Confirmed all 7 satellite indices in exports  
-✅ Tested zone metadata editing  
-✅ Verified zone deletion works  
+- [x] Created and managed campaigns via Filament admin  
+- [x] Created at least one survey zone visually  
+- [x] Verified zone metadata editing  
+- [x] Verified zone deletion works  
+- [ ] Seen zones displayed on satellite map  
+- [ ] Verified temporal correlation color-coding  
+- [ ] Downloaded JSON and CSV exports  
+- [ ] Confirmed all 7 satellite indices in exports  
 
 **Total Time:** ~18 minutes  
 **Features Tested:** 7 major Phase 4 features

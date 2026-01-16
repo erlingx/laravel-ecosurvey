@@ -92,6 +92,7 @@ $updateZone = function (int $zoneId, string $name, ?string $description = null):
     $this->editingZoneId = null;
 
     session()->flash('success', "Survey zone '{$name}' updated successfully!");
+    $this->dispatch('zonesUpdated');
 };
 
 $deleteZone = function (int $zoneId): void {
@@ -184,7 +185,7 @@ $dataPointsGeoJSON = computed(function () {
                      data-zones="{{ json_encode($zones ?? []) }}"
                      data-datapoints="{{ json_encode($this->dataPointsGeoJSON ?? ['type' => 'FeatureCollection', 'features' => []]) }}"
                      data-campaign-id="{{ $campaignId }}"
-                     wire:key="zones-{{ count($zones) }}">
+                     wire:key="zones-{{ md5(json_encode($zones)) }}">
                 </div>
             </x-card>
         </div>
@@ -221,7 +222,7 @@ $dataPointsGeoJSON = computed(function () {
                                             <flux:button
                                                 size="sm"
                                                 variant="primary"
-                                                wire:click="updateZone({{ $zone['id'] }}, '{{ addslashes($zoneName) }}', '{{ addslashes($zoneDescription) }}')"
+                                                wire:click="updateZone({{ $zone['id'] }}, $wire.zoneName, $wire.zoneDescription)"
                                             >
                                                 Save
                                             </flux:button>

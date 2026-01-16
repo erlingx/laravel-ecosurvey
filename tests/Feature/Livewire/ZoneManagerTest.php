@@ -60,12 +60,10 @@ test('zone manager can save new zone', function () {
         ],
     ];
 
-    $component = Volt::test('campaigns.zone-manager', ['campaignId' => $campaign->id])
-        ->dispatch('saveZoneData', [
-            'geoJson' => $geoJson,
-            'name' => 'New Test Zone',
-            'description' => 'Created via test',
-        ]);
+    Volt::test('campaigns.zone-manager', ['campaignId' => $campaign->id])
+        ->call('saveZone', $geoJson, 'New Test Zone', 'Created via test')
+        ->assertHasNoErrors()
+        ->assertDispatched('zonesUpdated');
 
     expect(SurveyZone::where('campaign_id', $campaign->id)->count())->toBe(1);
 

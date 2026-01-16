@@ -4,14 +4,13 @@
 Running `ddev artisan boost:update` will update your Laravel Boost AI guidelines in `/.github/copilot-instructions.md`.
 
 **What gets updated:**
-- Content between `<laravel-boost-guidelines>` and `</laravel-boost-guidelines>`
+- Content between the opening and closing `laravel-boost-guidelines` tags
 - All the `===` sections (foundation rules, boost rules, php rules, etc.)
 
 **What is NOT updated:**
-- The top of the file (before `<laravel-boost-guidelines>`)
-- Content after `</laravel-boost-guidelines>` (if you added any)
+- The top of the file (before the opening tag)
+- Content after the closing tag (if you added any)
 - Your `.github/custom-instructions/` directory (completely separate)
-
 
 **Load custom instructions from:** `custom-instructions/project-config.md` (references all active modules)
 
@@ -319,7 +318,8 @@ document.addEventListener('livewire:init', function () {
 <code-snippet name="Volt Functional Component Example" lang="php">
 @volt
 <?php
-use function Livewire\Volt\{state, computed};
+use function Livewire\Volt\computed;
+use function Livewire\Volt\state;
 
 state(['count' => 0]);
 
@@ -400,16 +400,18 @@ test('product form creates product', function () {
 <?php
 
 use App\Models\Product;
-use function Livewire\Volt\{state, computed};
+
+use function Livewire\Volt\computed;
+use function Livewire\Volt\state;
 
 state(['editing' => null, 'search' => '']);
 
-$products = computed(fn() => Product::when($this->search,
-    fn($q) => $q->where('name', 'like', "%{$this->search}%")
+$products = computed(fn () => Product::when($this->search,
+    fn ($q) => $q->where('name', 'like', "%{$this->search}%")
 )->get());
 
-$edit = fn(Product $product) => $this->editing = $product->id;
-$delete = fn(Product $product) => $product->delete();
+$edit = fn (Product $product) => $this->editing = $product->id;
+$delete = fn (Product $product) => $product->delete();
 
 ?>
 

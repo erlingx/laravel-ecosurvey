@@ -50,6 +50,11 @@ class CampaignForm
                     ->placeholder('Select end date')
                     ->after('start_date'),
 
+                Placeholder::make('owner')
+                    ->label('Campaign Owner')
+                    ->content(fn (?Campaign $record): string => $record?->user?->name ?? auth()->user()->name ?? 'Unknown')
+                    ->columnSpanFull(),
+
                 Placeholder::make('data_points_count')
                     ->label('Total Data Points')
                     ->content(fn (?Campaign $record): string => $record ? number_format($record->dataPoints()->count()) : '0')
