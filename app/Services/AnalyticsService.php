@@ -14,31 +14,44 @@ class AnalyticsService
      */
     public function getHeatmapData(?int $campaignId = null, ?int $metricId = null): array
     {
-        $query = DataPoint::query()
-            ->select([
-                DB::raw('ST_Y(location::geometry) as latitude'),
-                DB::raw('ST_X(location::geometry) as longitude'),
-                'value',
-            ]);
+        // Require metric selection to prevent mixing incompatible data
+        if (! $metricId) {
+            return [];
+        }
+
+        // Build WHERE conditions
+        $where = ['deleted_at IS NULL'];
+        $bindings = [];
 
         if ($campaignId) {
-            $query->where('campaign_id', $campaignId);
+            $where[] = 'campaign_id = ?';
+            $bindings[] = $campaignId;
         }
 
-        if ($metricId) {
-            $query->where('environmental_metric_id', $metricId);
-        }
+        $where[] = 'environmental_metric_id = ?';
+        $bindings[] = $metricId;
 
-        $dataPoints = $query->get();
+        $whereClause = 'WHERE '.implode(' AND ', $where);
+
+        // Use raw SQL to extract coordinates efficiently in single query
+        $results = DB::select(
+            "SELECT
+                ST_Y(location::geometry) as latitude,
+                ST_X(location::geometry) as longitude,
+                value
+            FROM data_points
+            {$whereClause}",
+            $bindings
+        );
 
         // Format: [[lat, lng, intensity], ...]
-        return $dataPoints->map(function ($point) {
+        return array_map(function ($row) {
             return [
-                (float) $point->latitude,
-                (float) $point->longitude,
-                (float) $point->value,
+                (float) $row->latitude,
+                (float) $row->longitude,
+                (float) $row->value,
             ];
-        })->toArray();
+        }, $results);
     }
 
     /**

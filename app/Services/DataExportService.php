@@ -109,9 +109,9 @@ class DataExportService
                         'calibration_date' => $dp->calibration_at,
                         'protocol_version' => $dp->protocol_version,
                     ],
-                    'satellite_context' => $dp->ndvi_value ? [
-                        'ndvi_value' => (float) $dp->ndvi_value,
-                        'ndmi_value' => (float) $dp->ndmi_value,
+                    'satellite_context' => $dp->satellite_date ? [
+                        'ndvi_value' => $dp->ndvi_value ? (float) $dp->ndvi_value : null,
+                        'ndmi_value' => $dp->ndmi_value ? (float) $dp->ndmi_value : null,
                         'ndre_value' => $dp->ndre_value ? (float) $dp->ndre_value : null,
                         'evi_value' => $dp->evi_value ? (float) $dp->evi_value : null,
                         'msi_value' => $dp->msi_value ? (float) $dp->msi_value : null,

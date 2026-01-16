@@ -14,16 +14,6 @@ state([
     'updateRevision' => 0, // Track updates to force re-render
 ]);
 
-// Initialize with first metric if none selected
-$boot = function () {
-    if (! $this->metricId) {
-        $firstMetric = EnvironmentalMetric::where('is_active', true)->orderBy('name')->first();
-        if ($firstMetric) {
-            $this->metricId = $firstMetric->id;
-        }
-    }
-};
-
 // Watch for filter changes and increment revision
 $updatedCampaignId = function (): void {
     $this->updateRevision = (int) $this->updateRevision + 1;
@@ -122,6 +112,7 @@ $statistics = computed(function () {
                                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                                 required
                             >
+                                <option value="">Select a metric...</option>
                                 @foreach($this->metrics as $metric)
                                     <option value="{{ $metric->id }}">{{ $metric->name }} ({{ $metric->unit }})</option>
                                 @endforeach
@@ -148,16 +139,11 @@ $statistics = computed(function () {
             </div>
 
             {{-- Statistics Panel or No Data Message --}}
-            @if($this->statistics['count'] > 0)
+            @if($this->selectedMetric && $this->statistics['count'] > 0)
                 <div class="overflow-hidden bg-white shadow-sm dark:bg-gray-800 sm:rounded-lg">
                     <div class="p-6">
                         <h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-gray-100">
-                            Statistics
-                            @if($this->selectedMetric)
-                                <span class="text-base font-normal text-gray-600 dark:text-gray-400">
-                                    - {{ $this->selectedMetric->name }}
-                                </span>
-                            @endif
+                            Statistics - {{ $this->selectedMetric->name }} ({{ $this->selectedMetric->unit }})
                         </h3>
                         <div class="grid grid-cols-2 gap-4 md:grid-cols-6">
                             <div>
@@ -294,7 +280,7 @@ $statistics = computed(function () {
                             </div>
                         @endif
                     </div>
-                    @if(count($this->trendData) > 0)
+                    @if($this->selectedMetric && count($this->trendData) > 0)
                         <div class="relative h-[400px] w-full">
                             <canvas
                                 id="trend-chart"
@@ -307,9 +293,15 @@ $statistics = computed(function () {
                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                 </svg>
-                                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No data available</h3>
+                                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                    {{ !$this->selectedMetric ? 'No metric selected' : 'No data available' }}
+                                </h3>
                                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                    No time series data found for the selected filters.
+                                    @if(!$this->selectedMetric)
+                                        Select a metric from the dropdown above to view trend analysis.
+                                    @else
+                                        No time series data found for the selected filters.
+                                    @endif
                                 </p>
                             </div>
                         </div>
@@ -328,7 +320,7 @@ $statistics = computed(function () {
                             </span>
                         @endif
                     </h3>
-                    @if(count($this->distributionData) > 0)
+                    @if($this->selectedMetric && count($this->distributionData) > 0)
                         <div class="relative h-[400px] w-full">
                             <canvas
                                 id="distribution-chart"
@@ -341,9 +333,15 @@ $statistics = computed(function () {
                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                 </svg>
-                                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No data available</h3>
+                                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                    {{ !$this->selectedMetric ? 'No metric selected' : 'No data available' }}
+                                </h3>
                                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                    No distribution data found for the selected filters.
+                                    @if(!$this->selectedMetric)
+                                        Select a metric from the dropdown above to view distribution.
+                                    @else
+                                        No distribution data found for the selected filters.
+                                    @endif
                                 </p>
                             </div>
                         </div>

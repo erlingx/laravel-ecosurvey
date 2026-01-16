@@ -14,16 +14,6 @@ state([
     'updateRevision' => 0, // Track updates to force re-render
 ]);
 
-// Initialize with first metric on boot
-$boot = function () {
-    if (! $this->metricId) {
-        $firstMetric = EnvironmentalMetric::where('is_active', true)->orderBy('name')->first();
-        if ($firstMetric) {
-            $this->metricId = $firstMetric->id;
-        }
-    }
-};
-
 // Watch for filter changes and increment revision
 $updatedCampaignId = function (): void {
     $this->updateRevision = (int) $this->updateRevision + 1;
@@ -114,6 +104,7 @@ $statistics = computed(function () {
                                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                                 required
                             >
+                                <option value="">Select a metric...</option>
                                 @foreach($this->metrics as $metric)
                                     <option value="{{ $metric->id }}">{{ $metric->name }} ({{ $metric->unit }})</option>
                                 @endforeach
@@ -139,16 +130,11 @@ $statistics = computed(function () {
             </div>
 
             {{-- Statistics Panel --}}
-            @if($this->statistics['count'] > 0)
+            @if($this->selectedMetric && $this->statistics['count'] > 0)
                 <div class="overflow-hidden bg-white shadow-sm dark:bg-gray-800 sm:rounded-lg">
                     <div class="p-6">
                         <h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-gray-100">
-                            Statistics
-                            @if($this->selectedMetric)
-                                <span class="text-base font-normal text-gray-600 dark:text-gray-400">
-                                    - {{ $this->selectedMetric->name }} ({{ $this->selectedMetric->unit }})
-                                </span>
-                            @endif
+                            Statistics - {{ $this->selectedMetric->name }} ({{ $this->selectedMetric->unit }})
                         </h3>
                         <div class="grid grid-cols-2 gap-4 md:grid-cols-6">
                             <div>
@@ -228,30 +214,35 @@ $statistics = computed(function () {
                             </div>
                         @endif
                     </div>
-                    <div
-                        id="heatmap"
-                        class="h-[600px] w-full rounded-lg {{ count($this->heatmapData) > 0 ? '' : 'hidden' }}"
-                        wire:ignore
-                    ></div>
-                    @if(count($this->heatmapData) === 0)
-                        <div class="flex h-[600px] items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-                            <div class="text-center">
-                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                                </svg>
-                                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No data available</h3>
-                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                    @if($this->selectedMetric && $this->campaignId)
-                                        No {{ $this->selectedMetric->name }} measurements found for this campaign.
-                                    @elseif($this->selectedMetric)
-                                        No {{ $this->selectedMetric->name }} measurements found.
-                                    @else
-                                        Select a metric to view heatmap data.
-                                    @endif
-                                </p>
+                    {{-- Always render div to avoid canvas size issues. Empty state shown via overlay. --}}
+                    <div class="relative">
+                        <div
+                            id="heatmap"
+                            class="h-[600px] w-full rounded-lg"
+                            wire:ignore
+                        ></div>
+                        @if(!$this->selectedMetric || count($this->heatmapData) === 0)
+                            <div class="absolute inset-0 flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800">
+                                <div class="text-center">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                                    </svg>
+                                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                        {{ !$this->selectedMetric ? 'No metric selected' : 'No data available' }}
+                                    </h3>
+                                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                        @if(!$this->selectedMetric)
+                                            Select a metric from the dropdown above to view heatmap data.
+                                        @elseif($this->campaignId)
+                                            No {{ $this->selectedMetric->name }} measurements found for this campaign.
+                                        @else
+                                            No {{ $this->selectedMetric->name }} measurements found.
+                                        @endif
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                    @endif
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
