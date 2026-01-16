@@ -35,6 +35,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('campaigns.export.json');
     Route::get('campaigns/{campaign}/export/csv', [App\Http\Controllers\ExportController::class, 'exportCSV'])
         ->name('campaigns.export.csv');
+    Route::get('campaigns/{campaign}/export/pdf', [App\Http\Controllers\ExportController::class, 'exportPDF'])
+        ->name('campaigns.export.pdf');
 
     // Survey Zone Management
     Volt::route('campaigns/{campaignId}/zones/manage', 'campaigns.zone-manager')->name('campaigns.zones.manage');

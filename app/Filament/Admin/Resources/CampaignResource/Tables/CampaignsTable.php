@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\CampaignResource\Tables;
 
 use App\Models\Campaign;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -100,6 +101,30 @@ class CampaignsTable
                     ->icon(Heroicon::OutlinedMapPin)
                     ->url(fn (Campaign $record): string => route('campaigns.zones.manage', $record))
                     ->openUrlInNewTab(),
+                ActionGroup::make([
+                    Action::make('export_pdf')
+                        ->label('Export as PDF')
+                        ->icon(Heroicon::OutlinedDocumentText)
+                        ->url(fn (Campaign $record): string => route('campaigns.export.pdf', $record))
+                        ->openUrlInNewTab()
+                        ->color('success'),
+                    Action::make('export_json')
+                        ->label('Export as JSON')
+                        ->icon(Heroicon::OutlinedCodeBracket)
+                        ->url(fn (Campaign $record): string => route('campaigns.export.json', $record))
+                        ->openUrlInNewTab()
+                        ->color('info'),
+                    Action::make('export_csv')
+                        ->label('Export as CSV')
+                        ->icon(Heroicon::OutlinedTableCells)
+                        ->url(fn (Campaign $record): string => route('campaigns.export.csv', $record))
+                        ->openUrlInNewTab()
+                        ->color('warning'),
+                ])
+                    ->label('Export')
+                    ->icon(Heroicon::OutlinedArrowDownTray)
+                    ->color('primary')
+                    ->button(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

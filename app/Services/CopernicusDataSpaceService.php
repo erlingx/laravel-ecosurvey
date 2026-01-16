@@ -821,7 +821,7 @@ SCRIPT;
         }
     }
 
-     /**
+    /**
      * Evalscript for NDRE visualization overlay
      */
     private function getNDREVisualizationScript(): string

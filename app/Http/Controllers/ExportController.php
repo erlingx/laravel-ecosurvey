@@ -6,13 +6,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Campaign;
 use App\Services\DataExportService;
+use App\Services\ReportGeneratorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
 class ExportController extends Controller
 {
     public function __construct(
-        private DataExportService $exportService
+        private DataExportService $exportService,
+        private ReportGeneratorService $reportService
     ) {}
 
     /**
@@ -49,5 +51,13 @@ class ExportController extends Controller
         return response($csv, 200)
             ->header('Content-Type', 'text/csv')
             ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
+    }
+
+    /**
+     * Generate comprehensive PDF report
+     */
+    public function exportPDF(Campaign $campaign): Response
+    {
+        return $this->reportService->generatePDF($campaign);
     }
 }
