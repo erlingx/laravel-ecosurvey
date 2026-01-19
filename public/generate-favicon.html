@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Favicon Generator - EcoSurvey</title>
+</head>
+<body>
+    <h1>EcoSurvey Favicon Generator</h1>
+    <p>Click the button to download the favicon as PNG</p>
+
+    <canvas id="favicon" width="32" height="32" style="border: 1px solid #ccc; image-rendering: pixelated; width: 256px; height: 256px;"></canvas>
+
+    <br><br>
+    <button onclick="downloadFavicon()">Download favicon-32x32.png</button>
+    <button onclick="downloadFavicon16()">Download favicon-16x16.png</button>
+
+    <script>
+        const canvas = document.getElementById('favicon');
+        const ctx = canvas.getContext('2d');
+
+        // Draw 32x32 favicon
+        function drawFavicon(size) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = size;
+            tempCanvas.height = size;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            const center = size / 2;
+            const radius = size * 0.45;
+
+            // Background circle (green)
+            tempCtx.fillStyle = '#10B981';
+            tempCtx.beginPath();
+            tempCtx.arc(center, center, size / 2, 0, 2 * Math.PI);
+            tempCtx.fill();
+
+            // Globe outline (white)
+            tempCtx.strokeStyle = 'white';
+            tempCtx.lineWidth = size / 16;
+            tempCtx.beginPath();
+            tempCtx.arc(center, center, radius, 0, 2 * Math.PI);
+            tempCtx.stroke();
+
+            // Leaf - left side
+            tempCtx.fillStyle = 'white';
+            tempCtx.beginPath();
+            tempCtx.moveTo(center, size * 0.2);
+            tempCtx.quadraticCurveTo(size * 0.35, size * 0.3, size * 0.35, size * 0.45);
+            tempCtx.quadraticCurveTo(size * 0.35, size * 0.6, center, size * 0.7);
+            tempCtx.lineTo(center, size * 0.2);
+            tempCtx.fill();
+
+            // Leaf - right side (lighter)
+            tempCtx.fillStyle = '#D1FAE5';
+            tempCtx.beginPath();
+            tempCtx.moveTo(center, size * 0.2);
+            tempCtx.quadraticCurveTo(size * 0.65, size * 0.3, size * 0.65, size * 0.45);
+            tempCtx.quadraticCurveTo(size * 0.65, size * 0.6, center, size * 0.7);
+            tempCtx.lineTo(center, size * 0.2);
+            tempCtx.fill();
+
+            // Data points (blue circles)
+            const pointRadius = size / 12;
+            tempCtx.fillStyle = '#3B82F6';
+
+            // Left point
+            tempCtx.beginPath();
+            tempCtx.arc(size * 0.25, center, pointRadius, 0, 2 * Math.PI);
+            tempCtx.fill();
+
+            // Right point
+            tempCtx.beginPath();
+            tempCtx.arc(size * 0.75, center, pointRadius, 0, 2 * Math.PI);
+            tempCtx.fill();
+
+            // Bottom point
+            tempCtx.beginPath();
+            tempCtx.arc(center, size * 0.75, pointRadius, 0, 2 * Math.PI);
+            tempCtx.fill();
+
+            // Connection lines
+            tempCtx.strokeStyle = '#60A5FA';
+            tempCtx.lineWidth = size / 24;
+
+            tempCtx.beginPath();
+            tempCtx.moveTo(size * 0.25, center);
+            tempCtx.lineTo(center, size * 0.75);
+            tempCtx.stroke();
+
+            tempCtx.beginPath();
+            tempCtx.moveTo(size * 0.75, center);
+            tempCtx.lineTo(center, size * 0.75);
+            tempCtx.stroke();
+
+            return tempCanvas;
+        }
+
+        // Draw on main canvas
+        const favicon32 = drawFavicon(32);
+        ctx.drawImage(favicon32, 0, 0);
+
+        function downloadFavicon() {
+            const link = document.createElement('a');
+            link.download = 'favicon-32x32.png';
+            link.href = favicon32.toDataURL('image/png');
+            link.click();
+        }
+
+        function downloadFavicon16() {
+            const favicon16 = drawFavicon(16);
+            const link = document.createElement('a');
+            link.download = 'favicon-16x16.png';
+            link.href = favicon16.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+</html>

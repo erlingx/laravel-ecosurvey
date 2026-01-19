@@ -34,29 +34,30 @@ class EcoSurveySeeder extends Seeder
     {
         // Create Environmental Metrics
         $metrics = [
-            ['name' => 'Air Quality Index', 'unit' => 'AQI', 'description' => 'Air quality measurement (0-500)', 'is_active' => true],
-            ['name' => 'Temperature', 'unit' => '°C', 'description' => 'Ambient temperature in Celsius', 'is_active' => true],
-            ['name' => 'Humidity', 'unit' => '%', 'description' => 'Relative humidity percentage', 'is_active' => true],
-            ['name' => 'Noise Level', 'unit' => 'dB', 'description' => 'Sound level in decibels', 'is_active' => true],
-            ['name' => 'PM2.5', 'unit' => 'µg/m³', 'description' => 'Fine particulate matter concentration', 'is_active' => true],
-            ['name' => 'PM10', 'unit' => 'µg/m³', 'description' => 'Coarse particulate matter concentration', 'is_active' => true],
-            ['name' => 'CO2', 'unit' => 'ppm', 'description' => 'Carbon dioxide concentration', 'is_active' => true],
+            ['name' => 'Air Quality Index', 'unit' => 'AQI', 'description' => 'Air quality measurement (0-500)', 'expected_min' => 0, 'expected_max' => 500, 'is_active' => true],
+            ['name' => 'Temperature', 'unit' => '°C', 'description' => 'Ambient temperature in Celsius', 'expected_min' => -40, 'expected_max' => 50, 'is_active' => true],
+            ['name' => 'Humidity', 'unit' => '%', 'description' => 'Relative humidity percentage', 'expected_min' => 0, 'expected_max' => 100, 'is_active' => true],
+            ['name' => 'Noise Level', 'unit' => 'dB', 'description' => 'Sound level in decibels', 'expected_min' => 30, 'expected_max' => 120, 'is_active' => true],
+            ['name' => 'PM2.5', 'unit' => 'µg/m³', 'description' => 'Fine particulate matter concentration', 'expected_min' => 0, 'expected_max' => 500, 'is_active' => true],
+            ['name' => 'PM10', 'unit' => 'µg/m³', 'description' => 'Coarse particulate matter concentration', 'expected_min' => 0, 'expected_max' => 600, 'is_active' => true],
+            ['name' => 'CO2', 'unit' => 'ppm', 'description' => 'Carbon dioxide concentration', 'expected_min' => 300, 'expected_max' => 5000, 'is_active' => true],
         ];
 
         foreach ($metrics as $metric) {
-            EnvironmentalMetric::firstOrCreate(['name' => $metric['name']], $metric);
+            EnvironmentalMetric::updateOrCreate(['name' => $metric['name']], $metric);
         }
 
-        $user = User::first();
+        $adminUser = User::where('email', 'admin@admin.com')->first();
+        $firstUser = User::first();
 
-        // CAMPAIGN 1: Fælledparken Green Space Study
-        $this->createFalledparkenCampaign($user);
+        // CAMPAIGN 1: Fælledparken Green Space Study (owned by admin)
+        $this->createFalledparkenCampaign($adminUser);
 
-        // CAMPAIGN 2: Noise Pollution Study
-        $this->createNoisePollutionCampaign($user);
+        // CAMPAIGN 2: Noise Pollution Study (owned by admin)
+        $this->createNoisePollutionCampaign($adminUser);
 
-        // CAMPAIGN 3: Copenhagen Air Quality 2025
-        $this->createCopenhagenAirQualityCampaign($user);
+        // CAMPAIGN 3: Copenhagen Air Quality 2025 (owned by first user)
+        $this->createCopenhagenAirQualityCampaign($firstUser);
 
         $this->command->info('✅ Created 3 campaigns with survey zones and data points around August 15, 2025');
     }

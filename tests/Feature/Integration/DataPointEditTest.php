@@ -4,7 +4,12 @@ use App\Models\Campaign;
 use App\Models\DataPoint;
 use App\Models\EnvironmentalMetric;
 use App\Models\User;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
+
+beforeEach(function () {
+    Queue::fake(); // Prevent automatic satellite enrichment which can hang tests
+});
 
 test('can access edit page for existing data point', function () {
     $user = User::factory()->create();

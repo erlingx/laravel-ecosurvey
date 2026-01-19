@@ -34,6 +34,8 @@ class EnvironmentalMetricFactory extends Factory
             'name' => $metric['name'],
             'unit' => $metric['unit'],
             'description' => fake()->sentence(),
+            'expected_min' => null,
+            'expected_max' => null,
             'is_active' => true,
         ];
     }

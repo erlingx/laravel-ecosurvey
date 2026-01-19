@@ -5,11 +5,13 @@ use App\Models\DataPoint;
 use App\Models\EnvironmentalMetric;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    Queue::fake(); // Prevent automatic satellite enrichment which can hang tests
     $this->user = User::factory()->create();
     $this->campaign = Campaign::factory()->create(['status' => 'active', 'user_id' => $this->user->id]);
     $this->metric = EnvironmentalMetric::factory()->create(['is_active' => true]);

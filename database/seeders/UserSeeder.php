@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
@@ -17,7 +18,7 @@ class UserSeeder extends Seeder
         User::factory()->create([
             'name' => 'admin',
             'email' => 'admin@admin.com',
-            'password' => config('seeding.passwords.admin'),
+            'password' => Hash::make(config('seeding.passwords.admin')),
             'email_verified_at' => now(),
             'two_factor_confirmed_at' => null,
             'two_factor_secret' => null,
@@ -26,7 +27,7 @@ class UserSeeder extends Seeder
         User::factory()->create([
             'name' => 'dev',
             'email' => 'dev@dev.com',
-            'password' => config('seeding.passwords.dev'),
+            'password' => Hash::make(config('seeding.passwords.dev')),
             'email_verified_at' => now(),
             'two_factor_confirmed_at' => null,
             'two_factor_secret' => null,
@@ -35,7 +36,7 @@ class UserSeeder extends Seeder
         User::factory()->create([
             'name' => 'user',
             'email' => 'user@user.com',
-            'password' => config('seeding.passwords.user'),
+            'password' => Hash::make(config('seeding.passwords.user')),
             'email_verified_at' => now(),
             'two_factor_confirmed_at' => null,
             'two_factor_secret' => null,

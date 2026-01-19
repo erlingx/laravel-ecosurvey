@@ -166,6 +166,26 @@ class DataPointsTable
                     ->native(false)
                     ->indicator('Accuracy'),
 
+                SelectFilter::make('flagged')
+                    ->label('QA Status')
+                    ->options([
+                        'clean' => 'Clean (No Issues)',
+                        'flagged' => 'Flagged (Has Issues)',
+                    ])
+                    ->query(function ($query, $data) {
+                        if (! $data['value']) {
+                            return $query;
+                        }
+
+                        return match ($data['value']) {
+                            'clean' => $query->whereNull('qa_flags'),
+                            'flagged' => $query->whereNotNull('qa_flags'),
+                            default => $query,
+                        };
+                    })
+                    ->native(false)
+                    ->indicator('QA Status'),
+
                 TrashedFilter::make(),
             ])
             ->recordActions([
@@ -239,6 +259,27 @@ class DataPointsTable
                                 ->danger()
                                 ->title('Data points rejected!')
                                 ->body("{$count} data point".($count !== 1 ? 's have' : ' has').' been rejected.');
+                        }),
+
+                    Action::make('bulk_clear_flags')
+                        ->label('Clear QA Flags')
+                        ->icon(Heroicon::OutlinedShieldCheck)
+                        ->color('info')
+                        ->requiresConfirmation()
+                        ->modalHeading('Clear Quality Flags')
+                        ->modalDescription('Are you sure you want to clear QA flags from the selected data points?')
+                        ->modalSubmitActionLabel('Yes, clear flags')
+                        ->accessSelectedRecords()
+                        ->action(function ($records) {
+                            $records->each(fn (DataPoint $record) => $record->update(['qa_flags' => null]));
+                        })
+                        ->successNotification(function ($records) {
+                            $count = $records->count();
+
+                            return Notification::make()
+                                ->success()
+                                ->title('QA flags cleared!')
+                                ->body("Cleared flags from {$count} data point".($count !== 1 ? 's' : '').'.');
                         }),
 
                     DeleteBulkAction::make(),

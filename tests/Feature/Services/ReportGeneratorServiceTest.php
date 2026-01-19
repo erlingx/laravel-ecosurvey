@@ -5,6 +5,11 @@ use App\Models\DataPoint;
 use App\Models\EnvironmentalMetric;
 use App\Models\User;
 use App\Services\ReportGeneratorService;
+use Illuminate\Support\Facades\Queue;
+
+beforeEach(function () {
+    Queue::fake(); // Prevent automatic satellite enrichment which can hang tests
+});
 
 test('generates PDF report for campaign', function () {
     $user = User::factory()->create();

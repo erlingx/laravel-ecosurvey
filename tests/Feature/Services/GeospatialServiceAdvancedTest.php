@@ -9,10 +9,12 @@ use App\Models\SurveyZone;
 use App\Services\GeospatialService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    Queue::fake(); // Prevent automatic satellite enrichment which can hang tests
     $this->service = new GeospatialService;
 });
 

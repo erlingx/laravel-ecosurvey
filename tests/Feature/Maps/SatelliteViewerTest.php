@@ -7,9 +7,11 @@ use App\Models\DataPoint;
 use App\Models\EnvironmentalMetric;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 
 beforeEach(function () {
+    Queue::fake(); // Prevent automatic satellite enrichment which can hang tests
     $this->user = User::factory()->create();
 });
 
@@ -110,7 +112,8 @@ test('satellite viewer fetches imagery data', function () {
     ]);
 
     $component = Livewire::actingAs($this->user)
-        ->test('maps.satellite-viewer');
+        ->test('maps.satellite-viewer')
+        ->set('overlayType', 'truecolor'); // Set overlay type to trigger satellite data load
 
     $satelliteData = $component->get('satelliteData');
 
@@ -128,9 +131,10 @@ test('satellite viewer only fetches NDVI when enabled', function () {
     ]);
 
     $component = Livewire::actingAs($this->user)
-        ->test('maps.satellite-viewer');
+        ->test('maps.satellite-viewer')
+        ->set('overlayType', 'ndvi'); // Set NDVI overlay
 
-    // Initially NDVI overlay is set by default
+    // NDVI overlay is now set
     expect($component->get('overlayType'))->toBe('ndvi')
         ->and($component->get('analysisData'))->not->toBeNull();
 
@@ -179,11 +183,13 @@ test('satellite viewer updates imagery when date changes', function () {
 
     $component = Livewire::actingAs($this->user)
         ->test('maps.satellite-viewer')
+        ->set('overlayType', 'truecolor') // Set overlay type first
         ->set('selectedDate', $newDate);
 
     $satelliteData = $component->get('satelliteData');
 
-    expect($satelliteData['date'])->toBe($newDate);
+    expect($satelliteData)->not->toBeNull()
+        ->and($satelliteData['date'])->toBe($newDate);
 });
 
 test('satellite viewer displays coordinates', function () {
@@ -229,14 +235,18 @@ test('satellite viewer handles API errors gracefully', function () {
     ]);
 
     $component = Livewire::actingAs($this->user)
-        ->test('maps.satellite-viewer');
+        ->test('maps.satellite-viewer')
+        ->set('overlayType', 'truecolor'); // Try to load satellite data
 
     $satelliteData = $component->get('satelliteData');
 
-    // Check structure without dumping the entire image data
+    // When API fails, service returns mock data (for development/demo purposes)
     expect($satelliteData)->toBeArray()
-        ->and(isset($satelliteData['url']))->toBeTrue()
-        ->and(isset($satelliteData['source']))->toBeTrue();
+        ->and($satelliteData['source'])->toContain('Sentinel-2');
+
+    // Component should still be functional
+    expect($component->get('selectedLat'))->toBeFloat()
+        ->and($component->get('selectedLon'))->toBeFloat();
 });
 
 test('satellite viewer updates when campaign is selected', function () {

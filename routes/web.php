@@ -4,6 +4,13 @@ use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
 
+// Serve favicon.svg as favicon.ico for browser compatibility
+Route::get('favicon.ico', function () {
+    return response()->file(public_path('favicon.svg'), [
+        'Content-Type' => 'image/svg+xml',
+    ]);
+});
+
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
@@ -27,8 +34,8 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('analytics/heatmap', 'analytics.heatmap-generator')->name('analytics.heatmap');
     Volt::route('analytics/trends', 'analytics.trend-chart')->name('analytics.trends');
 
-    // Campaigns - redirect to Filament admin
-    Route::redirect('campaigns', '/admin/campaigns')->name('campaigns.index');
+    // Campaigns - user-facing campaign list
+    Volt::route('campaigns', 'campaigns.my-campaigns')->name('campaigns.index');
 
     // Exports
     Route::get('campaigns/{campaign}/export/json', [App\Http\Controllers\ExportController::class, 'exportJSON'])

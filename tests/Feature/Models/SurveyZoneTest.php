@@ -5,6 +5,11 @@ declare(strict_types=1);
 use App\Models\Campaign;
 use App\Models\DataPoint;
 use App\Models\SurveyZone;
+use Illuminate\Support\Facades\Queue;
+
+beforeEach(function () {
+    Queue::fake(); // Prevent automatic satellite enrichment which can hang tests
+});
 
 test('survey zone can calculate area', function () {
     $zone = SurveyZone::factory()->create();

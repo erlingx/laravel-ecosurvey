@@ -8,10 +8,12 @@ use App\Models\EnvironmentalMetric;
 use App\Models\User;
 use App\Services\AnalyticsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    Queue::fake(); // Prevent automatic satellite enrichment which can hang tests
     $this->service = new AnalyticsService;
     $this->user = User::factory()->create();
     $this->campaign = Campaign::factory()->create();
@@ -28,7 +30,7 @@ test('get heatmap data returns formatted array', function () {
         'location' => DB::raw("ST_GeomFromText('POINT(12.5683 55.6761)', 4326)"),
     ]);
 
-    $result = $this->service->getHeatmapData();
+    $result = $this->service->getHeatmapData(null, $this->metric->id);
 
     expect($result)->toBeArray()
         ->and($result)->toHaveCount(1)
@@ -55,7 +57,7 @@ test('get heatmap data filters by campaign', function () {
         'value' => 20.0,
     ]);
 
-    $result = $this->service->getHeatmapData($this->campaign->id);
+    $result = $this->service->getHeatmapData($this->campaign->id, $this->metric->id);
 
     expect($result)->toHaveCount(1)
         ->and($result[0][2])->toBe(10.0);
@@ -82,6 +84,21 @@ test('get heatmap data filters by metric', function () {
 
     expect($result)->toHaveCount(1)
         ->and($result[0][2])->toBe(15.0);
+});
+
+test('get heatmap data returns empty array when no metric provided', function () {
+    DataPoint::factory()->create([
+        'campaign_id' => $this->campaign->id,
+        'environmental_metric_id' => $this->metric->id,
+        'user_id' => $this->user->id,
+        'value' => 25.5,
+    ]);
+
+    // No metric ID provided - should return empty array
+    $result = $this->service->getHeatmapData();
+
+    expect($result)->toBeArray()
+        ->and($result)->toBeEmpty();
 });
 
 test('calculate statistics with data', function () {

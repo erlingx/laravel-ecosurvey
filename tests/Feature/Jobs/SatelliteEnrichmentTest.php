@@ -55,6 +55,8 @@ test('satellite analysis can be created for data point', function () {
 });
 
 test('data point can have multiple satellite analyses from different sources', function () {
+    Queue::fake(); // Prevent automatic enrichment job from running
+
     $dataPoint = DataPoint::factory()->create();
 
     SatelliteAnalysis::factory()->create([

@@ -94,6 +94,35 @@ Get-Content storage/logs/laravel.log -Tail 50
 Select-String -Pattern "search" -Path file.txt
 ```
 
+### Exiting Pagers (less, more)
+
+When commands open a pager (shows `(END)` at bottom), you cannot see output in AI tools:
+
+**How to Exit Pager:**
+- Press **`q`** (quit) to exit and return to prompt
+
+**Avoid Pagers in Commands:**
+```bash
+# ❌ May open pager
+ddev exec psql -c '\d table_name'
+git log
+git diff
+
+# ✅ Prevent pager - use | cat
+ddev exec bash -c "psql -c '\d table_name' | cat"
+git --no-pager log
+git --no-pager diff
+
+# ✅ Limit output - use | tail or | head
+ddev exec bash -c "psql -c '\d table_name' | tail -50"
+git log --oneline | head -20
+```
+
+**For AI Assistants:**
+- Always use `| cat`, `| tail`, or `| head` to avoid pagers
+- Use `--no-pager` flag for git commands
+- If user reports `(END)` in terminal, instruct them to press `q`
+
 ### PowerShell Output Buffering Issue (CRITICAL)
 
 **Problem:** PowerShell buffers output from DDEV commands, causing delayed or missing output in PhpStorm terminal and GitHub Copilot tool responses.

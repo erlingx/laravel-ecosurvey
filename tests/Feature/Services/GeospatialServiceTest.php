@@ -6,10 +6,12 @@ use App\Models\EnvironmentalMetric;
 use App\Models\User;
 use App\Services\GeospatialService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    Queue::fake(); // Prevent automatic satellite enrichment which can hang tests
     $this->service = new GeospatialService;
     $this->user = User::factory()->create();
     $this->campaign = Campaign::factory()->create(['status' => 'active', 'user_id' => $this->user->id]);

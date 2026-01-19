@@ -4,6 +4,11 @@ use App\Models\Campaign;
 use App\Models\DataPoint;
 use App\Models\EnvironmentalMetric;
 use App\Services\OutlierDetectionService;
+use Illuminate\Support\Facades\Queue;
+
+beforeEach(function () {
+    Queue::fake(); // Prevent automatic satellite enrichment which can hang tests
+});
 
 test('detects outliers using IQR method', function () {
     $campaign = Campaign::factory()->create();

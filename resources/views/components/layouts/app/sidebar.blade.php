@@ -42,6 +42,12 @@
             class="grid"
         >
             <flux:navlist.item
+                icon="folder"
+                :href="route('campaigns.index')"
+                :current="request()->routeIs('campaigns.index')"
+                wire:navigate
+            >{{ __('My Campaigns') }}</flux:navlist.item>
+            <flux:navlist.item
                 icon="cog"
                 href="/admin/campaigns"
                 :current="request()->is('admin/campaigns*')"

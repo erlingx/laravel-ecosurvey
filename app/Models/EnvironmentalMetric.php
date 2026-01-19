@@ -15,12 +15,16 @@ class EnvironmentalMetric extends Model
         'name',
         'unit',
         'description',
+        'expected_min',
+        'expected_max',
         'is_active',
     ];
 
     protected function casts(): array
     {
         return [
+            'expected_min' => 'decimal:2',
+            'expected_max' => 'decimal:2',
             'is_active' => 'boolean',
         ];
     }

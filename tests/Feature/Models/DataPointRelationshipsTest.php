@@ -8,6 +8,7 @@ use App\Models\EnvironmentalMetric;
 use App\Models\SatelliteAnalysis;
 use App\Models\SurveyZone;
 use App\Models\User;
+use Illuminate\Support\Facades\Queue;
 
 test('data point belongs to campaign', function () {
     $campaign = Campaign::factory()->create();
@@ -68,6 +69,8 @@ test('data point reviewer relationship is nullable', function () {
 });
 
 test('data point has many satellite analyses', function () {
+    Queue::fake(); // Prevent automatic satellite analysis creation
+
     $dataPoint = DataPoint::factory()->create();
     SatelliteAnalysis::factory()->count(3)->create(['data_point_id' => $dataPoint->id]);
 
@@ -78,12 +81,16 @@ test('data point has many satellite analyses', function () {
 });
 
 test('data point satellite analyses relationship is empty when no analyses exist', function () {
+    Queue::fake(); // Prevent automatic satellite analysis creation
+
     $dataPoint = DataPoint::factory()->create();
 
     expect($dataPoint->satelliteAnalyses)->toBeEmpty();
 });
 
 test('data point can eager load all relationships', function () {
+    Queue::fake(); // Prevent automatic satellite analysis creation
+
     $campaign = Campaign::factory()->create();
     $metric = EnvironmentalMetric::factory()->create();
     $user = User::factory()->create();
