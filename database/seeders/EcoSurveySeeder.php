@@ -6,8 +6,8 @@ use App\Models\Campaign;
 use App\Models\EnvironmentalMetric;
 use App\Models\SurveyZone;
 use App\Models\User;
-use Illuminate\Database\Seeder;
 use Carbon\Carbon;
+use Illuminate\Database\Seeder;
 
 class EcoSurveySeeder extends Seeder
 {
@@ -84,7 +84,7 @@ class EcoSurveySeeder extends Seeder
         SurveyZone::firstOrCreate(
             [
                 'campaign_id' => $campaign->id,
-                'name' => 'Fælledparken Core Area'
+                'name' => 'Fælledparken Core Area',
             ],
             [
                 'description' => 'Central park area with dense vegetation',
@@ -205,7 +205,7 @@ class EcoSurveySeeder extends Seeder
             'environmental_metric_id' => $tempMetric->id,
             'user_id' => $user->id,
             'value' => 21.5,
-            'location' => \DB::raw("ST_SetSRID(ST_MakePoint(12.5704, 55.7072), 4326)"),
+            'location' => \DB::raw('ST_SetSRID(ST_MakePoint(12.5704, 55.7072), 4326)'),
             'accuracy' => 5.0,
             'collected_at' => $testDate->copy()->setTime(10, 0),
             'status' => 'draft',
@@ -219,7 +219,7 @@ class EcoSurveySeeder extends Seeder
             'environmental_metric_id' => $tempMetric->id,
             'user_id' => $user->id,
             'value' => 32.0,
-            'location' => \DB::raw("ST_SetSRID(ST_MakePoint(12.5690, 55.7080), 4326)"),
+            'location' => \DB::raw('ST_SetSRID(ST_MakePoint(12.5690, 55.7080), 4326)'),
             'accuracy' => 7.0,
             'collected_at' => $testDate->copy()->setTime(14, 0),
             'status' => 'pending',
@@ -234,7 +234,7 @@ class EcoSurveySeeder extends Seeder
             'environmental_metric_id' => $humidityMetric->id,
             'user_id' => $user->id,
             'value' => 95.0,
-            'location' => \DB::raw("ST_SetSRID(ST_MakePoint(12.5718, 55.7065), 4326)"),
+            'location' => \DB::raw('ST_SetSRID(ST_MakePoint(12.5718, 55.7065), 4326)'),
             'accuracy' => 25.0,
             'collected_at' => $testDate->copy()->setTime(16, 0),
             'status' => 'rejected',
@@ -252,7 +252,7 @@ class EcoSurveySeeder extends Seeder
             'environmental_metric_id' => $aqiMetric->id,
             'user_id' => $user->id,
             'value' => 45.0,
-            'location' => \DB::raw("ST_SetSRID(ST_MakePoint(12.5680, 55.7075), 4326)"),
+            'location' => \DB::raw('ST_SetSRID(ST_MakePoint(12.5680, 55.7075), 4326)'),
             'accuracy' => 6.0,
             'collected_at' => $testDate->copy()->setTime(12, 0),
             'status' => 'approved',
@@ -302,7 +302,7 @@ class EcoSurveySeeder extends Seeder
             ]);
         }
 
-        $this->command->info("✓ Created Fælledparken campaign with survey zone and data points (Aug 1-30, 2025)");
+        $this->command->info('✓ Created Fælledparken campaign with survey zone and data points (Aug 1-30, 2025)');
     }
 
     /**
@@ -327,7 +327,7 @@ class EcoSurveySeeder extends Seeder
         SurveyZone::firstOrCreate(
             [
                 'campaign_id' => $campaign->id,
-                'name' => 'Central Copenhagen Zone'
+                'name' => 'Central Copenhagen Zone',
             ],
             [
                 'description' => 'High-traffic urban area including Central Station and Nørreport',
@@ -431,7 +431,7 @@ class EcoSurveySeeder extends Seeder
             ]);
         }
 
-        $this->command->info("✓ Created Noise Pollution campaign with survey zone and data points (Aug 1-30, 2025)");
+        $this->command->info('✓ Created Noise Pollution campaign with survey zone and data points (Aug 1-30, 2025)');
     }
 
     /**
@@ -456,7 +456,7 @@ class EcoSurveySeeder extends Seeder
         SurveyZone::firstOrCreate(
             [
                 'campaign_id' => $campaign->id,
-                'name' => 'Greater Copenhagen Area'
+                'name' => 'Greater Copenhagen Area',
             ],
             [
                 'description' => 'Urban and suburban areas covering key monitoring stations',
@@ -489,7 +489,7 @@ class EcoSurveySeeder extends Seeder
                     $location = $locations[array_rand($locations)];
 
                     // Generate realistic values based on metric
-                    $value = match($metric->name) {
+                    $value = match ($metric->name) {
                         'PM2.5' => 12 + rand(-5, 15),
                         'PM10' => 20 + rand(-8, 20),
                         'CO2' => 400 + rand(-20, 50),
@@ -561,7 +561,7 @@ class EcoSurveySeeder extends Seeder
             'environmental_metric_id' => $aqiMetric->id,
             'user_id' => $user->id,
             'value' => 125.0,
-            'location' => \DB::raw("ST_SetSRID(ST_MakePoint(12.5700, 55.6867), 4326)"),
+            'location' => \DB::raw('ST_SetSRID(ST_MakePoint(12.5700, 55.6867), 4326)'),
             'accuracy' => 8.0,
             'collected_at' => $testDate->copy()->setTime(15, 0),
             'status' => 'pending',
@@ -575,7 +575,7 @@ class EcoSurveySeeder extends Seeder
             $location = $locations[array_rand($locations)];
             $metric = [$pm25Metric, $pm10Metric, $co2Metric, $aqiMetric][array_rand([$pm25Metric, $pm10Metric, $co2Metric, $aqiMetric])];
 
-            $value = match($metric->name) {
+            $value = match ($metric->name) {
                 'PM2.5' => rand(80, 200) / 10,
                 'PM10' => rand(150, 350) / 10,
                 'CO2' => rand(3800, 4500) / 10,
@@ -602,7 +602,7 @@ class EcoSurveySeeder extends Seeder
             $location = $locations[array_rand($locations)];
             $metric = [$pm25Metric, $pm10Metric, $co2Metric, $aqiMetric][array_rand([$pm25Metric, $pm10Metric, $co2Metric, $aqiMetric])];
 
-            $value = match($metric->name) {
+            $value = match ($metric->name) {
                 'PM2.5' => rand(50, 250) / 10,
                 'PM10' => rand(100, 400) / 10,
                 'CO2' => rand(3500, 5000) / 10,
@@ -628,6 +628,6 @@ class EcoSurveySeeder extends Seeder
             ]);
         }
 
-        $this->command->info("✓ Created Copenhagen Air Quality campaign with survey zone and data points (Aug 1-30, 2025)");
+        $this->command->info('✓ Created Copenhagen Air Quality campaign with survey zone and data points (Aug 1-30, 2025)');
     }
 }

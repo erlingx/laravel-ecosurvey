@@ -246,7 +246,7 @@ test('metrics list only shows active metrics', function () {
     // Create an inactive metric that should NOT appear
     $inactiveMetric = EnvironmentalMetric::factory()->create([
         'name' => 'Inactive Test Metric',
-        'is_active' => false
+        'is_active' => false,
     ]);
 
     $component = Livewire::actingAs($this->user)
