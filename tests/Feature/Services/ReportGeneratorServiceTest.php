@@ -49,7 +49,6 @@ test('PDF generation works with data points', function () {
     expect($response->getStatusCode())->toBe(200);
 });
 
-
 test('example', function () {
     $response = $this->get('/');
 

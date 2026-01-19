@@ -219,3 +219,52 @@ select:focus[data-flux-control] {
 .marker-tooltip::before {
     border-top-color: rgba(0, 0, 0, 0.85) !important;
 }
+
+/* Filament Admin Panel Table Styling */
+.fi-ta-table {
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* Prevent horizontal scrollbar when columns fit */
+.fi-ta-content {
+    overflow-x: visible !important;
+}
+
+/* Ensure table cells wrap properly */
+.fi-ta-cell {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Make table responsive on smaller screens */
+@media (max-width: 1024px) {
+    .fi-ta-content {
+        overflow-x: auto !important;
+    }
+}
+
+/* Filament Admin Sidebar - Match Dashboard Style */
+/* Keep it simple to avoid breaking CSS */
+
+/* Sidebar background - light gray not black */
+.fi-sidebar {
+    background-color: rgb(249 250 251) !important; /* light gray */
+    border-right-color: rgb(229 231 235) !important; /* lighter border */
+}
+
+/* Dark mode sidebar */
+.dark .fi-sidebar {
+    background-color: rgb(250 250 250) !important; /* very light gray in dark mode */
+    border-right-color: rgb(229 231 235) !important;
+}
+
+/* Navigation group labels */
+.fi-sidebar-group-label {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: rgb(156 163 175) !important; /* gray-400 */
+}
+

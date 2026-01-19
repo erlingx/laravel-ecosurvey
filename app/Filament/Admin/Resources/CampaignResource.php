@@ -17,11 +17,13 @@ class CampaignResource extends Resource
 {
     protected static ?string $model = Campaign::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMap;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCog;
 
     protected static string|UnitEnum|null $navigationGroup = 'Campaigns';
 
     protected static ?int $navigationSort = 1;
+
+    protected static ?string $navigationLabel = 'Manage Campaigns';
 
     public static function form(Schema $schema): Schema
     {

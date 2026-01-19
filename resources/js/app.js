@@ -140,8 +140,64 @@ function initializeMaps() {
     }, 100); // 100ms debounce
 }
 
+// Dark Mode Toggle System
+function initDarkMode() {
+    // Check for saved user preference, otherwise default to light mode
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+
+    // Apply the theme
+    if (isDark) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+
+    updateDarkModeButton(isDark);
+}
+
+function updateDarkModeButton(isDark) {
+    const toggle = document.getElementById('dark-mode-toggle');
+    const label = document.getElementById('dark-mode-label');
+
+    if (toggle && label) {
+        // Update icon
+        const icon = toggle.querySelector('[data-flux-icon]');
+        if (icon) {
+            icon.setAttribute('data-flux-icon', isDark ? 'moon' : 'sun');
+        }
+
+        // Update label
+        label.textContent = isDark ? 'Dark Mode' : 'Light Mode';
+    }
+}
+
+function toggleDarkMode() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    updateDarkModeButton(isDark);
+}
+
+// Setup dark mode toggle listener
+function setupDarkModeToggle() {
+    const toggle = document.getElementById('dark-mode-toggle');
+    if (toggle) {
+        toggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleDarkMode();
+        });
+    }
+}
+
+// Initialize dark mode on page load
+initDarkMode();
+
 // Initialize maps when DOM is ready
-document.addEventListener('DOMContentLoaded', initializeMaps);
+document.addEventListener('DOMContentLoaded', () => {
+    initializeMaps();
+    setupDarkModeToggle();
+});
 
 // Initialize maps after Livewire navigation
 document.addEventListener('livewire:navigated', () => {
@@ -149,4 +205,5 @@ document.addEventListener('livewire:navigated', () => {
     // Reset flag to allow reinitialization
     window.mapInitialized = false;
     initializeMaps();
+    setupDarkModeToggle();
 });

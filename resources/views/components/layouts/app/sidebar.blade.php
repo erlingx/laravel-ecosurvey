@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html
     lang="{{ str_replace('_', '-', app()->getLocale()) }}"
-    class="dark"
 >
 <head>
     @include('partials.head')
@@ -59,6 +58,11 @@
                 :current="request()->routeIs('data-points.submit')"
                 wire:navigate
             >{{ __('Submit Data') }}</flux:navlist.item>
+            <flux:navlist.item
+                icon="clipboard-document-check"
+                href="/admin/data-points"
+                :current="request()->is('admin/data-points*')"
+            >{{ __('Review Data Points') }}</flux:navlist.item>
             <flux:navlist.item
                 icon="map"
                 :href="route('maps.survey')"
@@ -122,6 +126,16 @@
             wire:navigate
         >
             {{ __('About EcoSurvey') }}
+        </flux:navlist.item>
+
+        <flux:navlist.item
+            id="dark-mode-toggle"
+            icon="sun"
+            as="button"
+            type="button"
+            class="cursor-pointer"
+        >
+            <span id="dark-mode-label">{{ __('Light Mode') }}</span>
         </flux:navlist.item>
     </flux:navlist>
 
