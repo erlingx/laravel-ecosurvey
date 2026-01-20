@@ -218,8 +218,12 @@ class DataPointsTable
                         }
 
                         return match ($data['value']) {
-                            'clean' => $query->whereNull('qa_flags'),
-                            'flagged' => $query->whereNotNull('qa_flags'),
+                            'clean' => $query->where(function ($q) {
+                                $q->whereNull('qa_flags')
+                                    ->orWhereRaw("qa_flags::text = '[]'");
+                            }),
+                            'flagged' => $query->whereNotNull('qa_flags')
+                                ->whereRaw("qa_flags::text != '[]'"),
                             default => $query,
                         };
                     })
