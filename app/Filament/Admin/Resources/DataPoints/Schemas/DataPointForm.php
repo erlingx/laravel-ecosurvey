@@ -4,6 +4,8 @@ namespace App\Filament\Admin\Resources\DataPoints\Schemas;
 
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -104,8 +106,40 @@ class DataPointForm
                             ->label('Sensor Type')
                             ->maxLength(255)
                             ->helperText('e.g., built-in, external'),
+
+                        DateTimePicker::make('calibration_at')
+                            ->label('Calibration Date')
+                            ->native(false)
+                            ->seconds(false)
+                            ->helperText('When was the sensor last calibrated?'),
                     ])
                     ->columns(2),
+
+                Section::make('Review Information')
+                    ->schema([
+                        Textarea::make('review_notes')
+                            ->label('Review Notes')
+                            ->rows(3)
+                            ->maxLength(1000)
+                            ->helperText('Notes from reviewer (approve/reject decision)')
+                            ->columnSpanFull(),
+
+                        Placeholder::make('reviewed_info')
+                            ->label('Review Details')
+                            ->content(function ($record) {
+                                if (! $record || ! $record->reviewed_at) {
+                                    return 'Not yet reviewed';
+                                }
+
+                                $reviewer = $record->reviewedBy?->name ?? 'Unknown';
+                                $date = $record->reviewed_at->format('M d, Y H:i');
+
+                                return "Reviewed by {$reviewer} on {$date}";
+                            })
+                            ->columnSpanFull(),
+                    ])
+                    ->collapsible()
+                    ->collapsed(false),
 
                 Section::make('Additional Information')
                     ->schema([
@@ -129,6 +163,84 @@ class DataPointForm
                             ->columnSpanFull(),
                     ])
                     ->columns(1),
+
+                Section::make('Quality Assurance')
+                    ->schema([
+                        Placeholder::make('qa_flags_display')
+                            ->label('QA Flags')
+                            ->content(function ($record) {
+                                if (! $record || empty($record->qa_flags)) {
+                                    return '✅ No quality issues detected';
+                                }
+
+                                // Map flag types to labels with icons (same as selector)
+                                $flagLabels = [
+                                    'high_gps_error' => '📍 High GPS Error (>50m)',
+                                    'statistical_outlier' => '📊 Statistical Outlier',
+                                    'outside_zone' => '🗺️ Outside Survey Zone',
+                                    'unexpected_range' => '⚠️ Unexpected Range',
+                                    'outlier' => '📊 Statistical Outlier (Manual)',
+                                    'suspicious_value' => '⚠️ Suspicious Value',
+                                    'location_uncertainty' => '📍 Location Uncertainty',
+                                    'calibration_overdue' => '⚙️ Calibration Issue',
+                                    'manual_review' => '👁️ Manual Review Required',
+                                    'data_quality' => '🔍 Data Quality Concern',
+                                ];
+
+                                $flags = collect($record->qa_flags)
+                                    ->map(function ($flag) use ($flagLabels) {
+                                        $type = $flag['type'] ?? 'unknown';
+                                        $label = $flagLabels[$type] ?? '⚠️ Unknown Flag';
+                                        $reason = $flag['reason'] ?? 'No reason provided';
+
+                                        return "{$label}\n  → {$reason}";
+                                    })
+                                    ->join("\n\n");
+
+                                return $flags;
+                            })
+                            ->helperText('Quality issues detected by automated checks. Use "Clear QA Flags" bulk action to remove.')
+                            ->columnSpanFull(),
+
+                        Repeater::make('qa_flags')
+                            ->label('Edit QA Flags')
+                            ->schema([
+                                Select::make('type')
+                                    ->label('Flag Type')
+                                    ->options([
+                                        // Automated QA flags
+                                        'high_gps_error' => '📍 High GPS Error (>50m)',
+                                        'statistical_outlier' => '📊 Statistical Outlier',
+                                        'outside_zone' => '🗺️ Outside Survey Zone',
+                                        'unexpected_range' => '⚠️ Unexpected Range',
+                                        // Manual QA flags
+                                        'outlier' => '📊 Statistical Outlier (Manual)',
+                                        'suspicious_value' => '⚠️ Suspicious Value',
+                                        'location_uncertainty' => '📍 Location Uncertainty',
+                                        'calibration_overdue' => '⚙️ Calibration Issue',
+                                        'manual_review' => '👁️ Manual Review Required',
+                                        'data_quality' => '🔍 Data Quality Concern',
+                                    ])
+                                    ->required()
+                                    ->searchable()
+                                    ->native(false),
+
+                                TextInput::make('reason')
+                                    ->label('Reason')
+                                    ->required()
+                                    ->placeholder('e.g., GPS accuracy exceeds threshold'),
+                            ])
+                            ->columns(2)
+                            ->collapsible()
+                            ->itemLabel(fn (array $state): ?string => $state['type'] ?? 'New Flag')
+                            ->addActionLabel('Add QA Flag')
+                            ->helperText('View, edit, or remove existing QA flags. Add new flags as needed.')
+                            ->columnSpanFull()
+                            ->cloneable()
+                            ->reorderable(),
+                    ])
+                    ->collapsible()
+                    ->collapsed(fn ($record) => empty($record?->qa_flags)),
             ]);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\SatelliteApiCall;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -180,6 +181,9 @@ class CopernicusDataSpaceService
                         'location' => "{$latitude},{$longitude}",
                     ]);
 
+                    // Track API call for analytics/billing
+                    $this->trackApiCall('enrichment', 'satellite_imagery', $latitude, $longitude, $date, true);
+
                     return [
                         'url' => "data:image/png;base64,{$imageData}",
                         'date' => $date,
@@ -338,6 +342,9 @@ class CopernicusDataSpaceService
                         'location' => "{$latitude},{$longitude}",
                     ]);
 
+                    // Track API call for analytics/billing
+                    $this->trackApiCall('analysis', 'ndvi', $latitude, $longitude, $date, true);
+
                     return [
                         'ndvi_value' => $ndviValue,
                         'interpretation' => $this->interpretNDVI($ndviValue),
@@ -490,6 +497,9 @@ class CopernicusDataSpaceService
                         'date' => $date,
                         'location' => "{$latitude},{$longitude}",
                     ]);
+
+                    // Track API call for analytics/billing
+                    $this->trackApiCall('analysis', 'soil_moisture', $latitude, $longitude, $date, true);
 
                     return [
                         'moisture_value' => $moistureValue,
@@ -1081,7 +1091,10 @@ SCRIPT;
 
         $cacheKey = "copernicus_overlay_{$overlayType}_{$lat}_{$lon}_{$date}_{$width}x{$height}";
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($lat, $lon, $date, $overlayType, $width, $height, $retryCount) {
+        // Check if cached BEFORE calling Cache::remember
+        $wasCached = Cache::has($cacheKey);
+
+        $result = Cache::remember($cacheKey, $this->cacheTtl, function () use ($lat, $lon, $date, $overlayType, $width, $height, $retryCount) {
             $token = $this->getAccessToken();
             if (! $token) {
                 return null;
@@ -1185,6 +1198,13 @@ SCRIPT;
                 return null;
             }
         });
+
+        // Track API call AFTER cache check (so we know if it was cached)
+        if ($result !== null) {
+            $this->trackApiCall('overlay', $overlayType, $lat, $lon, $date, $wasCached);
+        }
+
+        return $result;
     }
 
     /**
@@ -1964,6 +1984,64 @@ SCRIPT;
                 return null;
             }
         });
+    }
+
+    /**
+     * Track a satellite API call for billing/analytics
+     */
+    private function trackApiCall(
+        string $callType,
+        string $indexType,
+        float $latitude,
+        float $longitude,
+        ?string $date = null,
+        bool $cached = false,
+        ?int $responseTimeMs = null,
+        ?int $dataPointId = null,
+        ?int $campaignId = null,
+        ?int $userId = null
+    ): void {
+        try {
+            SatelliteApiCall::create([
+                'data_point_id' => $dataPointId,
+                'campaign_id' => $campaignId,
+                'user_id' => $userId ?? auth()->id(),
+                'call_type' => $callType,
+                'index_type' => $indexType,
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'acquisition_date' => $date,
+                'cached' => $cached,
+                'response_time_ms' => $responseTimeMs,
+                'cost_credits' => $this->getCostForCallType($callType, $indexType, $cached),
+            ]);
+        } catch (\Exception $e) {
+            // Don't fail the main request if tracking fails
+            Log::warning('Failed to track API call', [
+                'error' => $e->getMessage(),
+                'type' => $callType,
+                'index' => $indexType,
+            ]);
+        }
+    }
+
+    /**
+     * Get cost in credits for different API call types
+     * These can be adjusted for billing purposes
+     */
+    private function getCostForCallType(string $callType, string $indexType, bool $cached = false): float
+    {
+        // Cached calls cost nothing - they don't use the API
+        if ($cached) {
+            return 0.0;
+        }
+
+        return match ($callType) {
+            'enrichment' => 1.0,      // Full data point enrichment
+            'overlay' => 0.5,          // Just viewing an overlay
+            'analysis' => 0.75,        // Single index analysis
+            default => 1.0,
+        };
     }
 
     /**

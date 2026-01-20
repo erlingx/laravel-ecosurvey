@@ -369,14 +369,40 @@ This balances scientific rigor (maintains data provenance, enables multi-tempora
 - **Campaign Management:**
     - Create/edit survey campaigns
     - View all data collection progress
-    - Approve/reject suspicious readings
     - Team member management
 
-- **Analytics & Insights:**
-    - Data collection heatmap by region
-    - API cost tracking (show cost optimization)
-    - Quality assurance dashboard
-    - User contribution leaderboard
+- **Data Point Review & QA (Phase 8):**
+    - Approve/reject data points with reviewer notes
+    - Bulk approve/reject operations
+    - Advanced filtering (status, campaign, metric, GPS accuracy)
+    - GPS accuracy color coding and validation
+    - QA flags column display
+    - Bulk clear flags action
+    - Edit data points with photo replacement
+    - Audit trail (reviewer, timestamp, decision notes)
+
+- **Quality Dashboard (Phase 9):**
+    - QA Statistics widget (6 metrics: pending, approved, rejected, campaigns, points, users)
+    - User Contribution Leaderboard (top 5 with medals 🥇🥈🥉)
+    - 30-day activity tracking with approval rates and GPS accuracy
+    - Quality guidelines and review workflow documentation
+
+- **Automated Quality Control (Phase 9):**
+    - Auto-flag outliers using IQR and Z-score methods
+    - GPS accuracy threshold validation (>50m flagged)
+    - Expected range validation for environmental metrics
+    - Automated quality check command (`ecosurvey:quality-check`)
+    - Flag suspicious readings for manual review
+    - Auto-approve high-quality data option
+
+- **Satellite API Call Tracking:**
+    - Track ALL satellite API calls (overlay views, data enrichment, analysis)
+    - Differentiated pricing: Enrichment (1.0 credits), Overlay (0.5 credits), Analysis (0.75 credits)
+    - Cache hit rate monitoring (cost savings visualization)
+    - Per-user and per-campaign usage tracking
+    - Call type breakdown (enrichment/overlay/analysis)
+    - Monthly credit consumption with 7-day trend charts
+    - Stripe-ready billing infrastructure with configurable credit-to-USD conversion
 
 ### **8. Stripe Integration (Optional but Impressive)**
 - **Premium Features/Paywall:**
@@ -471,6 +497,13 @@ environmental_metrics
 satellite_images
   - id, campaign_id, location (polygon), date_captured, 
     ndvi_image_url, thumbnail_url, created_at
+
+satellite_api_calls (billing-ready API usage tracking)
+  - id, data_point_id, campaign_id, user_id,
+    call_type (enrichment/overlay/analysis), index_type (ndvi/moisture/evi/etc),
+    latitude, longitude, acquisition_date,
+    cached (boolean), response_time_ms, cost_credits,
+    created_at, updated_at
 
 reports
   - id, campaign_id, generated_by, title, pdf_url, created_at
@@ -705,6 +738,13 @@ eco-survey/
 ✅ **Deployment Ready** - Docker setup shows DevOps knowledge  
 ✅ **Documentation** - Thorough README for easy onboarding  
 ✅ **Data Quality & QA/QC** - Scientific rigor with auto-flagging and review workflow  
+✅ **Full CRUD Operations** - Create, read, update (edit), delete data points  
+✅ **Photo Management** - Upload, preview, replace, persist (Windows-compatible solution)  
+✅ **GPS Accuracy Handling** - Auto-capture with device accuracy + manual entry (0m for surveyed locations)  
+✅ **Automated Quality Checks** - IQR/Z-score outlier detection, range validation  
+✅ **Bulk Operations** - Mass approve/reject/clear flags for efficient data management  
+✅ **User Contribution Tracking** - Gamification with leaderboard and medals  
+✅ **API Cost Tracking** - Billing-ready satellite API usage monitoring with credit system  
 ✅ **Full CRUD Operations** - Create, read, update (edit), delete data points  
 ✅ **Photo Management** - Upload, preview, replace, persist (Windows-compatible solution)  
 ✅ **GPS Accuracy Handling** - Auto-capture with device accuracy + manual entry (0m for surveyed locations)

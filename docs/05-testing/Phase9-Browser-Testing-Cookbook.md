@@ -299,19 +299,89 @@ php artisan ecosurvey:quality-check --auto-approve
 ### Test: API Call Tracking
 
 **Steps:**
-1. Note current "Today" count
-2. Create a satellite analysis (trigger satellite API call)
+1. Note current "Today" count on Quality Dashboard
+2. **View a satellite overlay** on the map viewer
+   - Go to `/maps/satellite`
+   - Select a campaign
+   - Choose a date
+   - Select an overlay type (NDVI, Moisture, etc.)
+   - Wait for overlay to load
 3. Refresh Quality Dashboard
 4. Check counts
 
 **Expected Results:**
 ✅ "Today" count increases by 1  
 ✅ "This month" count increases by 1  
-✅ 7-day trend chart updates
+✅ 7-day trend chart updates  
+✅ Call Type Breakdown shows "Overlay: 1"
+
+**Alternative: Create DataPoint (triggers enrichment):**
+```bash
+ddev artisan tinker
+>>> $dp = App\Models\DataPoint::factory()->create();
+>>> exit
+# Wait 5-10 seconds for queue to process
+# Then refresh dashboard - should see "Enrichment: 1"
+```
+
+**What Gets Tracked:**
+✅ **Overlay views** (map viewer) - 0.5 credits each  
+✅ **Data point enrichment** (background job) - 1.0 credits each  
+✅ **Single index analysis** - 0.75 credits each  
+✅ **Cached vs fresh calls** - tracks cache hit rate  
+✅ **Cost in credits** - ready for Stripe integration
+
+**Verify in Database:**
+```bash
+ddev artisan tinker
+>>> App\Models\SatelliteApiCall::whereDate('created_at', today())->get();
+# Shows all API calls today with type, cost, coordinates, etc.
+```
+
+**Billing-Ready Features:**
+- Different costs per call type (overlay cheaper than enrichment)
+- Tracks user_id for per-user billing
+- Tracks campaign_id for per-project billing
+- Cost in credits ready for conversion to USD
+- Cache tracking shows cost savings
 
 ---
 
 ### Test: Cache Hit Rate Calculation
+
+**Understanding Cache Behavior:**
+- **First request** for a location/date/overlay = FRESH call (cached = false)
+- **Subsequent requests** for same location/date/overlay = CACHED call (cached = true)
+- Cache is per combination of: latitude, longitude, date, overlay type, width, height
+
+**Steps to Test Fresh vs Cached:**
+
+**Step 1: Clear Application Cache**
+```bash
+ddev artisan cache:clear
+```
+
+**Step 2: Make First Request (Fresh)**
+1. Go to `/maps/satellite`
+2. Select campaign and date
+3. Select overlay type (e.g., NDVI)
+4. Wait for overlay to load
+5. Note dashboard: Should show "0 cached / 1 fresh today" (0% cache hit rate)
+
+**Step 3: Make Same Request Again (Cached)**
+1. Refresh the satellite viewer page
+2. Load the SAME overlay (same location, date, type)
+3. Check dashboard: Should show "1 cached / 1 fresh today" (50% cache hit rate)
+
+**Step 4: Make Different Request (Fresh)**
+1. Change overlay type to Moisture
+2. Wait for load
+3. Check dashboard: Should show "1 cached / 2 fresh today" (33% cache hit rate)
+
+**Step 5: Repeat Same Requests (Cached)**
+1. Switch back to NDVI (already cached)
+2. Then Moisture (already cached)
+3. Check dashboard: Should show "3 cached / 2 fresh today" (60% cache hit rate)
 
 **Validation:**
 
@@ -324,15 +394,29 @@ php artisan ecosurvey:quality-check --auto-approve
 ✅ Indicates room for improvement
 
 **Calculation:**
-- Cache hits stored in: `Cache::get('api.cache_hits.today', 0)`
-- Cache misses stored in: `Cache::get('api.cache_misses.today', 0)`
-- Rate = (hits / (hits + misses)) × 100
-
-**Example:**
 ```
-80 hits, 20 misses
-80 / (80 + 20) = 80 / 100 = 80%
-Color: Yellow (warning)
+Total calls = cached + fresh
+Hit rate = (cached / total) × 100
+
+Example:
+6 cached + 0 fresh = 6 total
+Hit rate = (6 / 6) × 100 = 100% ✅ Green
+```
+
+**Why You See 100% Cache Hit:**
+If you're seeing "6 cached / 0 fresh", it means:
+- All 6 requests were for combinations already in cache
+- No fresh API calls were made to Copernicus
+- This is GOOD - saves API costs!
+
+**To See Fresh Calls:**
+```bash
+# Clear cache
+ddev artisan cache:clear
+
+# Make a new satellite request
+# First time = fresh call
+# Second time = cached call
 ```
 
 ---

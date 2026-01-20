@@ -62,13 +62,29 @@ class QualityAssuranceStatsWidget extends StatsOverviewWidget
 
     protected function getPendingTrend(): array
     {
-        // Last 7 days of pending submissions
+        // Last 7 days of pending queue size (snapshot at end of each day)
         $data = [];
         for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i)->startOfDay();
-            $count = DataPoint::where('status', 'pending')
-                ->whereDate('created_at', $date)
+            $date = now()->subDays($i)->endOfDay();
+
+            // Count data points that were pending at this point in time:
+            // 1. Created before or on this date
+            // 2. Either still pending, OR were reviewed AFTER this date
+            $count = DataPoint::where(function ($query) use ($date) {
+                $query->where('status', 'pending')
+                    ->where('created_at', '<=', $date);
+            })
+                ->orWhere(function ($query) use ($date) {
+                    // Items that are now approved/rejected but weren't reviewed yet at this date
+                    $query->whereIn('status', ['approved', 'rejected'])
+                        ->where('created_at', '<=', $date)
+                        ->where(function ($q) use ($date) {
+                            $q->whereNull('reviewed_at')
+                                ->orWhere('reviewed_at', '>', $date);
+                        });
+                })
                 ->count();
+
             $data[] = $count;
         }
 

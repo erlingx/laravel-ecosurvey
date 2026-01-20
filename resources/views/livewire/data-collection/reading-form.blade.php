@@ -1020,12 +1020,20 @@ $formatQaFlag = function (string|array $flag): array {
                 class="w-full h-10 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 px-3 py-2 text-sm"
             >
                 <option value="">Select flag type...</option>
-                <option value="outlier">📊 Statistical Outlier</option>
-                <option value="suspicious_value">⚠️ Suspicious Value</option>
-                <option value="location_uncertainty">📍 Location Uncertainty</option>
-                <option value="calibration_overdue">⚙️ Calibration Issue</option>
-                <option value="manual_review">👁️ Manual Review Required</option>
-                <option value="data_quality">🔍 Data Quality Concern</option>
+                <optgroup label="Automated QA Flags">
+                    <option value="high_gps_error">📍 High GPS Error (>50m)</option>
+                    <option value="statistical_outlier">📊 Statistical Outlier</option>
+                    <option value="outside_zone">🗺️ Outside Survey Zone</option>
+                    <option value="unexpected_range">⚠️ Unexpected Range</option>
+                </optgroup>
+                <optgroup label="Manual QA Flags">
+                    <option value="outlier">📊 Statistical Outlier (Manual)</option>
+                    <option value="suspicious_value">⚠️ Suspicious Value</option>
+                    <option value="location_uncertainty">📍 Location Uncertainty</option>
+                    <option value="calibration_overdue">⚙️ Calibration Issue</option>
+                    <option value="manual_review">👁️ Manual Review Required</option>
+                    <option value="data_quality">🔍 Data Quality Concern</option>
+                </optgroup>
             </select>
             <flux:error name="flagType" />
         </flux:field>

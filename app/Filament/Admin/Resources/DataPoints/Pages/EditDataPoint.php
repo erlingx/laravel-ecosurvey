@@ -48,6 +48,22 @@ class EditDataPoint extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        // Track status changes - set reviewed_at and reviewed_by
+        $originalStatus = $this->record->status ?? null;
+        $newStatus = $data['status'] ?? $originalStatus;
+
+        // If status changed to approved or rejected, record the review
+        if ($originalStatus !== $newStatus && in_array($newStatus, ['approved', 'rejected'])) {
+            $data['reviewed_at'] = now();
+            $data['reviewed_by'] = auth()->id();
+        }
+
+        // If status changed back to pending/draft, clear review data
+        if ($originalStatus !== $newStatus && in_array($newStatus, ['pending', 'draft'])) {
+            $data['reviewed_at'] = null;
+            $data['reviewed_by'] = null;
+        }
+
         // Convert latitude/longitude to PostGIS geometry point
         if (isset($data['latitude']) && isset($data['longitude'])) {
             $lat = $data['latitude'];

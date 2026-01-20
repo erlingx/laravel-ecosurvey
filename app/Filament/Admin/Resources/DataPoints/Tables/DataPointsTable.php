@@ -101,6 +101,40 @@ class DataPointsTable
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->limit(20),
 
+                TextColumn::make('qa_flags')
+                    ->label('QA Flags')
+                    ->badge()
+                    ->formatStateUsing(function ($state, DataPoint $record): string {
+                        // Get the properly cast value from the model
+                        $flags = $record->qa_flags;
+
+                        if (empty($flags)) {
+                            return 'Clean';
+                        }
+
+                        $count = count($flags);
+
+                        return $count === 1 ? '1 issue' : "{$count} issues";
+                    })
+                    ->color(function ($state, DataPoint $record): string {
+                        $flags = $record->qa_flags;
+
+                        return empty($flags) ? 'success' : 'warning';
+                    })
+                    ->tooltip(function ($state, DataPoint $record): ?string {
+                        $flags = $record->qa_flags;
+
+                        if (empty($flags)) {
+                            return null;
+                        }
+
+                        return implode("\n", array_map(
+                            fn ($flag) => $flag['reason'] ?? 'Unknown issue',
+                            $flags
+                        ));
+                    })
+                    ->toggleable(),
+
                 TextColumn::make('collected_at')
                     ->label('Collected')
                     ->dateTime('M d, Y H:i')
@@ -117,6 +151,12 @@ class DataPointsTable
                     ->dateTime('M d, Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('updated_at')
+                    ->label('Updated')
+                    ->dateTime('M d, Y H:i')
+                    ->sortable()
+                    ->toggleable(),
             ])
             ->filters([
                 SelectFilter::make('status')
@@ -226,7 +266,11 @@ class DataPointsTable
                         ->accessSelectedRecords()
                         ->action(function ($records) {
                             $count = $records->count();
-                            $records->each(fn (DataPoint $record) => $record->update(['status' => 'approved']));
+                            $records->each(fn (DataPoint $record) => $record->update([
+                                'status' => 'approved',
+                                'reviewed_at' => now(),
+                                'reviewed_by' => auth()->id(),
+                            ]));
                         })
                         ->successNotificationTitle(fn ($records) => 'Success!')
                         ->successNotification(function ($records) {
@@ -249,7 +293,11 @@ class DataPointsTable
                         ->accessSelectedRecords()
                         ->action(function ($records) {
                             $count = $records->count();
-                            $records->each(fn (DataPoint $record) => $record->update(['status' => 'rejected']));
+                            $records->each(fn (DataPoint $record) => $record->update([
+                                'status' => 'rejected',
+                                'reviewed_at' => now(),
+                                'reviewed_by' => auth()->id(),
+                            ]));
                         })
                         ->successNotificationTitle(fn ($records) => 'Data points rejected!')
                         ->successNotification(function ($records) {
