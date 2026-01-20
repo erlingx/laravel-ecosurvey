@@ -341,6 +341,6 @@ class DataPointsTable
             ->columnManagerTriggerAction(
                 fn (Action $action) => $action->modalCloseButton()
             )
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort('updated_at', 'desc');
     }
 }

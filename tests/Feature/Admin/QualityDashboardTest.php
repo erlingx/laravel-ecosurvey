@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\User;
-use Filament\Facades\Filament;
 
 use function Pest\Laravel\actingAs;
 
@@ -44,6 +43,3 @@ test('quality dashboard page requires authentication', function () {
 
     $response->assertRedirect('/admin/login');
 });
-
-
-

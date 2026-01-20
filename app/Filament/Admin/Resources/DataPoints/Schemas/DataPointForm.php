@@ -18,6 +18,59 @@ class DataPointForm
     {
         return $schema
             ->components([
+                // QA Flags Warning Section (shown at top when flags exist)
+                Placeholder::make('qa_flags_warning')
+                    ->label('')
+                    ->content(function ($record) {
+                        if (! $record || empty($record->qa_flags)) {
+                            return null;
+                        }
+
+                        $flagLabels = [
+                            'high_gps_error' => '📍 High GPS Error (>50m)',
+                            'statistical_outlier' => '📊 Statistical Outlier',
+                            'outside_zone' => '🗺️ Outside Survey Zone',
+                            'unexpected_range' => '⚠️ Unexpected Range',
+                            'outlier' => '📊 Statistical Outlier (Manual)',
+                            'suspicious_value' => '⚠️ Suspicious Value',
+                            'location_uncertainty' => '📍 Location Uncertainty',
+                            'calibration_overdue' => '⚙️ Calibration Issue',
+                            'manual_review' => '👁️ Manual Review Required',
+                            'data_quality' => '🔍 Data Quality Concern',
+                        ];
+
+                        $flagCount = count($record->qa_flags);
+                        $flagsList = collect($record->qa_flags)
+                            ->map(function ($flag) use ($flagLabels) {
+                                $type = $flag['type'] ?? 'unknown';
+                                $label = $flagLabels[$type] ?? '⚠️ Unknown Flag';
+                                $reason = $flag['reason'] ?? 'No reason provided';
+
+                                return "<div class='mb-2'><strong>{$label}</strong><br><span class='ml-4 text-sm'>→ {$reason}</span></div>";
+                            })
+                            ->join('');
+
+                        return new \Illuminate\Support\HtmlString(
+                            "<div class='space-y-3'>
+                                <div class='flex items-start gap-2'>
+                                    <span class='text-2xl'>🚩</span>
+                                    <div>
+                                        <div class='font-bold text-lg text-red-900 dark:text-red-100 mb-2'>QUALITY ASSURANCE ALERTS ({$flagCount})</div>
+                                        <div class='text-sm text-red-800 dark:text-red-200 mb-3'>This data point has been flagged for quality issues. Even if approved, it will show as red on the map until flags are cleared.</div>
+                                        <div class='space-y-2 mb-3'>{$flagsList}</div>
+                                        <div class='text-xs text-red-700 dark:text-red-300 flex items-center gap-2'>
+                                            <span>⚠️</span>
+                                            <span>Use the Quality Assurance section below to manage these flags.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>"
+                        );
+                    })
+                    ->visible(fn ($record) => $record && ! empty($record->qa_flags))
+                    ->columnSpanFull()
+                    ->extraAttributes(['class' => 'bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-lg p-4']),
+
                 Section::make('Data Point Information')
                     ->schema([
                         Select::make('campaign_id')
@@ -170,7 +223,7 @@ class DataPointForm
                             ->label('QA Flags')
                             ->content(function ($record) {
                                 if (! $record || empty($record->qa_flags)) {
-                                    return '✅ No quality issues detected';
+                                    return new \Illuminate\Support\HtmlString('<div class="text-center py-4"><span class="text-2xl">✅</span><div class="text-sm text-gray-600 dark:text-gray-400 mt-2">No quality issues detected</div></div>');
                                 }
 
                                 // Map flag types to labels with icons (same as selector)
@@ -193,11 +246,14 @@ class DataPointForm
                                         $label = $flagLabels[$type] ?? '⚠️ Unknown Flag';
                                         $reason = $flag['reason'] ?? 'No reason provided';
 
-                                        return "{$label}\n  → {$reason}";
+                                        return "<div class='mb-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800'>
+                                                    <div class='font-semibold text-sm text-red-900 dark:text-red-100'>{$label}</div>
+                                                    <div class='text-xs text-red-700 dark:text-red-300 mt-1 ml-4'>→ {$reason}</div>
+                                                </div>";
                                     })
-                                    ->join("\n\n");
+                                    ->join('');
 
-                                return $flags;
+                                return new \Illuminate\Support\HtmlString("<div class='space-y-2'>{$flags}</div>");
                             })
                             ->helperText('Quality issues detected by automated checks. Use "Clear QA Flags" bulk action to remove.')
                             ->columnSpanFull(),
@@ -240,7 +296,7 @@ class DataPointForm
                             ->reorderable(),
                     ])
                     ->collapsible()
-                    ->collapsed(fn ($record) => empty($record?->qa_flags)),
+                    ->collapsed(false),
             ]);
     }
 }

@@ -112,7 +112,6 @@ updated([
     'manualLongitude' => fn () => $this->resetErrorBag(['manualLongitude', 'location']),
 ]);
 
-
 $save = function () {
 
     // Custom validation: require either GPS OR manual coordinates
@@ -293,7 +292,7 @@ $save = function () {
 };
 
 $clearFlags = function () {
-    if (!$this->dataPointId) {
+    if (! $this->dataPointId) {
         return;
     }
 
@@ -304,7 +303,7 @@ $clearFlags = function () {
     // Update local state
     $this->qaFlags = [];
 
-    session()->flash('success', 'QA flags cleared! The marker will show as ' . ($dataPoint->status === 'approved' ? 'green (approved)' : 'blue (pending)') . ' on the map after saving.');
+    session()->flash('success', 'QA flags cleared! The marker will show as '.($dataPoint->status === 'approved' ? 'green (approved)' : 'blue (pending)').' on the map after saving.');
 };
 
 $openFlagModal = function () {
@@ -314,7 +313,7 @@ $openFlagModal = function () {
 };
 
 $addFlag = function () {
-    if (!$this->dataPointId) {
+    if (! $this->dataPointId) {
         return;
     }
 
@@ -341,6 +340,32 @@ $addFlag = function () {
     $this->flagReason = '';
 
     session()->flash('success', 'QA flag added successfully! This data point will now show as red on the map.');
+};
+
+$removeFlag = function ($index) {
+    if (! $this->dataPointId) {
+        return;
+    }
+
+    $dataPoint = DataPoint::query()->findOrFail($this->dataPointId);
+
+    $flags = $dataPoint->qa_flags ?? [];
+
+    // Remove the flag at the specified index
+    if (isset($flags[$index])) {
+        array_splice($flags, $index, 1);
+
+        $dataPoint->qa_flags = empty($flags) ? null : array_values($flags);
+        $dataPoint->save();
+
+        $this->qaFlags = $dataPoint->qa_flags ?? [];
+
+        $message = empty($flags)
+            ? 'Last QA flag removed! The marker will show as '.($dataPoint->status === 'approved' ? 'green (approved)' : 'blue (pending)').' on the map.'
+            : 'QA flag removed successfully!';
+
+        session()->flash('success', $message);
+    }
 };
 
 $existingPhotoUrl = computed(function () {
@@ -443,6 +468,7 @@ $formatQaFlag = function (string|array $flag): array {
             if ($reason) {
                 $result['description'] = $reason;
             }
+
             return $result;
         }
 
@@ -632,72 +658,117 @@ $formatQaFlag = function (string|array $flag): array {
         @endif
 
         <form x-on:submit.prevent="submitForm" class="mt-6 space-y-6">
-            {{-- Campaign Selection --}}
-            <flux:field>
-                <flux:label>Campaign <span x-data :class="$wire.campaignId ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">*</span></flux:label>
-                <select
-                    wire:model.live="campaignId"
-                    class="w-full h-10 rounded-lg border @error('campaignId') border-red-500 dark:border-red-400 @else border-zinc-300 dark:border-zinc-600 @enderror bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 px-3 py-2 text-sm"
-                >
-                    <option value="">Select campaign...</option>
-                    @foreach($this->campaigns as $campaign)
-                        <option value="{{ $campaign->id }}">{{ $campaign->name }}</option>
-                    @endforeach
-                </select>
-                <flux:error name="campaignId" />
-            </flux:field>
 
-            {{-- Metric Type Selection --}}
-            <flux:field>
-                <flux:label>Metric Type <span x-data :class="$wire.metricId ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">*</span></flux:label>
-                <select
-                    wire:model.live="metricId"
-                    class="w-full h-10 rounded-lg border @error('metricId') border-red-500 dark:border-red-400 @else border-zinc-300 dark:border-zinc-600 @enderror bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 px-3 py-2 text-sm"
-                >
-                    <option value="">Select metric...</option>
-                    @foreach($this->metrics as $metric)
-                        <option value="{{ $metric->id }}">
-                            {{ $metric->name }} ({{ $metric->unit }})
-                        </option>
-                    @endforeach
-                </select>
-                <flux:error name="metricId" />
-            </flux:field>
+            {{-- Data Point Information Section --}}
+            <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+                <div class="bg-zinc-50 dark:bg-zinc-800 px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+                    <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Data Point Information</h3>
+                </div>
+                <div class="p-4 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {{-- Campaign Selection --}}
+                        <flux:field>
+                            <flux:label>Campaign <span x-data :class="$wire.campaignId ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">*</span></flux:label>
+                            <select
+                                wire:model.live="campaignId"
+                                class="w-full h-10 rounded-lg border @error('campaignId') border-red-500 dark:border-red-400 @else border-zinc-300 dark:border-zinc-600 @enderror bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 px-3 py-2 text-sm"
+                            >
+                                <option value="">Select campaign...</option>
+                                @foreach($this->campaigns as $campaign)
+                                    <option value="{{ $campaign->id }}">{{ $campaign->name }}</option>
+                                @endforeach
+                            </select>
+                            <flux:error name="campaignId" />
+                        </flux:field>
 
-            {{-- GPS Location Capture --}}
-            <flux:field>
-                <flux:label>GPS Location <span x-data :class="($wire.latitude && $wire.longitude) || ($wire.manualLatitude && $wire.manualLongitude) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">*</span></flux:label>
+                        {{-- Metric Type Selection --}}
+                        <flux:field>
+                            <flux:label>Environmental Metric <span x-data :class="$wire.metricId ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">*</span></flux:label>
+                            <select
+                                wire:model.live="metricId"
+                                class="w-full h-10 rounded-lg border @error('metricId') border-red-500 dark:border-red-400 @else border-zinc-300 dark:border-zinc-600 @enderror bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 px-3 py-2 text-sm"
+                            >
+                                <option value="">Select metric...</option>
+                                @foreach($this->metrics as $metric)
+                                    <option value="{{ $metric->id }}">
+                                        {{ $metric->name }} ({{ $metric->unit }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            <flux:error name="metricId" />
+                        </flux:field>
+                    </div>
 
-                <div class="flex gap-2 {{ $errors->has('location') ? 'p-2 -m-2 border-2 border-red-500 dark:border-red-400 rounded-lg' : '' }}">
-                    <flux:button
-                        type="button"
-                        x-on:click="captureLocation()"
-                        variant="outline"
-                        x-bind:disabled="$wire.gpsStatus === 'requesting'"
-                    >
-                        <span x-show="$wire.gpsStatus !== 'requesting'">📍 Capture GPS</span>
-                        <span x-show="$wire.gpsStatus === 'requesting'" x-cloak>🔄 Getting location...</span>
-                    </flux:button>
+                    {{-- Value Input --}}
+                    <flux:field>
+                        <flux:label>Measurement Value <span x-data :class="$wire.value ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">*</span></flux:label>
+                        <flux:input
+                            type="number"
+                            step="0.01"
+                            wire:model.live="value"
+                            placeholder="Enter measurement value..."
+                        />
+                        <flux:error name="value" />
+                    </flux:field>
 
-                    @if($gpsStatus === 'success')
-                        <flux:badge color="green">
-                            ✓ GPS Captured
-                        </flux:badge>
+                    @if($dataPointId)
+                        <flux:field>
+                            <flux:label>Status <span class="text-red-600 dark:text-red-400">*</span></flux:label>
+                            <select
+                                wire:model="status"
+                                class="w-full h-10 rounded-lg border @error('status') border-red-500 dark:border-red-400 @else border-zinc-300 dark:border-zinc-600 @enderror bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 px-3 py-2 text-sm"
+                            >
+                                <option value="draft">Draft</option>
+                                <option value="pending">Pending Review</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                            <flux:error name="status" />
+                        </flux:field>
                     @endif
                 </div>
+            </div>
 
-                {{-- Show GPS info under button --}}
-                @if($latitude && $longitude)
-                    <div class="mt-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                        <flux:text class="text-sm text-green-800 dark:text-green-200">
-                            📍 <strong>GPS Captured:</strong><br>
-                            Lat: {{ number_format($latitude, 6) }}, Long: {{ number_format($longitude, 6) }}<br>
-                            Accuracy: ±{{ round($accuracy) }}m
-                        </flux:text>
-                    </div>
-                @endif
+            {{-- Location Information Section --}}
+            <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+                <div class="bg-zinc-50 dark:bg-zinc-800 px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+                    <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Location Information</h3>
+                </div>
+                <div class="p-4 space-y-4">
+                    {{-- GPS Location Capture --}}
+                    <flux:field>
+                        <flux:label>GPS Location <span x-data :class="($wire.latitude && $wire.longitude) || ($wire.manualLatitude && $wire.manualLongitude) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">*</span></flux:label>
 
-                @if($gpsError)
+                        <div class="flex gap-2 {{ $errors->has('location') ? 'p-2 -m-2 border-2 border-red-500 dark:border-red-400 rounded-lg' : '' }}">
+                            <flux:button
+                                type="button"
+                                x-on:click="captureLocation()"
+                                variant="outline"
+                                x-bind:disabled="$wire.gpsStatus === 'requesting'"
+                            >
+                                <span x-show="$wire.gpsStatus !== 'requesting'">📍 Capture GPS</span>
+                                <span x-show="$wire.gpsStatus === 'requesting'" x-cloak>🔄 Getting location...</span>
+                            </flux:button>
+
+                            @if($gpsStatus === 'success')
+                                <flux:badge color="green">
+                                    ✓ GPS Captured
+                                </flux:badge>
+                            @endif
+                        </div>
+
+                        {{-- Show GPS info under button --}}
+                        @if($latitude && $longitude)
+                            <div class="mt-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                                <flux:text class="text-sm text-green-800 dark:text-green-200">
+                                    📍 <strong>GPS Captured:</strong><br>
+                                    Lat: {{ number_format($latitude, 6) }}, Long: {{ number_format($longitude, 6) }}<br>
+                                    Accuracy: ±{{ round($accuracy) }}m
+                                </flux:text>
+                            </div>
+                        @endif
+
+                        @if($gpsError)
                     <flux:text class="mt-2 text-sm text-red-600 dark:text-red-400">
                         ⚠️ {{ $gpsError }}
                     </flux:text>
@@ -722,7 +793,7 @@ $formatQaFlag = function (string|array $flag): array {
                         x-on:focus="onManualEntry()"
                     />
                     <flux:text class="text-sm">
-                        Decimal degrees (-90 to 90)
+                        WGS84 decimal degrees (-90 to +90)
                     </flux:text>
                     <flux:error name="manualLatitude" />
                 </flux:field>
@@ -739,7 +810,7 @@ $formatQaFlag = function (string|array $flag): array {
                         x-on:focus="onManualEntry()"
                     />
                     <flux:text class="text-sm">
-                        Decimal degrees (-180 to 180)
+                        WGS84 decimal degrees (-180 to +180)
                     </flux:text>
                     <flux:error name="manualLongitude" />
                 </flux:field>
@@ -755,34 +826,78 @@ $formatQaFlag = function (string|array $flag): array {
                     </flux:text>
                 </div>
             @endif
+        </div>
+    </div>
 
-            {{-- Value Input --}}
+    {{-- Collection Details Section --}}
+    <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+        <div class="bg-zinc-50 dark:bg-zinc-800 px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+            <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Collection Details</h3>
+        </div>
+        <div class="p-4 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {{-- Device Model --}}
+                <flux:field>
+                    <flux:label>Device Model</flux:label>
+                    <flux:input
+                        type="text"
+                        wire:model="deviceModel"
+                        placeholder="e.g., iPhone 14, Samsung Galaxy S23"
+                    />
+                    <flux:error name="deviceModel" />
+                </flux:field>
+
+                {{-- Sensor Type --}}
+                <flux:field>
+                    <flux:label>Sensor Type</flux:label>
+                    <select
+                        wire:model="sensorType"
+                        class="w-full h-10 rounded-lg border @error('sensorType') border-red-500 dark:border-red-400 @else border-zinc-300 dark:border-zinc-600 @enderror bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 px-3 py-2 text-sm"
+                    >
+                        <option value="">Select type...</option>
+                        <option value="GPS">GPS</option>
+                        <option value="Mobile Device">Mobile Device</option>
+                        <option value="Professional Equipment">Professional Equipment</option>
+                        <option value="Survey Equipment">Survey Equipment</option>
+                        <option value="Manual Entry">Manual Entry</option>
+                    </select>
+                    <flux:error name="sensorType" />
+                </flux:field>
+            </div>
+
+            {{-- Calibration Date --}}
             <flux:field>
-                <flux:label>Reading Value <span x-data :class="$wire.value ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">*</span></flux:label>
+                <flux:label>Last Calibration Date</flux:label>
                 <flux:input
-                    type="number"
-                    step="0.01"
-                    wire:model.live="value"
-                    placeholder="Enter measurement value..."
-                />
-                <flux:error name="value" />
-            </flux:field>
-
-            {{-- Notes (Optional) --}}
-            <flux:field>
-                <flux:label>Notes (Optional)</flux:label>
-                <flux:textarea
-                    wire:model="notes"
-                    rows="3"
-                    placeholder="Add any observations or context..."
+                    type="date"
+                    wire:model="calibrationDate"
+                    max="{{ date('Y-m-d') }}"
                 />
                 <flux:text class="text-sm">
-                    {{ strlen($notes ?? '') }}/1000 characters
+                    When was your device/sensor last calibrated?
+                    @if($calibrationDate)
+                        @php
+                            $daysSince = \Carbon\Carbon::parse($calibrationDate)->diffInDays(now());
+                            $isOverdue = $daysSince > 90;
+                            $colorClass = $isOverdue ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400';
+                        @endphp
+                        <span class="{{ $colorClass }}">
+                            ({{ $daysSince }} days ago{{ $isOverdue ? ' ⚠️ Calibration overdue!' : '' }})
+                        </span>
+                    @endif
                 </flux:text>
-                <flux:error name="notes" />
+                <flux:error name="calibrationDate" />
             </flux:field>
+        </div>
+    </div>
 
-            {{-- Photo Upload (Optional) - Inline with preview --}}
+    {{-- Additional Information Section --}}
+    <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+        <div class="bg-zinc-50 dark:bg-zinc-800 px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+            <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Additional Information</h3>
+        </div>
+        <div class="p-4 space-y-4">
+            {{-- Photo Upload --}}
             <flux:field>
                 <flux:label>Photo (Optional)</flux:label>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -793,7 +908,7 @@ $formatQaFlag = function (string|array $flag): array {
                             accept="image/*"
                         />
                         <flux:text class="text-sm mt-2">
-                            Maximum file size: 5MB. Accepted formats: JPG, PNG, WebP
+                            Max 5MB. JPG, PNG, WebP
                         </flux:text>
                         <flux:error name="photo" />
                     </div>
@@ -835,166 +950,164 @@ $formatQaFlag = function (string|array $flag): array {
                 </div>
             </flux:field>
 
-            {{-- Device & Sensor Information (Optional) --}}
-            <flux:separator text="Device Information (Optional)" />
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {{-- Device Model --}}
-                <flux:field>
-                    <flux:label>Device/Sensor Model</flux:label>
-                    <flux:input
-                        type="text"
-                        wire:model="deviceModel"
-                        placeholder="e.g., iPhone 14, AirQuality Pro 2000"
-                    />
-                    <flux:text class="text-sm">
-                        What device or sensor are you using?
-                    </flux:text>
-                    <flux:error name="deviceModel" />
-                </flux:field>
-
-                {{-- Sensor Type --}}
-                <flux:field>
-                    <flux:label>Sensor Type</flux:label>
-                    <select
-                        wire:model="sensorType"
-                        class="w-full h-10 rounded-lg border @error('sensorType') border-red-500 dark:border-red-400 @else border-zinc-300 dark:border-zinc-600 @enderror bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 px-3 py-2 text-sm"
-                    >
-                        <option value="">Select type...</option>
-                        <option value="GPS">GPS</option>
-                        <option value="Mobile Device">Mobile Device</option>
-                        <option value="Professional Equipment">Professional Equipment</option>
-                        <option value="Survey Equipment">Survey Equipment</option>
-                        <option value="Manual Entry">Manual Entry</option>
-                    </select>
-                    <flux:text class="text-sm">
-                        How was this measurement taken?
-                    </flux:text>
-                    <flux:error name="sensorType" />
-                </flux:field>
-            </div>
-
-            {{-- Calibration Date --}}
+            {{-- Notes --}}
             <flux:field>
-                <flux:label>Last Calibration Date</flux:label>
-                <flux:input
-                    type="date"
-                    wire:model="calibrationDate"
-                    max="{{ date('Y-m-d') }}"
+                <flux:label>Notes (Optional)</flux:label>
+                <flux:textarea
+                    wire:model="notes"
+                    rows="3"
+                    placeholder="Add any observations or context..."
                 />
                 <flux:text class="text-sm">
-                    When was your device/sensor last calibrated? (Leave empty if not applicable)
-                    @if($calibrationDate)
-                        @php
-                            $daysSince = \Carbon\Carbon::parse($calibrationDate)->diffInDays(now());
-                            $isOverdue = $daysSince > 90;
-                            $colorClass = $isOverdue ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400';
-                        @endphp
-                        <span class="{{ $colorClass }}">
-                            ({{ $daysSince }} days ago{{ $isOverdue ? ' ⚠️ Calibration overdue!' : '' }})
-                        </span>
-                    @endif
+                    {{ strlen($notes ?? '') }}/1000 characters
                 </flux:text>
-                <flux:error name="calibrationDate" />
+                <flux:error name="notes" />
             </flux:field>
+        </div>
+    </div>
 
-            {{-- Quality Review Section (Only shown in edit mode) - Moved to bottom --}}
-            @if($dataPointId)
-                <flux:separator text="Quality Review" />
+    @if($dataPointId)
+        {{-- Review Information Section --}}
+        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+            <div class="bg-zinc-50 dark:bg-zinc-800 px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Review Information</h3>
+            </div>
+            <div class="p-4 space-y-4">
+                <flux:field>
+                    <flux:label>Review Notes</flux:label>
+                    <flux:textarea
+                        wire:model="reviewNotes"
+                        rows="3"
+                        placeholder="Add review notes..."
+                    />
+                    <flux:text class="text-sm">
+                        Notes from reviewer (approve/reject decision)
+                    </flux:text>
+                    <flux:error name="reviewNotes" />
+                </flux:field>
+            </div>
+        </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {{-- Status --}}
-                    <flux:field>
-                        <div class="flex items-center justify-between mb-2">
-                            <flux:label>Status</flux:label>
-                            <div class="flex gap-2">
-                                @if(!empty($qaFlags))
-                                    <flux:button
-                                        wire:click="clearFlags"
-                                        variant="danger"
-                                        size="xs"
-                                        type="button"
-                                    >
-                                        🗑️ Clear Flags
-                                    </flux:button>
-                                @endif
+        {{-- Quality Assurance Section --}}
+        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+            <div class="bg-zinc-50 dark:bg-zinc-800 px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Quality Assurance</h3>
+                    <div class="flex gap-2">
+                        @if(!empty($qaFlags))
+                            <flux:button
+                                wire:click="clearFlags"
+                                variant="danger"
+                                size="xs"
+                                type="button"
+                            >
+                                🗑️ Clear All Flags
+                            </flux:button>
+                        @endif
+                        <flux:button
+                            wire:click="openFlagModal"
+                            variant="outline"
+                            size="xs"
+                            type="button"
+                        >
+                            🚩 Add Flag
+                        </flux:button>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 space-y-4">
+                @if(!empty($qaFlags))
+                    <div class="space-y-2">
+                        <flux:text class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            Current QA Flags ({{ count($qaFlags) }}):
+                        </flux:text>
+                        @foreach($qaFlags as $index => $flag)
+                            @php
+                                $flagInfo = $this->formatQaFlag($flag);
+                            @endphp
+                            <div class="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                                <div class="text-lg">{{ $flagInfo['icon'] }}</div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-zinc-900 dark:text-zinc-100 text-sm">{{ $flagInfo['name'] }}</div>
+                                    <div class="text-xs text-zinc-600 dark:text-zinc-400 mt-1">{{ $flagInfo['description'] }}</div>
+                                </div>
                                 <flux:button
-                                    wire:click="openFlagModal"
-                                    variant="outline"
+                                    wire:click="removeFlag({{ $index }})"
+                                    variant="ghost"
                                     size="xs"
                                     type="button"
+                                    class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                                 >
-                                    🚩 Flag for Review
+                                    ✕
                                 </flux:button>
                             </div>
-                        </div>
-                        <select
-                            wire:model="status"
-                            class="w-full h-10 rounded-lg border @error('status') border-red-500 dark:border-red-400 @else border-zinc-300 dark:border-zinc-600 @enderror bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 px-3 py-2 text-sm"
-                        >
-                            <option value="pending">Pending</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
-                        </select>
-                        <flux:text class="text-sm">
-                            Review status of this data point
-                        </flux:text>
-                        <flux:error name="status" />
-                    </flux:field>
-
-                    {{-- Review Notes --}}
-                    <flux:field>
-                        <flux:label>Review Notes</flux:label>
-                        <flux:textarea
-                            wire:model="reviewNotes"
-                            rows="3"
-                            placeholder="Add review comments..."
-                        />
-                        <flux:text class="text-sm">
-                            {{ strlen($reviewNotes ?? '') }}/1000 characters
-                        </flux:text>
-                        <flux:error name="reviewNotes" />
-                    </flux:field>
-                </div>
-            @endif
-
-            {{-- Submit Button --}}
-            <div class="flex gap-2">
-                <flux:button
-                    type="submit"
-                    variant="primary"
-                    x-bind:disabled="isSaving"
-                >
-                    <span x-show="!isSaving">
-                        {{ $dataPointId ? 'Update Reading' : 'Submit Reading' }}
-                    </span>
-                    <span x-show="isSaving" x-cloak class="flex items-center gap-2">
-                        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Processing...
-                    </span>
-                </flux:button>
-                @if($inModal)
-                    <button
-                        type="button"
-                        @click="window.dispatchEvent(new CustomEvent('edit-modal-close'))"
-                        class="inline-flex items-center justify-center h-10 px-4 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors text-sm font-medium"
-                    >
-                        Cancel
-                    </button>
+                        @endforeach
+                    </div>
                 @else
-                    <button
-                        type="button"
-                        onclick="window.history.back()"
-                        class="inline-flex items-center justify-center h-10 px-4 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors text-sm font-medium"
-                    >
-                        Cancel
-                    </button>
+                    <div class="text-center py-8">
+                        <div class="text-4xl mb-2">✅</div>
+                        <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">
+                            No quality issues detected
+                        </flux:text>
+                        <flux:text class="text-xs text-zinc-500 dark:text-zinc-500 mt-1">
+                            Click "Add Flag" to manually flag this data point
+                        </flux:text>
+                    </div>
                 @endif
             </div>
-        </form>
+        </div>
+    @endif
+
+    {{-- Remove duplicate fields below (now moved to sections above) --}}
+    {{-- OLD STRUCTURE STARTS HERE - TO BE REMOVED --}}
+    <div style="display:none;">
+        {{-- These fields are now in proper sections above --}}
+        {{-- Value Input - moved to Data Point Information section --}}
+        {{-- Notes - moved to Additional Information section --}}
+        {{-- Photo Upload - moved to Additional Information section --}}
+        {{-- Device & Sensor Info - moved to Collection Details section --}}
+        {{-- Calibration Date - moved to Collection Details section --}}
+        {{-- Review Fields - moved to Review Information section --}}
+    </div>
+    {{-- OLD STRUCTURE ENDS HERE --}}
+
+    {{-- Submit Button --}}
+    <div class="flex gap-2">
+        <flux:button
+            type="submit"
+            variant="primary"
+            x-bind:disabled="isSaving"
+        >
+            <span x-show="!isSaving">
+                {{ $dataPointId ? 'Update Reading' : 'Submit Reading' }}
+            </span>
+            <span x-show="isSaving" x-cloak class="flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+            </span>
+        </flux:button>
+        @if($inModal)
+            <button
+                type="button"
+                @click="window.dispatchEvent(new CustomEvent('edit-modal-close'))"
+                class="inline-flex items-center justify-center h-10 px-4 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors text-sm font-medium"
+            >
+                Cancel
+            </button>
+        @else
+            <button
+                type="button"
+                onclick="window.history.back()"
+                class="inline-flex items-center justify-center h-10 px-4 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors text-sm font-medium"
+            >
+                Cancel
+            </button>
+        @endif
+    </div>
+</form>
 
         {{-- Success Message --}}
         @if (session('success'))

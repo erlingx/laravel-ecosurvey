@@ -93,5 +93,3 @@ test('quality dashboard navigation is accessible from admin panel', function () 
         ->assertSee('Quality Assurance Dashboard')
         ->assertNoJavascriptErrors();
 });
-
-
