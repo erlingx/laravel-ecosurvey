@@ -3,6 +3,7 @@
 use App\Models\Campaign;
 use App\Models\DataPoint;
 use App\Models\EnvironmentalMetric;
+use App\Services\UsageTrackingService;
 use Livewire\WithFileUploads;
 
 use function Livewire\Volt\computed;
@@ -113,6 +114,21 @@ updated([
 ]);
 
 $save = function () {
+    $usageService = app(UsageTrackingService::class);
+
+    // Check usage limits for NEW data points only (not edits)
+    if (! $this->dataPointId) {
+        if (! $usageService->canPerformAction(auth()->user(), 'data_points')) {
+            $remaining = $usageService->getRemainingQuota(auth()->user(), 'data_points');
+            $tier = auth()->user()->subscriptionTier();
+
+            $this->addError('usage_limit', "You've reached your monthly limit for data points. Upgrade to Pro for 10x more!");
+            $this->dispatch('saving-failed');
+            $this->dispatch('usage-limit-reached', resource: 'data_points', tier: $tier);
+
+            return;
+        }
+    }
 
     // Custom validation: require either GPS OR manual coordinates
     $this->validate([
@@ -249,6 +265,10 @@ $save = function () {
         $data['collected_at'] = now();
         $data['status'] = 'pending';
         $dataPoint = DataPoint::query()->create($data);
+
+        // Record usage for new data point
+        $usageService->recordDataPointCreation(auth()->user());
+
         $message = 'Reading submitted successfully!';
     }
 

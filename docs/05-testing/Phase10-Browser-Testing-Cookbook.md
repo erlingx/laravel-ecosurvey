@@ -1,8 +1,8 @@
 # Phase 10 Features - Browser Testing Cookbook
 **Last Updated:** January 21, 2026  
-**Estimated Time:** 10-12 minutes  
+**Estimated Time:** 10-12 minutes (Priority 1) + 12 minutes (Priority 2)  
 **Prerequisites:** Logged in user, Stripe test mode configured (for checkout testing)
-**Testing Status:** 🟢 MOSTLY COMPLETE - Sections 1-6 tested & approved, Section 7 pending
+**Testing Status:** 🟢 Priority 1 COMPLETE - All sections tested & approved | ⏳ Priority 2 STARTS TOMORROW (January 22, 2026)
 ---
 ## Testing Notes
 **Phase 10 Features to Test:**
@@ -11,9 +11,11 @@
 3. ✅ Frontend: Subscription plans page (ready for browser testing)
 4. ✅ Frontend: Stripe checkout flow (ready for browser testing)
 5. ⏳ Subscription management dashboard (placeholder only)
-6. ⏳ Usage tracking & limits (not implemented)
-7. ⏳ Billing portal integration (not implemented)
-8. ⏳ Webhook handling (not implemented)
+6. ✅ Usage tracking & limits (IMPLEMENTED - Priority 2)
+7. ✅ Usage dashboard (IMPLEMENTED - Priority 2)
+8. ✅ Filament admin widget (IMPLEMENTED - Priority 2)
+9. ⏳ Billing portal integration (not implemented)
+10. ⏳ Webhook handling (not implemented)
 **Prerequisites:**
 - User account created and logged in
 - For full checkout testing: Stripe products created in dashboard
@@ -30,13 +32,23 @@
 - Task 1.2: Subscription configuration - verified via automated tests
 ---
 ## Quick Test Checklist
+
+**Priority 1: Subscription Setup (Tasks 1.1-1.4)**
 - [x] **Subscription Plans Page** ✅ TESTED & APPROVED (3 min)
 - [x] **Checkout Flow UI** ✅ TESTED & APPROVED (2 min)
 - [x] **Stripe Checkout Integration** ✅ TESTED & APPROVED (requires Stripe setup)
 - [x] **Success/Cancel Pages** ✅ TESTED & APPROVED (1 min)
 - [x] **Subscription Management** ✅ TESTED & APPROVED (1 min)
 - [x] **Dark Mode Compatibility** ✅ TESTED & APPROVED (1 min)
-- [ ] **Authentication Protection** ⏳ PENDING BROWSER TEST (30 sec)
+- [x] **Authentication Protection** ✅ TESTED & APPROVED (30 sec)
+
+**Priority 2: Usage Tracking & Dashboard (Tasks 2.1-2.3)**
+- [ ] **Usage Dashboard Page** ⏳ READY FOR TESTING (3 min)
+- [ ] **Usage Progress Bars** ⏳ READY FOR TESTING (2 min)
+- [ ] **Usage Limit Enforcement** ⏳ READY FOR TESTING (3 min)
+- [ ] **Upgrade CTA Display** ⏳ READY FOR TESTING (1 min)
+- [ ] **Filament Admin Widget** ⏳ READY FOR TESTING (2 min)
+- [ ] **Dark Mode (Usage Dashboard)** ⏳ READY FOR TESTING (1 min)
 ---
 ## 1. Subscription Plans Page (3 minutes)
 ### Test: Access Billing Plans
@@ -443,17 +455,385 @@ This test requires Stripe configuration. If not set up, skip this section.
 - [ ] Transitions smoothly between modes
 - [ ] No visual glitches
 ---
-## 7. Authentication Protection (30 seconds)
+## 7. Authentication Protection ✅ TESTED & APPROVED (30 seconds)
 ### Test: Unauthenticated Access
 **Steps:**
 1. Log out of application
 2. Try to navigate to `/billing/plans`
 3. Observe behavior
 **Expected Results:**
-- [ ] Redirects to login page
-- [ ] Cannot access billing pages while logged out
-- [ ] After login, can access billing pages normally
+- [x] Redirects to login page ✅
+- [x] Cannot access billing pages while logged out ✅
+- [x] After login, can access billing pages normally ✅
 ---
+
+## 8. Usage Dashboard (Priority 2 - Task 2.3) (3 minutes)
+
+### Test: Access Usage Dashboard
+
+**URL:** `/billing/usage`
+
+**Via Sidebar Navigation:**
+1. Look for "Billing" section in sidebar
+2. Click "Usage" link (has chart-bar icon 📊)
+
+**Expected Results:**
+- [ ] Sidebar shows "Usage" link under "Billing" section
+- [ ] "Usage" link is highlighted when on `/billing/usage`
+- [ ] Page loads without errors
+- [ ] Page title: "Usage Dashboard"
+- [ ] Subtitle: "Track your monthly usage across all features"
+
+---
+
+### Test: Current Plan Card
+
+**Steps:**
+1. Locate the "Current Plan" card at top of page
+2. Review displayed information
+
+**Expected Results:**
+- [ ] White card with shadow (dark gray in dark mode)
+- [ ] Section shows "Current Plan: [Your Tier]" (Free/Pro/Enterprise)
+- [ ] Billing cycle dates displayed: "Billing cycle: Jan 1 - Jan 31, 2026" format
+- [ ] **If Free tier:** "Upgrade to Pro" button (blue/primary)
+- [ ] **If Pro/Enterprise tier:** "Manage Plan" button (outline style)
+
+---
+
+### Test: Usage Meters - Data Points
+
+**Steps:**
+1. Locate the first usage card (Data Points)
+2. Review all elements
+
+**Expected Results:**
+- [ ] Card has white background with shadow
+- [ ] Blue icon (map pin) in circle at top left
+- [ ] Title: "Data Points"
+- [ ] Large number showing current usage (e.g., "0", "25", "45")
+- [ ] Usage fraction below: "X / Y" or "X / Unlimited"
+- [ ] Percentage displayed on right (e.g., "50%")
+- [ ] Progress bar below showing usage percentage
+- [ ] **Progress bar color:**
+  - [ ] Green if <50% usage
+  - [ ] Orange if 50-80% usage
+  - [ ] Yellow if 80-90% usage
+  - [ ] Red if >90% usage
+- [ ] **If at 80%+ usage:** Yellow warning box: "⚠️ You're approaching your limit!"
+
+---
+
+### Test: Usage Meters - Satellite Analyses
+
+**Steps:**
+1. Locate the second usage card (Satellite Analyses)
+2. Review all elements
+
+**Expected Results:**
+- [ ] Purple globe icon in circle
+- [ ] Title: "Satellite Analyses"
+- [ ] Current usage count displayed
+- [ ] Usage fraction: "X / Y" or "Unlimited"
+- [ ] Percentage displayed
+- [ ] Color-coded progress bar (same colors as Data Points)
+- [ ] Warning at 80%+ if applicable
+
+---
+
+### Test: Usage Meters - Report Exports
+
+**Steps:**
+1. Locate the third usage card (Report Exports)
+2. Review all elements
+
+**Expected Results:**
+- [ ] Green download icon in circle
+- [ ] Title: "Report Exports"
+- [ ] Current usage count displayed
+- [ ] Usage fraction: "X / Y" or "Unlimited"
+- [ ] Percentage displayed
+- [ ] Color-coded progress bar
+- [ ] Warning at 80%+ if applicable
+
+---
+
+### Test: Unlimited Display (Enterprise Tier)
+
+**Prerequisites:** Enterprise subscription active
+
+**Steps:**
+1. View usage dashboard as Enterprise user
+2. Check all three usage cards
+
+**Expected Results:**
+- [ ] All cards show "Unlimited" instead of limits
+- [ ] No progress bars shown (or shows 0%)
+- [ ] Green checkmark text: "✓ Unlimited"
+- [ ] No warning messages
+
+---
+
+### Test: Upgrade CTA (Free Users at 50%+ Usage)
+
+**Prerequisites:** Free tier user with >50% usage on any resource
+
+**Steps:**
+1. As free user, create data points until >50% usage (26+ out of 50)
+2. Navigate to `/billing/usage`
+3. Scroll to view upgrade CTA section
+
+**Expected Results:**
+- [ ] Blue-to-purple gradient banner appears
+- [ ] Heading: "Running low on resources?"
+- [ ] Description: "Upgrade to Pro for 10x more data points, satellite analyses, and exports!"
+- [ ] Feature list with checkmarks:
+  - [ ] "✓ 500 data points/month (10x more)"
+  - [ ] "✓ 100 satellite analyses/month (10x more)"
+  - [ ] "✓ 20 report exports/month (10x more)"
+  - [ ] "✓ Priority support"
+- [ ] White button: "Upgrade to Pro - $29/mo"
+- [ ] Button navigates to `/billing/plans`
+
+---
+
+### Test: No Upgrade CTA for Paid Users
+
+**Prerequisites:** Pro or Enterprise subscription
+
+**Steps:**
+1. Navigate to `/billing/usage` as paid user
+2. Scroll entire page
+
+**Expected Results:**
+- [ ] No gradient upgrade banner shown
+- [ ] No "Running low on resources?" message
+- [ ] Page shows only usage meters and info box
+
+---
+
+### Test: Info Box
+
+**Steps:**
+1. Scroll to bottom of usage dashboard
+2. Locate blue information box
+
+**Expected Results:**
+- [ ] Light blue background box (dark blue in dark mode)
+- [ ] Blue info icon (i in circle)
+- [ ] Bold text: "About usage tracking"
+- [ ] Message: "Usage resets automatically at the start of each billing cycle. Your current cycle ends on [date]."
+- [ ] Correct billing cycle end date shown
+
+---
+
+### Test: Responsive Layout (Usage Dashboard)
+
+**Steps:**
+1. Resize browser to mobile width (<768px)
+2. Observe card layout
+3. Resize to desktop width
+
+**Expected Results:**
+- [ ] **Mobile:** Usage cards stack vertically (1 per row)
+- [ ] **Desktop:** 3 cards in grid layout
+- [ ] Current plan card stays full width
+- [ ] All elements remain readable
+- [ ] No horizontal scrolling
+
+---
+
+## 9. Usage Limit Enforcement (Priority 2 - Task 2.2) (3 minutes)
+
+### Test: Data Point Creation Limit
+
+**Prerequisites:** Free tier user at or near limit (50 data points)
+
+**Steps:**
+1. Navigate to data collection form (create new reading)
+2. If at limit, observe form behavior
+3. If not at limit, create data points until limit reached
+
+**Expected Results:**
+- [ ] **Before limit:** Form works normally
+- [ ] **At limit (50/50):**
+  - [ ] Error message appears: "You've reached your monthly limit. Upgrade to Pro."
+  - [ ] Form submission blocked
+  - [ ] Error displayed prominently
+  - [ ] Suggestion to upgrade shown
+
+**Note:** To test without creating 50 actual data points, you can use the UsageTrackingService in Tinker to artificially set usage.
+
+---
+
+### Test: Report Export Limit
+
+**Prerequisites:** Free tier user at export limit (2 exports)
+
+**Steps:**
+1. Navigate to a campaign page
+2. Attempt to export report (PDF/CSV/JSON)
+3. Observe response
+
+**Expected Results:**
+- [ ] **Before limit:** Export downloads successfully
+- [ ] **At limit (2/2):**
+  - [ ] 403 Forbidden response
+  - [ ] Error message: "You have reached your monthly export limit. Upgrade to Pro for more exports!"
+  - [ ] No file downloaded
+
+---
+
+### Test: Pro User Exceeds Free Limits
+
+**Prerequisites:** Active Pro subscription
+
+**Steps:**
+1. As Pro user, check usage on dashboard
+2. Create more than 50 data points (free tier limit)
+3. Verify no blocking occurs
+
+**Expected Results:**
+- [ ] Can create >50 data points (up to 500)
+- [ ] No error messages at 50 data points
+- [ ] Usage dashboard shows correct Pro limits (500)
+- [ ] Progress bar reflects Pro tier limits
+
+---
+
+## 10. Filament Admin Widget (Priority 2 - Task 2.3) (2 minutes)
+
+**Prerequisites:** Admin access to Filament panel
+
+### Test: Access Admin Dashboard
+
+**URL:** `/admin`
+
+**Steps:**
+1. Log in as admin user
+2. Navigate to `/admin` (Filament dashboard)
+3. Locate usage statistics widget
+
+**Expected Results:**
+- [ ] Admin dashboard loads
+- [ ] Widget displays at top of page (or in widgets section)
+- [ ] Widget contains 6 stat cards
+
+---
+
+### Test: Monthly Recurring Revenue (MRR) Stat
+
+**Steps:**
+1. Locate first stat card (MRR)
+2. Review displayed data
+
+**Expected Results:**
+- [ ] Title: "Monthly Recurring Revenue"
+- [ ] Dollar amount displayed (e.g., "$3,567")
+- [ ] Description: "X Pro + Y Enterprise subscribers"
+- [ ] Green color/theme (success)
+- [ ] Dollar icon
+- [ ] Mini trend chart visible
+
+---
+
+### Test: Total Users Stat
+
+**Steps:**
+1. Locate second stat card
+2. Review user breakdown
+
+**Expected Results:**
+- [ ] Title: "Total Users"
+- [ ] User count displayed
+- [ ] Breakdown: "X Free • Y Pro • Z Enterprise"
+- [ ] Blue/primary color
+- [ ] Users icon
+- [ ] Mini trend chart
+
+---
+
+### Test: Usage Stats
+
+**Steps:**
+1. Review remaining stat cards
+2. Check data accuracy
+
+**Expected Results:**
+- [ ] **Data Points (This Month):**
+  - [ ] Current month total
+  - [ ] Percentage change from last month (+ or -)
+  - [ ] Up/down arrow icon
+  - [ ] Green if positive, red if negative
+- [ ] **Satellite Analyses:**
+  - [ ] Current month total
+  - [ ] Month-over-month comparison
+  - [ ] Trend indicator
+- [ ] **Report Exports:**
+  - [ ] Current month total
+  - [ ] Comparison with previous month
+  - [ ] Trend visualization
+- [ ] **Avg Data Points/User:**
+  - [ ] Calculated average
+  - [ ] "Average monthly usage per user" description
+  - [ ] Info/blue color
+
+---
+
+### Test: Widget Refresh
+
+**Steps:**
+1. Note current stat values
+2. Create a new subscription or usage event
+3. Refresh admin dashboard
+4. Check if stats updated
+
+**Expected Results:**
+- [ ] Stats reflect current database state
+- [ ] Values update after refresh
+- [ ] Calculations are accurate
+
+---
+
+## 11. Dark Mode - Usage Features (1 minute)
+
+### Test: Usage Dashboard Dark Mode
+
+**Steps:**
+1. Navigate to `/billing/usage`
+2. Toggle dark mode
+3. Review all elements
+
+**Expected Results:**
+- [ ] **Light Mode:**
+  - [ ] White card backgrounds
+  - [ ] Dark text (gray-900)
+  - [ ] Proper contrast
+- [ ] **Dark Mode:**
+  - [ ] Dark gray card backgrounds (gray-800)
+  - [ ] White text
+  - [ ] Progress bars still colored correctly
+  - [ ] Icons visible
+  - [ ] Info box has dark blue background
+  - [ ] All text readable
+
+---
+
+### Test: Admin Widget Dark Mode
+
+**Steps:**
+1. In Filament admin panel, toggle dark mode
+2. Observe widget appearance
+
+**Expected Results:**
+- [ ] Stat cards adapt to dark theme
+- [ ] Text remains readable
+- [ ] Charts still visible
+- [ ] Colors maintain meaning (green=positive, red=negative)
+- [ ] No contrast issues
+
+---
+
 ## Console Error Check (Throughout All Tests)
 **During all tests above, keep browser DevTools open (F12)**
 **Monitor Console tab for:**
@@ -483,15 +863,24 @@ This test requires Stripe configuration. If not set up, skip this section.
 - Invoice download functionality
 ---
 ## Testing Summary
-**Completed Testing:**
+
+**Priority 1 - Completed Testing:**
 - [x] Subscription plans page displays correctly ✅
 - [x] All 3 tiers show proper information ✅
 - [x] Checkout flow UI works as expected ✅
 - [x] Success/cancel pages display correctly ✅
 - [x] Manage page loads properly ✅
 - [x] Dark mode compatibility verified ✅
-- [ ] Authentication protection works ⏳
+- [x] Authentication protection works ✅ (January 21, 2026)
 - [x] No console errors during testing ✅
+
+**Priority 2 - Pending Testing:**
+- [ ] Usage dashboard page ⏳
+- [ ] Usage progress bars and limits ⏳
+- [ ] Usage limit enforcement ⏳
+- [ ] Upgrade CTA display ⏳
+- [ ] Filament admin widget ⏳
+- [ ] Dark mode (usage features) ⏳
 
 **Stripe Integration Testing:**
 - [x] Stripe checkout redirect works ✅
@@ -576,23 +965,25 @@ Should display your Pro price ID and status "active".
 **Last Manual Test:** ✅ January 21, 2026  
 **Tested By:** Erik  
 **Date:** January 21, 2026  
-**Browser:** Chrome/Edge (assumed)  
-**Status:** 🟢 MOSTLY COMPLETE - Sections 1-6 approved, Section 7 pending
+**Browser:** Chrome/Edge  
+**Status:** 🟢 Priority 1 COMPLETE - All 7 sections tested & approved | Priority 2 READY FOR TESTING
 
-**Test Results:**
+**Priority 1 Test Results:**
 - ✅ Subscription Plans Page - All features working correctly
 - ✅ Checkout Flow UI - Navigation and display verified
 - ✅ Stripe Checkout Integration - Successfully subscribed to Pro tier
 - ✅ Success/Cancel Pages - All links and messaging correct
 - ✅ Subscription Management - Pro tier properly displayed
 - ✅ Dark Mode Compatibility - All pages work in dark/light mode
-- ⏳ Authentication Protection - Pending test
+- ✅ Authentication Protection - Redirects to login work correctly
 
 **Issues Resolved:**
 - ✅ Subscription sync issue fixed with manual sync command
 - ✅ User model properly detects Pro tier from subscription_items table
 
 **Next Steps:**
-1. Test Section 7 (Authentication Protection)
-2. Consider setting up webhooks in Stripe Dashboard for automatic syncing
-3. Phase 10 Tasks 1.1-1.4 complete and tested!
+1. ✅ Priority 1 complete - 7 of 7 tests passing (100%)
+2. ⏳ **Tomorrow (January 22, 2026):** Priority 2 browser testing - Usage tracking & dashboard features
+3. ⏳ Consider setting up webhooks in Stripe Dashboard for automatic syncing
+4. ✅ Phase 10 Tasks 1.1-1.4 complete and fully tested!
+5. ✅ Phase 10 Tasks 2.1-2.3 implementation complete - ready for browser testing tomorrow

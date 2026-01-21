@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\DataPoint;
 use App\Models\SatelliteAnalysis;
 use App\Services\CopernicusDataSpaceService;
+use App\Services\UsageTrackingService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -24,8 +25,16 @@ class EnrichDataPointWithSatelliteData implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(CopernicusDataSpaceService $copernicusService): void
+    public function handle(CopernicusDataSpaceService $copernicusService, UsageTrackingService $usageService): void
     {
+        // Check if user can perform satellite analysis
+        $user = $this->dataPoint->user;
+        if (! $usageService->canPerformAction($user, 'satellite_analyses')) {
+            Log::warning("User {$user->id} has reached satellite analysis limit for DataPoint {$this->dataPoint->id}");
+
+            return;
+        }
+
         try {
             // Extract coordinates from PostGIS geometry
             $coordinates = DB::selectOne(
@@ -87,6 +96,9 @@ class EnrichDataPointWithSatelliteData implements ShouldQueue
                     'fetch_date' => now()->toIso8601String(),
                 ],
             ]);
+
+            // Record usage for satellite analysis
+            $usageService->recordSatelliteAnalysis($user, 'all_indices');
 
             // Log which indices were fetched successfully
             $fetched = collect(compact('ndvi', 'ndmi', 'ndre', 'evi', 'msi', 'savi', 'gndvi'))

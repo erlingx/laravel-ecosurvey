@@ -54,6 +54,7 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('billing/success', 'billing.success')->name('billing.success');
     Volt::route('billing/cancel', 'billing.cancel')->name('billing.cancel');
     Volt::route('billing/manage', 'billing.manage')->name('billing.manage');
+    Volt::route('billing/usage', 'billing.usage-dashboard')->name('billing.usage');
 
     // Settings
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit');

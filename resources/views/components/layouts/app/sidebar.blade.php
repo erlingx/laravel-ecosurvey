@@ -119,9 +119,16 @@
             <flux:navlist.item
                 icon="credit-card"
                 :href="route('billing.plans')"
-                :current="request()->routeIs('billing.*')"
+                :current="request()->routeIs('billing.plans') || request()->routeIs('billing.checkout') || request()->routeIs('billing.manage')"
                 wire:navigate
             >{{ __('Subscription') }}</flux:navlist.item>
+
+            <flux:navlist.item
+                icon="chart-bar"
+                :href="route('billing.usage')"
+                :current="request()->routeIs('billing.usage')"
+                wire:navigate
+            >{{ __('Usage') }}</flux:navlist.item>
         </flux:navlist.group>
     </flux:navlist>
 

@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Models\Campaign;
 use App\Services\DataExportService;
 use App\Services\ReportGeneratorService;
+use App\Services\UsageTrackingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
@@ -14,7 +15,8 @@ class ExportController extends Controller
 {
     public function __construct(
         private DataExportService $exportService,
-        private ReportGeneratorService $reportService
+        private ReportGeneratorService $reportService,
+        private UsageTrackingService $usageService
     ) {}
 
     /**
@@ -22,7 +24,15 @@ class ExportController extends Controller
      */
     public function exportJSON(Campaign $campaign): JsonResponse
     {
+        // Check usage limit
+        if (! $this->usageService->canPerformAction(auth()->user(), 'report_exports')) {
+            abort(403, 'You have reached your monthly export limit. Upgrade to Pro for more exports!');
+        }
+
         $data = $this->exportService->exportForPublication($campaign);
+
+        // Record usage
+        $this->usageService->recordReportExport(auth()->user(), 'json');
 
         $filename = sprintf(
             'ecosurvey-%s-%s.json',
@@ -40,7 +50,15 @@ class ExportController extends Controller
      */
     public function exportCSV(Campaign $campaign): Response
     {
+        // Check usage limit
+        if (! $this->usageService->canPerformAction(auth()->user(), 'report_exports')) {
+            abort(403, 'You have reached your monthly export limit. Upgrade to Pro for more exports!');
+        }
+
         $csv = $this->exportService->exportAsCSV($campaign);
+
+        // Record usage
+        $this->usageService->recordReportExport(auth()->user(), 'csv');
 
         $filename = sprintf(
             'ecosurvey-%s-%s.csv',
@@ -58,6 +76,16 @@ class ExportController extends Controller
      */
     public function exportPDF(Campaign $campaign): Response
     {
-        return $this->reportService->generatePDF($campaign);
+        // Check usage limit
+        if (! $this->usageService->canPerformAction(auth()->user(), 'report_exports')) {
+            abort(403, 'You have reached your monthly export limit. Upgrade to Pro for more exports!');
+        }
+
+        $response = $this->reportService->generatePDF($campaign);
+
+        // Record usage
+        $this->usageService->recordReportExport(auth()->user(), 'pdf');
+
+        return $response;
     }
 }
