@@ -111,6 +111,18 @@
                 :current="request()->is('admin/users*')"
             >{{ __('Manage Users') }}</flux:navlist.item>
         </flux:navlist.group>
+
+        <flux:navlist.group
+            :heading="__('Billing')"
+            class="grid"
+        >
+            <flux:navlist.item
+                icon="credit-card"
+                :href="route('billing.plans')"
+                :current="request()->routeIs('billing.*')"
+                wire:navigate
+            >{{ __('Subscription') }}</flux:navlist.item>
+        </flux:navlist.group>
     </flux:navlist>
 
     <flux:spacer/>

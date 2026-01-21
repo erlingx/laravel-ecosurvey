@@ -10,12 +10,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Laravel\Cashier\Billable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use Billable, HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     /**
      * The attributes that are mass assignable.
@@ -95,5 +96,82 @@ class User extends Authenticatable implements FilamentUser
     public function reviewedDataPoints(): HasMany
     {
         return $this->hasMany(DataPoint::class, 'reviewed_by');
+    }
+
+    /**
+     * Get the user's current subscription tier
+     */
+    public function subscriptionTier(): string
+    {
+        if ($this->subscribed('default')) {
+            $subscription = $this->subscription('default');
+
+            // Get the price ID from subscription items
+            $item = $subscription->items()->first();
+            if ($item) {
+                $priceId = $item->stripe_price;
+
+                if ($priceId === config('subscriptions.plans.enterprise.stripe_price_id')) {
+                    return 'enterprise';
+                }
+
+                if ($priceId === config('subscriptions.plans.pro.stripe_price_id')) {
+                    return 'pro';
+                }
+            }
+        }
+
+        return 'free';
+    }
+
+    /**
+     * Check if user has an active plan of the given tier
+     */
+    public function hasActivePlan(string $tier): bool
+    {
+        return $this->subscriptionTier() === $tier;
+    }
+
+    /**
+     * Get the usage limit for a specific resource
+     */
+    public function getUsageLimit(string $resource): int
+    {
+        $tier = $this->subscriptionTier();
+        $limits = config("subscriptions.plans.{$tier}.limits");
+
+        return $limits[$resource] ?? 0;
+    }
+
+    /**
+     * Check if user can create a data point based on current usage
+     */
+    public function canCreateDataPoint(): bool
+    {
+        $limit = $this->getUsageLimit('data_points');
+
+        if ($limit === PHP_INT_MAX) {
+            return true; // Unlimited
+        }
+
+        // TODO: Implement actual usage counting in Task 2.1
+        // For now, always allow (will be restricted when usage tracking is implemented)
+        return true;
+    }
+
+    /**
+     * Check if user can run a satellite analysis based on current usage
+     */
+    public function canRunSatelliteAnalysis(): bool
+    {
+        $limit = $this->getUsageLimit('satellite_analyses');
+
+        if ($limit === PHP_INT_MAX) {
+            return true; // Unlimited
+        }
+
+        // TODO: Implement actual usage counting in Task 2.1
+        // For now, always allow (will be restricted when usage tracking is implemented)
+        return true;
     }
 }

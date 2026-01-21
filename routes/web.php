@@ -48,6 +48,13 @@ Route::middleware(['auth'])->group(function () {
     // Survey Zone Management
     Volt::route('campaigns/{campaignId}/zones/manage', 'campaigns.zone-manager')->name('campaigns.zones.manage');
 
+    // Billing & Subscriptions
+    Volt::route('billing/plans', 'billing.subscription-plans')->name('billing.plans');
+    Volt::route('billing/checkout/{plan}', 'billing.checkout')->name('billing.checkout');
+    Volt::route('billing/success', 'billing.success')->name('billing.success');
+    Volt::route('billing/cancel', 'billing.cancel')->name('billing.cancel');
+    Volt::route('billing/manage', 'billing.manage')->name('billing.manage');
+
     // Settings
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit');
     Volt::route('settings/password', 'settings.password')->name('user-password.edit');
