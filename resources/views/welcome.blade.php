@@ -123,6 +123,88 @@
                             </p>
                         </div>
                     </div>
+
+                    <!-- Pricing Section -->
+                    <div class="w-full max-w-6xl mt-16 md:mt-20 lg:mt-24">
+                        <div class="text-center mb-8 md:mb-12">
+                            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 md:mb-4">
+                                Choose Your Plan
+                            </h2>
+                            <p class="text-base md:text-lg text-gray-600 dark:text-gray-400">
+                                Start free, upgrade when you need more power
+                            </p>
+                        </div>
+
+                        <div class="grid md:grid-cols-3 gap-6 md:gap-8">
+                            @foreach(config('subscriptions.plans') as $key => $plan)
+                                <div class="relative flex flex-col bg-white dark:bg-zinc-800/50 rounded-xl shadow-lg border {{ $key === 'pro' ? 'border-blue-500 ring-2 ring-blue-500' : 'border-green-100 dark:border-zinc-700' }} overflow-hidden hover:shadow-xl transition-shadow">
+                                    @if($key === 'pro')
+                                        <div class="absolute top-0 right-0 bg-blue-500 text-white px-4 py-1 text-sm font-semibold rounded-bl-lg">
+                                            Most Popular
+                                        </div>
+                                    @endif
+
+                                    <div class="p-6 md:p-8">
+                                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                                            {{ $plan['name'] }}
+                                        </h3>
+
+                                        <div class="mb-6">
+                                            <span class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
+                                                ${{ $plan['price'] }}
+                                            </span>
+                                            <span class="text-gray-600 dark:text-gray-400">/month</span>
+                                        </div>
+
+                                        <div class="mb-6">
+                                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Features:</h4>
+                                            <ul class="space-y-2.5">
+                                                @foreach($plan['features'] as $feature)
+                                                    <li class="flex items-start gap-2">
+                                                        <svg class="w-5 h-5 text-green-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                        </svg>
+                                                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ $feature }}</span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+
+                                        <div class="mb-6 bg-gray-50 dark:bg-zinc-700/50 rounded-lg p-4">
+                                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Monthly Limits:</h4>
+                                            <ul class="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                                                <li>📊 {{ $plan['limits']['data_points'] === PHP_INT_MAX ? 'Unlimited' : number_format($plan['limits']['data_points']) }} data points</li>
+                                                <li>🛰️ {{ $plan['limits']['satellite_analyses'] === PHP_INT_MAX ? 'Unlimited' : number_format($plan['limits']['satellite_analyses']) }} satellite analyses</li>
+                                                <li>📄 {{ $plan['limits']['report_exports'] === PHP_INT_MAX ? 'Unlimited' : number_format($plan['limits']['report_exports']) }} report exports</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="p-6 md:p-8 pt-0 mt-auto">
+                                        @auth
+                                            @if(auth()->user()->subscriptionTier() === $key)
+                                                <button disabled class="w-full px-6 py-3 text-sm font-semibold text-gray-500 bg-gray-100 dark:bg-zinc-700 dark:text-gray-400 rounded-lg cursor-not-allowed">
+                                                    Current Plan
+                                                </button>
+                                            @else
+                                                <a href="{{ route('billing.plans') }}" class="block w-full px-6 py-3 text-center text-sm font-semibold {{ $key === 'pro' ? 'text-white bg-blue-600 hover:bg-blue-700' : 'text-green-600 dark:text-green-400 border-2 border-green-600 dark:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20' }} rounded-lg transition-all shadow-sm hover:shadow-md">
+                                                    @if($key === 'free')
+                                                        View Free Plan
+                                                    @else
+                                                        Upgrade to {{ $plan['name'] }}
+                                                    @endif
+                                                </a>
+                                            @endif
+                                        @else
+                                            <a href="{{ route('register') }}" class="block w-full px-6 py-3 text-center text-sm font-semibold {{ $key === 'pro' ? 'text-white bg-blue-600 hover:bg-blue-700' : 'text-green-600 dark:text-green-400 border-2 border-green-600 dark:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20' }} rounded-lg transition-all shadow-sm hover:shadow-md">
+                                                Get Started
+                                            </a>
+                                        @endauth
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>

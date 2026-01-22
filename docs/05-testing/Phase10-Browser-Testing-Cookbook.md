@@ -1,8 +1,8 @@
 # Phase 10 Features - Browser Testing Cookbook
-**Last Updated:** January 21, 2026  
+**Last Updated:** January 22, 2026  
 **Estimated Time:** 10-12 minutes (Priority 1) + 12 minutes (Priority 2)  
 **Prerequisites:** Logged in user, Stripe test mode configured (for checkout testing)
-**Testing Status:** 🟢 Priority 1 COMPLETE - All sections tested & approved | ⏳ Priority 2 STARTS TOMORROW (January 22, 2026)
+**Testing Status:** 🟢 Priority 1 COMPLETE | 🟢 Priority 2 COMPLETE - ALL SECTIONS TESTED & APPROVED
 ---
 ## Testing Notes
 **Phase 10 Features to Test:**
@@ -43,12 +43,12 @@
 - [x] **Authentication Protection** ✅ TESTED & APPROVED (30 sec)
 
 **Priority 2: Usage Tracking & Dashboard (Tasks 2.1-2.3)**
-- [ ] **Usage Dashboard Page** ⏳ READY FOR TESTING (3 min)
-- [ ] **Usage Progress Bars** ⏳ READY FOR TESTING (2 min)
-- [ ] **Usage Limit Enforcement** ⏳ READY FOR TESTING (3 min)
-- [ ] **Upgrade CTA Display** ⏳ READY FOR TESTING (1 min)
-- [ ] **Filament Admin Widget** ⏳ READY FOR TESTING (2 min)
-- [ ] **Dark Mode (Usage Dashboard)** ⏳ READY FOR TESTING (1 min)
+- [x] **Usage Dashboard Page** ✅ TESTED & APPROVED (3 min)
+- [x] **Usage Progress Bars** ✅ TESTED & APPROVED (2 min)
+- [x] **Usage Limit Enforcement** ✅ TESTED & APPROVED (3 min)
+- [x] **Upgrade CTA Display** ✅ TESTED & APPROVED (1 min)
+- [x] **Filament Admin Widget** ✅ TESTED & APPROVED (2 min)
+- [x] **Dark Mode (Usage Dashboard)** ✅ TESTED & APPROVED (1 min)
 ---
 ## 1. Subscription Plans Page (3 minutes)
 ### Test: Access Billing Plans
@@ -645,6 +645,66 @@ This test requires Stripe configuration. If not set up, skip this section.
 
 ## 9. Usage Limit Enforcement (Priority 2 - Task 2.2) (3 minutes)
 
+### Test: Data Point Creation Limit - Warning Banner
+
+**Prerequisites:** Free tier user at or near limit (50 data points)
+
+**Steps:**
+1. Set usage to 50 data points using: `ddev exec php artisan usage:set 2 data_points 50`
+2. Navigate to `/data-points/submit` (create new reading page)
+3. Observe the page
+
+**Expected Results:**
+- [ ] **Red warning banner appears at top of form** (above "Data Point Information")
+- [ ] Banner shows:
+  - [ ] ⚠️ Warning icon
+  - [ ] Heading: "You've Reached Your Monthly Limit"
+  - [ ] Message: "You've used **50** of your **50** data points this month"
+  - [ ] Suggestion: "Upgrade to **Pro** to create up to **500 data points/month** (10x more)!"
+  - [ ] "Upgrade to Pro - $29/mo" button (blue)
+  - [ ] "View Usage Dashboard" button (outlined)
+- [ ] **Submit button is disabled**
+- [ ] Submit button text changes to: "Limit Reached - Upgrade Required"
+- [ ] Form fields are still visible (user can see but not submit)
+
+**Testing Upgrade Links:**
+- [ ] Click "Upgrade to Pro" button → navigates to `/billing/plans`
+- [ ] Click "View Usage Dashboard" button → navigates to `/billing/usage`
+
+---
+
+### Test: Data Point Creation Limit - Form Submission
+
+**Prerequisites:** Free tier user at limit (50 data points), warning banner showing
+
+**Steps:**
+1. Try to submit the form by clicking the disabled submit button
+2. Observe behavior
+
+**Expected Results:**
+- [ ] Button remains disabled (cannot be clicked)
+- [ ] No form submission occurs
+- [ ] Warning banner remains visible
+- [ ] No additional error messages appear
+
+---
+
+### Test: No Warning When Editing Existing Data Point
+
+**Prerequisites:** Free tier user at limit (50 data points)
+
+**Steps:**
+1. Navigate to an existing data point edit page (e.g., `/data-points/1/edit`)
+2. Observe the page
+
+**Expected Results:**
+- [ ] **No warning banner shown** (editing doesn't count toward limit)
+- [ ] Submit button shows "Update Reading"
+- [ ] Submit button is enabled
+- [ ] Can successfully update the data point
+
+---
+
 ### Test: Data Point Creation Limit
 
 **Prerequisites:** Free tier user at or near limit (50 data points)
@@ -662,7 +722,18 @@ This test requires Stripe configuration. If not set up, skip this section.
   - [ ] Error displayed prominently
   - [ ] Suggestion to upgrade shown
 
-**Note:** To test without creating 50 actual data points, you can use the UsageTrackingService in Tinker to artificially set usage.
+**Note:** To test without creating 50 actual data points, use this artisan command:
+
+```bash
+# Set usage to 50 data points for user ID 2 (replace 2 with your user ID)
+ddev exec php artisan usage:set 2 data_points 50
+
+# You can also set other resources:
+# ddev exec php artisan usage:set 2 satellite_analyses 10
+# ddev exec php artisan usage:set 2 report_exports 2
+```
+
+Then refresh your browser to see the limit in effect.
 
 ---
 
@@ -874,13 +945,13 @@ This test requires Stripe configuration. If not set up, skip this section.
 - [x] Authentication protection works ✅ (January 21, 2026)
 - [x] No console errors during testing ✅
 
-**Priority 2 - Pending Testing:**
-- [ ] Usage dashboard page ⏳
-- [ ] Usage progress bars and limits ⏳
-- [ ] Usage limit enforcement ⏳
-- [ ] Upgrade CTA display ⏳
-- [ ] Filament admin widget ⏳
-- [ ] Dark mode (usage features) ⏳
+**Priority 2 - Completed Testing:**
+- [x] Usage dashboard page ✅ (January 22, 2026)
+- [x] Usage progress bars and limits ✅ (January 22, 2026)
+- [x] Usage limit enforcement ✅ (January 22, 2026)
+- [x] Upgrade CTA display ✅ (January 22, 2026)
+- [x] Filament admin widget ✅ (January 22, 2026)
+- [x] Dark mode (usage features) ✅ (January 22, 2026)
 
 **Stripe Integration Testing:**
 - [x] Stripe checkout redirect works ✅
@@ -903,70 +974,51 @@ This test requires Stripe configuration. If not set up, skip this section.
 
 ### Issue: Subscription shows as "Free" even after subscribing to Pro
 
-**Symptoms:**
-- Successfully completed Stripe checkout for Pro plan
-- Redirected to success page
-- But `/billing/plans` still shows Free tier as current
-- `/billing/manage` still shows "Free Plan"
+**Status:** ✅ **RESOLVED** (January 22, 2026)
 
-**Cause:**
-Stripe Checkout creates the subscription in Stripe, but it doesn't automatically sync to your local database without webhooks configured.
+**What Was Wrong:**
+The success page (`/billing/success`) was receiving the `session_id` from Stripe but not doing anything with it. It would just show the success message without actually creating the subscription in the database.
 
-**Solution (Temporary - Until Webhooks Configured):**
-A manual sync command has been created to pull subscriptions from Stripe:
+**The Fix:**
+Updated `/billing/success` to automatically sync the subscription when the `session_id` is present:
+1. Retrieves the Stripe Checkout Session
+2. Gets the subscription ID from the session
+3. Fetches full subscription details from Stripe
+4. Creates the subscription record in local database
+5. Creates subscription_items with price IDs
 
-```bash
-# Sync subscription for specific user (replace 1 with your user ID)
-ddev artisan stripe:sync-subscriptions 1
+**How It Works Now:**
+1. User completes Stripe Checkout
+2. Stripe redirects to `/billing/success?session_id=cs_test_...`
+3. Success page automatically syncs the subscription ✅
+4. User immediately sees correct tier (Pro/Enterprise)
+5. Admin dashboard immediately shows subscription count
+6. No manual sync needed ✅
+7. No webhook configuration needed for basic checkout ✅
 
-# Or sync all users with Stripe customer IDs
-ddev artisan stripe:sync-subscriptions
-```
+**Verification:**
+After completing Stripe checkout, you should see:
+- Success page shows correct tier name in welcome message
+- `/billing/plans` shows "Current Plan" on the subscribed tier
+- `/billing/manage` shows the correct plan name
+- `/admin` dashboard shows subscription count updated
 
-**Verification Steps:**
-1. Run the sync command: `ddev artisan stripe:sync-subscriptions 1`
-2. Clear application cache: `ddev artisan cache:clear`
-3. Refresh the browser (hard refresh: Ctrl+Shift+R or Cmd+Shift+R)
-4. Navigate to `/billing/plans` - should now show "Current Plan" on Pro tier
-5. Navigate to `/billing/manage` - should now show "Pro Plan"
+**What About Webhooks?**
+Webhooks are still useful for:
+- Subscription renewals
+- Payment failures
+- Cancellations
+- Updates made in Stripe Dashboard
 
-**Permanent Solution (Configure Webhooks):**
-For automatic syncing, configure webhooks in Stripe Dashboard:
-1. Go to: https://dashboard.stripe.com/test/webhooks
-2. Click "Add endpoint"
-3. Endpoint URL: `https://your-domain.ddev.site/stripe/webhook`
-4. Events to send:
-   - `customer.subscription.created`
-   - `customer.subscription.updated`  
-   - `customer.subscription.deleted`
-   - `invoice.payment_succeeded`
-   - `invoice.payment_failed`
-5. Copy the webhook signing secret
-6. Add to `.env`: `STRIPE_WEBHOOK_SECRET=whsec_xxxxx`
-7. Restart DDEV: `ddev restart`
-
-Once webhooks are configured, subscriptions will automatically sync when created/updated in Stripe.
-
-**Database Verification:**
-To verify your subscription exists:
-```bash
-ddev exec bash -c "psql -U db -d db -c 'SELECT si.stripe_price, s.stripe_status FROM subscriptions s JOIN subscription_items si ON s.id = si.subscription_id;'"
-```
-
-Should display your Pro price ID and status "active".
-
-**If Still Not Working:**
-1. Check that `STRIPE_PRICE_PRO` in `.env` matches the actual price ID from Stripe
-2. Verify the subscription was created: Check Stripe Dashboard → Customers → Subscriptions
-3. Check Laravel logs: `ddev logs | grep -i stripe`
+But for initial checkout, the success page now handles it automatically!
 
 ---
 
-**Last Manual Test:** ✅ January 21, 2026  
+**Last Manual Test:** ✅ January 22, 2026  
 **Tested By:** Erik  
-**Date:** January 21, 2026  
+**Date:** January 22, 2026  
 **Browser:** Chrome/Edge  
-**Status:** 🟢 Priority 1 COMPLETE - All 7 sections tested & approved | Priority 2 READY FOR TESTING
+**Status:** 🟢 ALL PRIORITIES COMPLETE - Phase 10 fully tested & approved
 
 **Priority 1 Test Results:**
 - ✅ Subscription Plans Page - All features working correctly
@@ -977,13 +1029,26 @@ Should display your Pro price ID and status "active".
 - ✅ Dark Mode Compatibility - All pages work in dark/light mode
 - ✅ Authentication Protection - Redirects to login work correctly
 
-**Issues Resolved:**
-- ✅ Subscription sync issue fixed with manual sync command
-- ✅ User model properly detects Pro tier from subscription_items table
+**Priority 2 Test Results:**
+- ✅ Usage Dashboard Page - All metrics displaying correctly
+- ✅ Usage Progress Bars - Color-coded and responsive
+- ✅ Usage Limit Enforcement - Submit button properly disabled at limit
+- ✅ Warning banners showing at correct thresholds
+- ✅ Upgrade CTAs displaying for free tier users
+- ✅ Filament Admin Widget - All stats accurate and updating
+- ✅ Dark Mode - All usage features work in both themes
 
-**Next Steps:**
-1. ✅ Priority 1 complete - 7 of 7 tests passing (100%)
-2. ⏳ **Tomorrow (January 22, 2026):** Priority 2 browser testing - Usage tracking & dashboard features
-3. ⏳ Consider setting up webhooks in Stripe Dashboard for automatic syncing
-4. ✅ Phase 10 Tasks 1.1-1.4 complete and fully tested!
-5. ✅ Phase 10 Tasks 2.1-2.3 implementation complete - ready for browser testing tomorrow
+**Issues Resolved:**
+- ✅ Subscription sync issue fixed - checkout now syncs automatically
+- ✅ User model properly detects Pro/Enterprise tier from subscription_items table
+- ✅ Admin dashboard widget queries fixed to show correct subscription counts
+- ✅ Upgrade flow now always goes through Stripe Checkout (no silent billing)
+- ✅ Usage limit warning banners implemented
+- ✅ Submit button properly disabled when at data point limit
+
+**Phase 10 Complete:**
+- ✅ Tasks 1.1-1.4: Subscription setup (100% tested)
+- ✅ Tasks 2.1-2.3: Usage tracking & dashboard (100% tested)
+- ✅ All 13 test sections passing
+- ✅ No console errors
+- ✅ Production-ready billing system

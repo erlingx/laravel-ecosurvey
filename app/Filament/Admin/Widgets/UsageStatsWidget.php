@@ -13,14 +13,26 @@ class UsageStatsWidget extends StatsOverviewWidget
     {
         // Get subscription counts
         $totalUsers = User::count();
-        $freeUsers = User::whereDoesntHave('subscriptions')->count();
+
+        // Count Pro users - check subscription items for Pro price ID
         $proUsers = User::whereHas('subscriptions', function ($query) {
-            $query->where('stripe_price', config('subscriptions.plans.pro.stripe_price_id'))
-                ->where('stripe_status', 'active');
+            $query->where('stripe_status', 'active')
+                ->whereHas('items', function ($itemQuery) {
+                    $itemQuery->where('stripe_price', config('subscriptions.plans.pro.stripe_price_id'));
+                });
         })->count();
+
+        // Count Enterprise users - check subscription items for Enterprise price ID
         $enterpriseUsers = User::whereHas('subscriptions', function ($query) {
-            $query->where('stripe_price', config('subscriptions.plans.enterprise.stripe_price_id'))
-                ->where('stripe_status', 'active');
+            $query->where('stripe_status', 'active')
+                ->whereHas('items', function ($itemQuery) {
+                    $itemQuery->where('stripe_price', config('subscriptions.plans.enterprise.stripe_price_id'));
+                });
+        })->count();
+
+        // Free users = users without any active subscription
+        $freeUsers = User::whereDoesntHave('subscriptions', function ($query) {
+            $query->where('stripe_status', 'active');
         })->count();
 
         // Calculate MRR (Monthly Recurring Revenue)

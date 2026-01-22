@@ -20,7 +20,15 @@ new class extends Component
     {
         $user = auth()->user();
         $priceId = $this->planDetails['stripe_price_id'];
+
         try {
+            // Always use Stripe Checkout to show pricing clearly to the user
+            if ($user->subscribed('default')) {
+                // Cancel existing subscription first
+                $user->subscription('default')->cancelNow();
+            }
+
+            // Create new subscription via Checkout
             $checkout = $user->newSubscription('default', $priceId)
                 ->checkout([
                     'success_url' => route('billing.success').'?session_id={CHECKOUT_SESSION_ID}',
@@ -74,8 +82,8 @@ new class extends Component
             </div>
         </div>
         <div class="space-y-4">
-            <flux:button 
-                variant="primary" 
+            <flux:button
+                variant="primary"
                 class="w-full text-lg py-3"
                 wire:click="checkout"
                 wire:loading.attr="disabled"
@@ -87,8 +95,8 @@ new class extends Component
                     Redirecting to Stripe...
                 </span>
             </flux:button>
-            <flux:button 
-                variant="outline" 
+            <flux:button
+                variant="outline"
                 class="w-full"
                 href="{{ route('billing.plans') }}"
                 wire:navigate
@@ -97,7 +105,11 @@ new class extends Component
             </flux:button>
         </div>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-6 text-center">
-            You will be redirected to Stripe's secure checkout page. Your subscription will start immediately upon successful payment.
+            @if(auth()->user()->subscribed('default'))
+                Your existing subscription will be cancelled and replaced. You will be charged the full price for the new plan.
+            @else
+                You will be redirected to Stripe's secure checkout page. Your subscription will start immediately upon successful payment.
+            @endif
         </p>
     </div>
 </div>

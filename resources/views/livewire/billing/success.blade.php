@@ -10,7 +10,56 @@ new class extends Component
     public function mount(): void
     {
         $this->sessionId = request('session_id');
-        $this->tier = auth()->user()->subscriptionTier();
+
+        // If we have a session_id from Stripe Checkout, sync the subscription
+        if ($this->sessionId) {
+            try {
+                $stripe = new \Stripe\StripeClient(config('cashier.secret'));
+                $session = $stripe->checkout->sessions->retrieve($this->sessionId);
+
+                // Get the subscription ID from the session
+                if ($session->subscription) {
+                    $user = auth()->user();
+                    $stripeSubscription = $stripe->subscriptions->retrieve($session->subscription);
+
+                    // Create or update the subscription in our database
+                    $subscription = $user->subscriptions()->updateOrCreate(
+                        ['stripe_id' => $stripeSubscription->id],
+                        [
+                            'type' => 'default',
+                            'stripe_status' => $stripeSubscription->status,
+                            'trial_ends_at' => $stripeSubscription->trial_end ? \Carbon\Carbon::createFromTimestamp($stripeSubscription->trial_end) : null,
+                            'ends_at' => $stripeSubscription->cancel_at ? \Carbon\Carbon::createFromTimestamp($stripeSubscription->cancel_at) : null,
+                        ]
+                    );
+
+                    // Sync subscription items
+                    foreach ($stripeSubscription->items->data as $item) {
+                        $subscription->items()->updateOrCreate(
+                            ['stripe_id' => $item->id],
+                            [
+                                'stripe_product' => $item->price->product,
+                                'stripe_price' => $item->price->id,
+                                'quantity' => $item->quantity,
+                            ]
+                        );
+                    }
+
+                    \Log::info('Subscription synced from checkout session', [
+                        'user_id' => $user->id,
+                        'session_id' => $this->sessionId,
+                        'subscription_id' => $stripeSubscription->id,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed to sync subscription from checkout session', [
+                    'session_id' => $this->sessionId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $this->tier = auth()->user()->fresh()->subscriptionTier();
     }
 }; ?>
 <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

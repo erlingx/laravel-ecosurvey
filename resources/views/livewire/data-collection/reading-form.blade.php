@@ -102,6 +102,31 @@ $metrics = computed(fn () => EnvironmentalMetric::query()
     ->get()
 );
 
+// Check if user has reached their data points limit (only for new submissions)
+$isAtLimit = computed(function () {
+    if ($this->dataPointId) {
+        // Editing existing - no limit check needed
+        return false;
+    }
+
+    $usageService = app(UsageTrackingService::class);
+
+    return ! $usageService->canPerformAction(auth()->user(), 'data_points');
+});
+
+$usageInfo = computed(function () {
+    $usageService = app(UsageTrackingService::class);
+    $tier = auth()->user()->subscriptionTier();
+    $usage = $usageService->getCurrentUsage(auth()->user());
+    $limits = config("subscriptions.plans.{$tier}.limits");
+
+    return [
+        'current' => $usage['data_points'],
+        'limit' => $limits['data_points'],
+        'tier' => $tier,
+    ];
+});
+
 // Clear validation errors when fields are updated
 updated([
     'campaignId' => fn () => $this->resetErrorBag('campaignId'),
@@ -516,6 +541,7 @@ $formatQaFlag = function (string|array $flag): array {
 <div class="max-w-2xl mx-auto relative"
      x-data="{
     isSaving: false,
+    isAtLimit: {{ ($this->isAtLimit && !$dataPointId) ? 'true' : 'false' }},
     captureLocation() {
         if (!navigator.geolocation) {
             this.$wire.set('gpsError', 'Geolocation is not supported by your browser');
@@ -678,6 +704,43 @@ $formatQaFlag = function (string|array $flag): array {
         @endif
 
         <form x-on:submit.prevent="submitForm" class="mt-6 space-y-6">
+
+            {{-- Usage Limit Warning (only shown when creating new data points and at limit) --}}
+            @if($this->isAtLimit && !$dataPointId)
+                <div class="rounded-lg border-2 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="text-2xl">⚠️</div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-red-900 dark:text-red-100 mb-2">
+                                You've Reached Your Monthly Limit
+                            </div>
+                            <div class="text-sm text-red-800 dark:text-red-200 mb-3">
+                                You've used <strong>{{ $this->usageInfo['current'] }}</strong> of your <strong>{{ $this->usageInfo['limit'] === PHP_INT_MAX ? 'unlimited' : $this->usageInfo['limit'] }}</strong> data points this month.
+                                @if($this->usageInfo['tier'] === 'free')
+                                    Upgrade to <strong>Pro</strong> to create up to <strong>500 data points/month</strong> (10x more)!
+                                @endif
+                            </div>
+                            @if($this->usageInfo['tier'] === 'free')
+                                <div class="flex gap-2">
+                                    <a href="{{ route('billing.plans') }}"
+                                       wire:navigate
+                                       class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                        </svg>
+                                        Upgrade to Pro - $29/mo
+                                    </a>
+                                    <a href="{{ route('billing.usage') }}"
+                                       wire:navigate
+                                       class="inline-flex items-center px-4 py-2 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-sm font-medium rounded-lg border border-zinc-300 dark:border-zinc-600 transition-colors">
+                                        View Usage Dashboard
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endif
 
             {{-- Data Point Information Section --}}
             <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
@@ -1093,22 +1156,33 @@ $formatQaFlag = function (string|array $flag): array {
 
     {{-- Submit Button --}}
     <div class="flex gap-2">
-        <flux:button
-            type="submit"
-            variant="primary"
-            x-bind:disabled="isSaving"
-        >
-            <span x-show="!isSaving">
-                {{ $dataPointId ? 'Update Reading' : 'Submit Reading' }}
-            </span>
-            <span x-show="isSaving" x-cloak class="flex items-center gap-2">
-                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Processing...
-            </span>
-        </flux:button>
+        @if($this->isAtLimit && !$dataPointId)
+            {{-- Use plain button when at limit to avoid Flux's loading indicator --}}
+            <button
+                type="button"
+                disabled
+                class="relative items-center font-medium justify-center gap-2 whitespace-nowrap disabled:opacity-75 disabled:cursor-default disabled:pointer-events-none h-10 text-sm rounded-lg px-4 inline-flex bg-zinc-400 text-white border border-zinc-500"
+            >
+                Limit Reached - Upgrade Required
+            </button>
+        @else
+            <flux:button
+                type="submit"
+                variant="primary"
+                x-bind:disabled="isSaving"
+            >
+                <span x-show="!isSaving">
+                    {{ $dataPointId ? 'Update Reading' : 'Submit Reading' }}
+                </span>
+                <span x-show="isSaving" x-cloak class="flex items-center gap-2">
+                    <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                </span>
+            </flux:button>
+        @endif
         @if($inModal)
             <button
                 type="button"

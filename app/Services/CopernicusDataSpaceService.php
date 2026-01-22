@@ -128,7 +128,10 @@ class CopernicusDataSpaceService
         $date = $date ?? now()->subDays(7)->format('Y-m-d');
         $cacheKey = "copernicus_imagery_{$latitude}_{$longitude}_{$date}_{$width}x{$height}";
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $width, $height) {
+        // Check if cached BEFORE calling Cache::remember
+        $wasCached = Cache::has($cacheKey);
+
+        $result = Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $width, $height) {
             $token = $this->getAccessToken();
             if (! $token) {
                 return null;
@@ -181,9 +184,6 @@ class CopernicusDataSpaceService
                         'location' => "{$latitude},{$longitude}",
                     ]);
 
-                    // Track API call for analytics/billing
-                    $this->trackApiCall('enrichment', 'satellite_imagery', $latitude, $longitude, $date, true);
-
                     return [
                         'url' => "data:image/png;base64,{$imageData}",
                         'date' => $date,
@@ -213,6 +213,13 @@ class CopernicusDataSpaceService
                 return null;
             }
         });
+
+        // Track API call AFTER cache check (so we know if it was cached)
+        if ($result !== null) {
+            $this->trackApiCall('enrichment', 'satellite_imagery', $latitude, $longitude, $date, $wasCached);
+        }
+
+        return $result;
     }
 
     /**
@@ -227,7 +234,10 @@ class CopernicusDataSpaceService
         $date = $date ?? now()->subDays(7)->format('Y-m-d');
         $cacheKey = "copernicus_ndvi_{$latitude}_{$longitude}_{$date}";
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
+        // Check if cached BEFORE calling Cache::remember
+        $wasCached = Cache::has($cacheKey);
+
+        $result = Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
             $token = $this->getAccessToken();
             if (! $token) {
                 return null;
@@ -342,9 +352,6 @@ class CopernicusDataSpaceService
                         'location' => "{$latitude},{$longitude}",
                     ]);
 
-                    // Track API call for analytics/billing
-                    $this->trackApiCall('analysis', 'ndvi', $latitude, $longitude, $date, true);
-
                     return [
                         'ndvi_value' => $ndviValue,
                         'interpretation' => $this->interpretNDVI($ndviValue),
@@ -382,6 +389,14 @@ class CopernicusDataSpaceService
                 return null;
             }
         });
+
+        // Track API call AFTER cache check (so we know if it was cached)
+        // Note: Usage tracking happens in getOverlayVisualization() or via Job->recordSatelliteAnalysis()
+        if ($result !== null) {
+            $this->trackApiCall('analysis', 'ndvi', $latitude, $longitude, $date, $wasCached);
+        }
+
+        return $result;
     }
 
     /**
@@ -396,7 +411,10 @@ class CopernicusDataSpaceService
         $date = $date ?? now()->subDays(7)->format('Y-m-d');
         $cacheKey = "copernicus_moisture_{$latitude}_{$longitude}_{$date}";
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
+        // Check if cached BEFORE calling Cache::remember
+        $wasCached = Cache::has($cacheKey);
+
+        $result = Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
             $token = $this->getAccessToken();
             if (! $token) {
                 return null;
@@ -498,9 +516,6 @@ class CopernicusDataSpaceService
                         'location' => "{$latitude},{$longitude}",
                     ]);
 
-                    // Track API call for analytics/billing
-                    $this->trackApiCall('analysis', 'soil_moisture', $latitude, $longitude, $date, true);
-
                     return [
                         'moisture_value' => $moistureValue,
                         'interpretation' => $this->interpretMoisture($moistureValue),
@@ -538,6 +553,13 @@ class CopernicusDataSpaceService
                 return null;
             }
         });
+
+        // Track API call AFTER cache check (so we know if it was cached)
+        if ($result !== null) {
+            $this->trackApiCall('analysis', 'soil_moisture', $latitude, $longitude, $date, $wasCached);
+        }
+
+        return $result;
     }
 
     /**
@@ -1246,7 +1268,10 @@ SCRIPT;
         $date = $date ?? now()->subDays(7)->format('Y-m-d');
         $cacheKey = "copernicus_ndre_{$latitude}_{$longitude}_{$date}";
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
+        // Check if cached BEFORE calling Cache::remember
+        $wasCached = Cache::has($cacheKey);
+
+        $result = Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
             $token = $this->getAccessToken();
             if (! $token) {
                 return null;
@@ -1380,6 +1405,13 @@ SCRIPT;
                 return null;
             }
         });
+
+        // Track API call AFTER cache check (so we know if it was cached)
+        if ($result !== null) {
+            $this->trackApiCall('analysis', 'ndre', $latitude, $longitude, $date, $wasCached);
+        }
+
+        return $result;
     }
 
     /**
@@ -1396,7 +1428,10 @@ SCRIPT;
         $date = $date ?? now()->subDays(7)->format('Y-m-d');
         $cacheKey = "copernicus_evi_{$latitude}_{$longitude}_{$date}";
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
+        // Check if cached BEFORE calling Cache::remember
+        $wasCached = Cache::has($cacheKey);
+
+        $result = Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
             $token = $this->getAccessToken();
             if (! $token) {
                 return null;
@@ -1530,6 +1565,13 @@ SCRIPT;
                 return null;
             }
         });
+
+        // Track API call AFTER cache check (so we know if it was cached)
+        if ($result !== null) {
+            $this->trackApiCall('analysis', 'evi', $latitude, $longitude, $date, $wasCached);
+        }
+
+        return $result;
     }
 
     /**
@@ -1546,7 +1588,10 @@ SCRIPT;
         $date = $date ?? now()->subDays(7)->format('Y-m-d');
         $cacheKey = "copernicus_msi_{$latitude}_{$longitude}_{$date}";
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
+        // Check if cached BEFORE calling Cache::remember
+        $wasCached = Cache::has($cacheKey);
+
+        $result = Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
             $token = $this->getAccessToken();
             if (! $token) {
                 return null;
@@ -1682,6 +1727,13 @@ SCRIPT;
                 return null;
             }
         });
+
+        // Track API call AFTER cache check (so we know if it was cached)
+        if ($result !== null) {
+            $this->trackApiCall('analysis', 'msi', $latitude, $longitude, $date, $wasCached);
+        }
+
+        return $result;
     }
 
     /**
@@ -1698,7 +1750,10 @@ SCRIPT;
         $date = $date ?? now()->subDays(7)->format('Y-m-d');
         $cacheKey = "copernicus_savi_{$latitude}_{$longitude}_{$date}";
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
+        // Check if cached BEFORE calling Cache::remember
+        $wasCached = Cache::has($cacheKey);
+
+        $result = Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
             $token = $this->getAccessToken();
             if (! $token) {
                 return null;
@@ -1833,6 +1888,13 @@ SCRIPT;
                 return null;
             }
         });
+
+        // Track API call AFTER cache check (so we know if it was cached)
+        if ($result !== null) {
+            $this->trackApiCall('analysis', 'savi', $latitude, $longitude, $date, $wasCached);
+        }
+
+        return $result;
     }
 
     /**
@@ -1849,7 +1911,10 @@ SCRIPT;
         $date = $date ?? now()->subDays(7)->format('Y-m-d');
         $cacheKey = "copernicus_gndvi_{$latitude}_{$longitude}_{$date}";
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
+        // Check if cached BEFORE calling Cache::remember
+        $wasCached = Cache::has($cacheKey);
+
+        $result = Cache::remember($cacheKey, $this->cacheTtl, function () use ($latitude, $longitude, $date, $retryCount) {
             $token = $this->getAccessToken();
             if (! $token) {
                 return null;
@@ -1984,6 +2049,13 @@ SCRIPT;
                 return null;
             }
         });
+
+        // Track API call AFTER cache check (so we know if it was cached)
+        if ($result !== null) {
+            $this->trackApiCall('analysis', 'gndvi', $latitude, $longitude, $date, $wasCached);
+        }
+
+        return $result;
     }
 
     /**
@@ -2015,6 +2087,15 @@ SCRIPT;
                 'response_time_ms' => $responseTimeMs,
                 'cost_credits' => $this->getCostForCallType($callType, $indexType, $cached),
             ]);
+
+            // Track in usage meters for billing (only non-cached overlay/enrichment calls)
+            // Analysis calls are tracked separately via Job->recordSatelliteAnalysis()
+            if (! $cached && in_array($callType, ['overlay', 'enrichment'])) {
+                $user = auth()->user() ?? \App\Models\User::find($userId);
+                if ($user) {
+                    app(UsageTrackingService::class)->recordSatelliteAnalysis($user, $indexType);
+                }
+            }
         } catch (\Exception $e) {
             // Don't fail the main request if tracking fails
             Log::warning('Failed to track API call', [

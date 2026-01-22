@@ -22,5 +22,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         DataPoint::observe(DataPointObserver::class);
+
+        // Register Stripe webhook listener
+        \Event::listen(
+            \Laravel\Cashier\Events\WebhookReceived::class,
+            \App\Listeners\StripeWebhookListener::class
+        );
     }
 }

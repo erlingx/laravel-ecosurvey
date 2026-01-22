@@ -1,4 +1,4 @@
-<a href="{{ route('dashboard') }}" class="flex items-center gap-2" wire:navigate>
+<a href="{{ route('home') }}" class="flex items-center gap-2" wire:navigate>
     <div class="flex aspect-square size-8 items-center justify-center rounded-md bg-accent-content text-accent-foreground">
         <x-app-logo-icon class="size-5 fill-current text-white dark:text-black" />
     </div>

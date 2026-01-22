@@ -17,7 +17,7 @@
     />
 
     <a
-        href="{{ route('dashboard') }}"
+        href="{{ route('home') }}"
         class="me-5 flex items-center space-x-2 rtl:space-x-reverse"
         wire:navigate
     >
@@ -105,6 +105,12 @@
             :heading="__('Administration')"
             class="grid"
         >
+            <flux:navlist.item
+                icon="chart-bar-square"
+                href="/admin"
+                :current="request()->is('admin') && !request()->is('admin/*')"
+            >{{ __('Admin Dashboard') }}</flux:navlist.item>
+
             <flux:navlist.item
                 icon="users"
                 href="/admin/users"
