@@ -19,33 +19,35 @@ Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
-Route::middleware(['auth'])->group(function () {
-    Route::redirect('settings', 'settings/profile');
-
-    // Data Collection - use regular Livewire with app layout
+Route::middleware(['auth', 'subscription.rate_limit'])->group(function () {
+    // Data Collection - rate limited per tier
     Volt::route('data-points/submit', 'data-collection.reading-form')->name('data-points.submit');
     Volt::route('data-points/{dataPoint}/edit', 'data-collection.reading-form')->name('data-points.edit');
 
-    // Maps - use regular Livewire with app layout
+    // Maps - rate limited per tier
     Volt::route('maps/survey', 'maps.survey-map-viewer')->name('maps.survey');
     Volt::route('maps/satellite', 'maps.satellite-viewer')->name('maps.satellite');
 
-    // Analytics - use regular Livewire with app layout
+    // Analytics - rate limited per tier
     Volt::route('analytics/heatmap', 'analytics.heatmap-generator')->name('analytics.heatmap');
     Volt::route('analytics/trends', 'analytics.trend-chart')->name('analytics.trends');
 
-    // Campaigns - user-facing campaign list
-    Volt::route('campaigns', 'campaigns.my-campaigns')->name('campaigns.index');
-
-    // Exports
+    // Exports - rate limited per tier
     Route::get('campaigns/{campaign}/export/json', [App\Http\Controllers\ExportController::class, 'exportJSON'])
         ->name('campaigns.export.json');
     Route::get('campaigns/{campaign}/export/csv', [App\Http\Controllers\ExportController::class, 'exportCSV'])
         ->name('campaigns.export.csv');
     Route::get('campaigns/{campaign}/export/pdf', [App\Http\Controllers\ExportController::class, 'exportPDF'])
         ->name('campaigns.export.pdf');
+});
 
-    // Survey Zone Management
+Route::middleware(['auth'])->group(function () {
+    Route::redirect('settings', 'settings/profile');
+
+    // Campaigns - user-facing campaign list (not rate limited)
+    Volt::route('campaigns', 'campaigns.my-campaigns')->name('campaigns.index');
+
+    // Survey Zone Management (not rate limited)
     Volt::route('campaigns/{campaignId}/zones/manage', 'campaigns.zone-manager')->name('campaigns.zones.manage');
 
     // Billing & Subscriptions

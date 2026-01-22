@@ -11,7 +11,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'subscription.rate_limit' => \App\Http\Middleware\SubscriptionRateLimiter::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
