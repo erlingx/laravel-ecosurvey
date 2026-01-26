@@ -5,8 +5,8 @@ use App\Models\EnvironmentalMetric;
 use App\Services\GeospatialService;
 
 use function Livewire\Volt\computed;
-use function Livewire\Volt\state;
 use function Livewire\Volt\on;
+use function Livewire\Volt\state;
 
 state([
     'campaignId' => null,

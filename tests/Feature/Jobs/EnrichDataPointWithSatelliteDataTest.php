@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Models\DataPoint;
 use App\Models\SatelliteAnalysis;
 use App\Services\CopernicusDataSpaceService;
+use App\Services\UsageTrackingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -38,7 +39,7 @@ test('enrichment job fetches all 7 satellite indices', function () {
     ]);
 
     $job = new EnrichDataPointWithSatelliteData($dataPoint);
-    $job->handle(new CopernicusDataSpaceService);
+    $job->handle(new CopernicusDataSpaceService, new UsageTrackingService);
 
     // Verify SatelliteAnalysis was created with all 7 indices
     $analysis = SatelliteAnalysis::where('data_point_id', $dataPoint->id)->first();
@@ -79,7 +80,7 @@ test('enrichment handles partial API failures gracefully', function () {
     ]);
 
     $job = new EnrichDataPointWithSatelliteData($dataPoint);
-    $job->handle(new CopernicusDataSpaceService);
+    $job->handle(new CopernicusDataSpaceService, new UsageTrackingService);
 
     // Should create record even if some indices fail
     $analysis = SatelliteAnalysis::where('data_point_id', $dataPoint->id)->first();
@@ -108,7 +109,7 @@ test('enrichment creates single SatelliteAnalysis record', function () {
     SatelliteAnalysis::where('data_point_id', $dataPoint->id)->delete();
 
     $job = new EnrichDataPointWithSatelliteData($dataPoint);
-    $job->handle(new CopernicusDataSpaceService);
+    $job->handle(new CopernicusDataSpaceService, new UsageTrackingService);
 
     // Should create at least 1 analysis record with all indices in single row
     $count = SatelliteAnalysis::where('data_point_id', $dataPoint->id)->count();
@@ -127,7 +128,7 @@ test('enrichment skips if no valid location', function () {
     ]);
 
     $job = new EnrichDataPointWithSatelliteData($dataPoint);
-    $job->handle(new CopernicusDataSpaceService);
+    $job->handle(new CopernicusDataSpaceService, new UsageTrackingService);
 
     // Should not create any analysis
     $count = SatelliteAnalysis::where('data_point_id', $dataPoint->id)->count();
@@ -153,7 +154,7 @@ test('enrichment skips if no satellite data available', function () {
     ]);
 
     $job = new EnrichDataPointWithSatelliteData($dataPoint);
-    $job->handle(new CopernicusDataSpaceService);
+    $job->handle(new CopernicusDataSpaceService, new UsageTrackingService);
 
     // Should not create analysis if all indices failed
     $count = SatelliteAnalysis::where('data_point_id', $dataPoint->id)->count();

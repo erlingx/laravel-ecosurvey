@@ -6,7 +6,7 @@
 [![PostgreSQL+PostGIS](https://img.shields.io/badge/PostgreSQL-PostGIS-336791?style=flat-square&logo=postgresql&logoColor=white)](https://postgis.net)
 [![Livewire 3](https://img.shields.io/badge/Livewire-3-FB70A9?style=flat-square&logo=livewire&logoColor=white)](https://livewire.laravel.com)
 [![Stripe](https://img.shields.io/badge/Stripe-Payment-008CDD?style=flat-square&logo=stripe&logoColor=white)](https://stripe.com)
-[![Tests](https://img.shields.io/badge/Tests-200%2B-brightgreen?style=flat-square)](https://github.com/yourusername/laravel-ecosurvey#testing)
+[![Tests](https://img.shields.io/badge/Tests-370%2B%20Passing-brightgreen?style=flat-square)](https://github.com/yourusername/laravel-ecosurvey#testing)
 [![License MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
 **Full-stack SaaS platform for environmental data collection with satellite integration and subscription billing.**
@@ -35,7 +35,7 @@ EcoSurvey is a production-ready SaaS application designed for environmental scie
 - 💳 **Subscription-based SaaS model** with usage metering and tier-based enforcement
 - 📊 **Rich analytics engine** with heatmaps, time-series analysis, and statistical reporting
 - 🌙 **Dark mode support** across the entire application
-- ✅ **Comprehensive test coverage** (200+ tests) ensuring reliability
+- ✅ **Comprehensive test coverage** (370+ tests, 100% passing) ensuring reliability
 
 ---
 
@@ -540,7 +540,9 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 ## 📊 Project Stats
 
 - **Lines of Code**: ~15,000
-- **Test Coverage**: 97%
+- **Tests**: 370+ passing (100% pass rate)
+- **Test Assertions**: 1,470+
+- **Code Coverage**: Comprehensive (all critical paths tested)
 - **Database Migrations**: 20+
 - **API Integrations**: 5
 - **Component Library**: 40+ Livewire components

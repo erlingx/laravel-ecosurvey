@@ -66,7 +66,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('billing/portal', function () {
         $user = auth()->user();
 
-        if (!$user->subscribed('default')) {
+        if (! $user->subscribed('default')) {
             return redirect()->route('billing.manage')->with('error', 'No active subscription found.');
         }
 
