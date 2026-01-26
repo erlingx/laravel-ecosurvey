@@ -1,6 +1,23 @@
 <x-layouts.app :title="__('EcoSurvey Dashboard')">
     @php
         $userId = Auth::id();
+        $user = Auth::user();
+        $tier = $user->subscriptionTier();
+
+        // Rate limiting info
+        $rateLimitKey = "user:{$userId}";
+        $maxAttempts = match ($tier) {
+            'free' => 60,
+            'pro' => 300,
+            'enterprise' => 1000,
+            default => 60,
+        };
+        $remaining = \Illuminate\Support\Facades\RateLimiter::remaining($rateLimitKey, $maxAttempts);
+        $used = $maxAttempts - $remaining;
+        $isRateLimited = $remaining === 0;
+        $retryAfter = $isRateLimited ? \Illuminate\Support\Facades\RateLimiter::availableIn($rateLimitKey) : 0;
+        $percentageUsed = ($used / $maxAttempts) * 100;
+
         $stats = [
             'campaigns' => [
                 'total' => \App\Models\Campaign::where('user_id', $userId)->count(),
@@ -19,8 +36,32 @@
     @endphp
 
     <div class="flex h-full w-full flex-1 flex-col gap-6">
+        <!-- Rate Limit Warning (if active) -->
+        @if($isRateLimited)
+            <div class="rounded-lg border-2 border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 p-4">
+                <div class="flex items-start gap-3">
+                    <div class="text-2xl">⏱️</div>
+                    <div class="flex-1">
+                        <div class="font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                            Rate Limit Exceeded
+                        </div>
+                        <div class="text-sm text-orange-800 dark:text-orange-200 mb-2">
+                            You've reached your hourly request limit. Please wait
+                            <strong>{{ floor($retryAfter / 60) }} minutes</strong> before making more requests.
+                        </div>
+                        <div class="text-xs text-orange-700 dark:text-orange-300">
+                            Your {{ ucfirst($tier) }} plan allows {{ $maxAttempts }} requests/hour
+                            @if($tier === 'free')
+                                • <a href="{{ route('billing.plans') }}" class="underline hover:no-underline">Upgrade to Pro</a> for 300 requests/hour
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <!-- Stats Grid -->
-        <div class="grid gap-4 md:grid-cols-3">
+        <div class="grid gap-4 md:grid-cols-4">
             <!-- Total Campaigns -->
             <x-card>
                 <div class="flex items-center justify-between">
@@ -54,6 +95,38 @@
                 @if($stats['data_points']['approved'] > 0)
                     <div class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
                         {{ $stats['data_points']['approved'] }} approved
+                    </div>
+                @endif
+            </x-card>
+
+            <!-- Rate Limit Status -->
+            <x-card>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <flux:subheading>{{ __('Requests Remaining') }}</flux:subheading>
+                        <flux:heading size="xl" class="{{ $isRateLimited ? 'text-red-600 dark:text-red-400' : '' }}">{{ $remaining }}</flux:heading>
+                    </div>
+                    <svg class="size-12 {{ $isRateLimited ? 'text-red-500' : ($percentageUsed > 80 ? 'text-orange-500' : 'text-blue-500') }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="mt-2">
+                    <div class="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                        <span>{{ $used }}/{{ $maxAttempts }} used</span>
+                        <span class="font-medium">{{ ucfirst($tier) }}</span>
+                    </div>
+                    <div class="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
+                        <div class="h-2 rounded-full transition-all {{ $isRateLimited ? 'bg-red-500' : ($percentageUsed > 80 ? 'bg-orange-500' : 'bg-blue-500') }}"
+                             style="width: {{ min($percentageUsed, 100) }}%"></div>
+                    </div>
+                </div>
+                @if($isRateLimited)
+                    <div class="mt-2 text-xs text-red-600 dark:text-red-400 font-medium">
+                        ⏱️ Resets in {{ floor($retryAfter / 60) }}m
+                    </div>
+                @elseif($percentageUsed > 80)
+                    <div class="mt-2 text-xs text-orange-600 dark:text-orange-400">
+                        ⚠️ {{ $remaining }} requests left
                     </div>
                 @endif
             </x-card>

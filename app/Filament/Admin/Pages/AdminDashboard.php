@@ -6,6 +6,7 @@ namespace App\Filament\Admin\Pages;
 
 use App\Filament\Admin\Widgets\ApiUsageTracker;
 use App\Filament\Admin\Widgets\QualityAssuranceStatsWidget;
+use App\Filament\Admin\Widgets\RateLimitStatusWidget;
 use App\Filament\Admin\Widgets\UsageStatsWidget;
 use App\Filament\Admin\Widgets\UserContributionLeaderboard;
 use Filament\Pages\Dashboard;
@@ -33,6 +34,7 @@ class AdminDashboard extends Dashboard
     public function getWidgets(): array
     {
         return [
+            RateLimitStatusWidget::class,
             UsageStatsWidget::class,
             QualityAssuranceStatsWidget::class,
             ApiUsageTracker::class,

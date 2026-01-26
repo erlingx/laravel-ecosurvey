@@ -97,11 +97,44 @@ $boundingBox = computed(function () {
     return $service->getBoundingBox($campaignId);
 });
 
+// Check if rate limited
+$isRateLimited = computed(function () {
+    return session('rate_limited', false);
+});
+
+$rateLimitRetryAfter = computed(function () {
+    return session('rate_limit_retry_after', 0);
+});
+
 ?>
 
 <div class="min-h-screen">
-    <div class="h-[calc(100vh-8rem)]">
+    <div class="h-[calc(100vh-8rem)]" x-data="{ isRateLimited: {{ $this->isRateLimited ? 'true' : 'false' }} }">
         <x-card class="h-full flex flex-col">
+
+            {{-- Rate Limit Warning --}}
+            @if($this->isRateLimited)
+                <div class="mb-4 rounded-lg border-2 border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="text-2xl">⏱️</div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                                Rate Limit Exceeded
+                            </div>
+                            <div class="text-sm text-orange-800 dark:text-orange-200 mb-2">
+                                You've made too many requests. Please wait
+                                <strong>{{ floor($this->rateLimitRetryAfter / 60) }} minutes</strong>
+                                before interacting with the map again.
+                            </div>
+                            <div class="text-xs text-orange-700 dark:text-orange-300">
+                                📊 Free: 60/hour | 📈 Pro: 300/hour | 🚀 Enterprise: 1000/hour
+                                <a href="{{ route('billing.plans') }}" wire:navigate class="ml-2 underline hover:no-underline">Upgrade for higher limits</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <div class="flex items-center justify-between mb-4">
                 <div>
                     <flux:heading size="lg">Survey Map</flux:heading>
@@ -121,6 +154,7 @@ $boundingBox = computed(function () {
                     label="Select a campaign to filter data points"
                     wire:model.live="campaignId"
                     wire:change="filterChanged"
+                    x-bind:disabled="isRateLimited"
                 >
                     <option value="">All Campaigns</option>
                     @foreach($this->campaigns as $campaign)
@@ -132,6 +166,7 @@ $boundingBox = computed(function () {
                     label="Select an environmental metric"
                     wire:model.live="metricId"
                     wire:change="filterChanged"
+                    x-bind:disabled="isRateLimited"
                 >
                     <option value="">All Metrics</option>
                     @foreach($this->metrics as $metric)
@@ -151,7 +186,12 @@ $boundingBox = computed(function () {
             {{-- Map Controls --}}
             <div class="mt-4 flex gap-2 justify-between items-start">
                 <div class="flex gap-2">
-                    <flux:button variant="outline" size="sm" onclick="resetMapView()">
+                    <flux:button
+                        variant="outline"
+                        size="sm"
+                        onclick="resetMapView()"
+                        x-bind:disabled="isRateLimited"
+                    >
                         🔄 Reset View
                     </flux:button>
                 </div>
@@ -259,7 +299,33 @@ $boundingBox = computed(function () {
 <div id="map-data-container" style="display: none;"
      data-points="{{ json_encode($this->dataPoints) }}"
      data-bounds="{{ json_encode($this->boundingBox) }}"
+     data-rate-limited="{{ $this->isRateLimited ? 'true' : 'false' }}"
      wire:key="map-update-{{ $campaignId }}-{{ $metricId }}">
 </div>
+
+@if($this->isRateLimited)
+<script>
+    // Disable map interactions when rate limited
+    document.addEventListener('DOMContentLoaded', function() {
+        const mapContainer = document.getElementById('survey-map');
+        if (mapContainer) {
+            // Add overlay to prevent clicks
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1000;
+                cursor: not-allowed;
+                background: rgba(0, 0, 0, 0.05);
+            `;
+            overlay.title = 'Map interactions disabled due to rate limiting';
+            mapContainer.parentElement.appendChild(overlay);
+        }
+    });
+</script>
+@endif
 </div>
 

@@ -47,22 +47,45 @@ class SubscriptionRateLimiter
      */
     protected function handleRateLimit(Request $request, Closure $next, string $key, int $maxAttempts): Response
     {
-        $executed = RateLimiter::attempt(
-            $key,
-            $maxAttempts,
-            function () use ($next, $request) {
-                return $next($request);
-            },
-            60 // Decay rate in seconds (1 hour)
-        );
+        // Check if we're at the rate limit BEFORE attempting
+        $remaining = RateLimiter::remaining($key, $maxAttempts);
 
-        if (! $executed) {
+        // If we still have requests remaining, increment and continue
+        if ($remaining > 0) {
+            $executed = RateLimiter::attempt(
+                $key,
+                $maxAttempts,
+                function () use ($next, $request) {
+                    return $next($request);
+                },
+                3600 // Decay rate in seconds (1 hour)
+            );
+
+            return $executed;
+        }
+
+        // We're at the limit - handle the rate limited response
+        $retryAfter = RateLimiter::availableIn($key);
+
+        // Return JSON for AJAX/API requests
+        if ($request->expectsJson()) {
             return response()->json([
                 'message' => 'Too many requests. Please slow down.',
-                'retry_after' => RateLimiter::availableIn($key),
+                'retry_after' => $retryAfter,
             ], 429);
         }
 
-        return $executed;
+        // For page views, put session data for THIS request only
+        session()->put('rate_limited', true);
+        session()->put('rate_limit_retry_after', $retryAfter);
+        session()->put('rate_limit_message', 'Too many requests. Please slow down.');
+
+        // Get the response
+        $response = $next($request);
+
+        // Immediately remove the session data so it doesn't persist to next request
+        session()->forget(['rate_limited', 'rate_limit_retry_after', 'rate_limit_message']);
+
+        return $response;
     }
 }

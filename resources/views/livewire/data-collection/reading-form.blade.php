@@ -127,6 +127,15 @@ $usageInfo = computed(function () {
     ];
 });
 
+// Check if rate limited
+$isRateLimited = computed(function () {
+    return session('rate_limited', false);
+});
+
+$rateLimitRetryAfter = computed(function () {
+    return session('rate_limit_retry_after', 0);
+});
+
 // Clear validation errors when fields are updated
 updated([
     'campaignId' => fn () => $this->resetErrorBag('campaignId'),
@@ -542,6 +551,8 @@ $formatQaFlag = function (string|array $flag): array {
      x-data="{
     isSaving: false,
     isAtLimit: {{ ($this->isAtLimit && !$dataPointId) ? 'true' : 'false' }},
+    isRateLimited: {{ $this->isRateLimited ? 'true' : 'false' }},
+    rateLimitRetryAfter: {{ $this->rateLimitRetryAfter ?? 0 }},
     captureLocation() {
         if (!navigator.geolocation) {
             this.$wire.set('gpsError', 'Geolocation is not supported by your browser');
@@ -704,6 +715,29 @@ $formatQaFlag = function (string|array $flag): array {
         @endif
 
         <form x-on:submit.prevent="submitForm" class="mt-6 space-y-6">
+
+            {{-- Rate Limit Warning (only shown when rate limited) --}}
+            @if($this->isRateLimited)
+                <div class="rounded-lg border-2 border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="text-2xl">⏱️</div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                                Rate Limit Exceeded
+                            </div>
+                            <div class="text-sm text-orange-800 dark:text-orange-200 mb-3">
+                                You've made too many requests. Please wait
+                                <strong x-text="Math.floor(rateLimitRetryAfter / 60) + ' minutes'"></strong>
+                                before submitting again.
+                            </div>
+                            <div class="text-xs text-orange-700 dark:text-orange-300">
+                                📊 Free: 60/hour | 📈 Pro: 300/hour | 🚀 Enterprise: 1000/hour
+                                <a href="{{ route('billing.plans') }}" wire:navigate class="ml-2 underline hover:no-underline">Upgrade for higher limits</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
 
             {{-- Usage Limit Warning (only shown when creating new data points and at limit) --}}
             @if($this->isAtLimit && !$dataPointId)
@@ -1156,7 +1190,16 @@ $formatQaFlag = function (string|array $flag): array {
 
     {{-- Submit Button --}}
     <div class="flex gap-2">
-        @if($this->isAtLimit && !$dataPointId)
+        @if($this->isRateLimited)
+            {{-- Rate limited - show disabled button --}}
+            <button
+                type="button"
+                disabled
+                class="relative items-center font-medium justify-center gap-2 whitespace-nowrap disabled:opacity-75 disabled:cursor-default disabled:pointer-events-none h-10 text-sm rounded-lg px-4 inline-flex bg-orange-400 text-white border border-orange-500"
+            >
+                ⏱️ Rate Limited - Please Wait
+            </button>
+        @elseif($this->isAtLimit && !$dataPointId)
             {{-- Use plain button when at limit to avoid Flux's loading indicator --}}
             <button
                 type="button"

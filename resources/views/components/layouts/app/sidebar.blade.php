@@ -211,6 +211,11 @@
                     icon="cog"
                     wire:navigate
                 >{{ __('Settings') }}</flux:menu.item>
+                <flux:menu.item
+                    :href="route('billing.manage')"
+                    icon="credit-card"
+                    wire:navigate
+                >{{ __('Billing') }}</flux:menu.item>
             </flux:menu.radio.group>
 
             <flux:menu.separator/>
@@ -282,6 +287,11 @@
                     icon="cog"
                     wire:navigate
                 >{{ __('Settings') }}</flux:menu.item>
+                <flux:menu.item
+                    :href="route('billing.manage')"
+                    icon="credit-card"
+                    wire:navigate
+                >{{ __('Billing') }}</flux:menu.item>
             </flux:menu.radio.group>
 
             <flux:menu.separator/>

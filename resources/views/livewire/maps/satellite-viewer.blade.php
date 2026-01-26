@@ -318,6 +318,15 @@ $surveyZonesGeoJSON = computed(function () {
     ];
 });
 
+// Check if rate limited
+$isRateLimited = computed(function () {
+    return session('rate_limited', false);
+});
+
+$rateLimitRetryAfter = computed(function () {
+    return session('rate_limit_retry_after', 0);
+});
+
 // Save satellite analysis to database
 $saveSatelliteAnalysis = function (): void {
     $satelliteData = $this->satelliteData;
@@ -361,10 +370,34 @@ $saveSatelliteAnalysis = function (): void {
 ?>
 
 <div class="min-h-screen"
-     x-data
+     x-data="{ isRateLimited: {{ $this->isRateLimited ? 'true' : 'false' }} }"
      @jump-to-datapoint.window="$wire.jumpToDataPoint($event.detail.latitude, $event.detail.longitude, $event.detail.date)">
     <div class="h-[calc(100vh-8rem)]">
         <x-card class="h-full flex flex-col">
+
+            {{-- Rate Limit Warning --}}
+            @if($this->isRateLimited)
+                <div class="mb-4 rounded-lg border-2 border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="text-2xl">⏱️</div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                                Rate Limit Exceeded
+                            </div>
+                            <div class="text-sm text-orange-800 dark:text-orange-200 mb-2">
+                                You've made too many requests. Please wait
+                                <strong>{{ floor($this->rateLimitRetryAfter / 60) }} minutes</strong>
+                                before changing filters or loading satellite data.
+                            </div>
+                            <div class="text-xs text-orange-700 dark:text-orange-300">
+                                📊 Free: 60/hour | 📈 Pro: 300/hour | 🚀 Enterprise: 1000/hour
+                                <a href="{{ route('billing.plans') }}" wire:navigate class="ml-2 underline hover:no-underline">Upgrade for higher limits</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <div class="flex items-center justify-between mb-4">
                 <div>
                     <flux:heading size="lg">Satellite Data Viewer</flux:heading>
@@ -400,6 +433,7 @@ $saveSatelliteAnalysis = function (): void {
                     <x-select
                         id="campaign-select"
                         wire:model.live="campaignId"
+                        x-bind:disabled="isRateLimited"
                     >
                         <option value="">Select a campaign...</option>
                         @foreach($this->campaigns as $campaign)
@@ -420,6 +454,7 @@ $saveSatelliteAnalysis = function (): void {
                     <x-select
                         id="overlay-select"
                         wire:model.live="overlayType"
+                        x-bind:disabled="isRateLimited"
                     >
                         <option value="">Select overlay type...</option>
                         <option value="ndvi">🌿 NDVI - Vegetation Index</option>
@@ -445,6 +480,7 @@ $saveSatelliteAnalysis = function (): void {
                         id="satellite-date"
                         wire:model.live="selectedDate"
                         max="{{ now()->format('Y-m-d') }}"
+                        x-bind:disabled="isRateLimited"
                     />
                 </div>
 
@@ -453,11 +489,13 @@ $saveSatelliteAnalysis = function (): void {
                         Display Options
                     </label>
                     <div class="space-y-2">
-                        <label class="flex items-center gap-2 p-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                        <label class="flex items-center gap-2 p-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                               x-bind:class="{ 'opacity-50 cursor-not-allowed': isRateLimited }">
                             <input
                                 type="checkbox"
                                 wire:model.live="showDataPoints"
                                 class="rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500"
+                                x-bind:disabled="isRateLimited"
                             />
                             <span class="text-sm text-zinc-700 dark:text-zinc-300">Show Field Data</span>
                             <flux:tooltip content="Overlay manual measurements on satellite imagery. Click 'View satellite on [DATE]' in marker popup to compare field data with satellite from that day.">

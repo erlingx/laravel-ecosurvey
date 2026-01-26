@@ -61,9 +61,18 @@ $statistics = computed(function () {
     return $service->calculateStatistics($campaignId, $metricId);
 });
 
+// Check if rate limited
+$isRateLimited = computed(function () {
+    return session('rate_limited', false);
+});
+
+$rateLimitRetryAfter = computed(function () {
+    return session('rate_limit_retry_after', 0);
+});
+
 ?>
 
-<div>
+<div x-data="{ isRateLimited: {{ $this->isRateLimited ? 'true' : 'false' }} }">
     <x-slot name="header">
         <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
             Heatmap Analytics
@@ -72,6 +81,30 @@ $statistics = computed(function () {
 
     <div class="py-12">
         <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
+
+            {{-- Rate Limit Warning --}}
+            @if($this->isRateLimited)
+                <div class="rounded-lg border-2 border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="text-2xl">⏱️</div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                                Rate Limit Exceeded
+                            </div>
+                            <div class="text-sm text-orange-800 dark:text-orange-200 mb-2">
+                                You've made too many requests. Please wait
+                                <strong>{{ floor($this->rateLimitRetryAfter / 60) }} minutes</strong>
+                                before changing filters or generating heatmaps.
+                            </div>
+                            <div class="text-xs text-orange-700 dark:text-orange-300">
+                                📊 Free: 60/hour | 📈 Pro: 300/hour | 🚀 Enterprise: 1000/hour
+                                <a href="{{ route('billing.plans') }}" wire:navigate class="ml-2 underline hover:no-underline">Upgrade for higher limits</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             {{-- Filters --}}
             <div class="overflow-hidden bg-white shadow-sm dark:bg-gray-800 sm:rounded-lg">
                 <div class="p-6">
@@ -85,6 +118,7 @@ $statistics = computed(function () {
                                 wire:model.live="campaignId"
                                 id="campaign"
                                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                x-bind:disabled="isRateLimited"
                             >
                                 <option value="">All Campaigns</option>
                                 @foreach($this->campaigns as $campaign)
@@ -103,6 +137,7 @@ $statistics = computed(function () {
                                 id="metric"
                                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                                 required
+                                x-bind:disabled="isRateLimited"
                             >
                                 <option value="">Select a metric...</option>
                                 @foreach($this->metrics as $metric)
@@ -120,6 +155,7 @@ $statistics = computed(function () {
                                 wire:model.live="mapType"
                                 id="mapType"
                                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                x-bind:disabled="isRateLimited"
                             >
                                 <option value="street">Street View</option>
                                 <option value="satellite">Satellite View</option>

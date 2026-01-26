@@ -12,6 +12,10 @@ import {BarWithErrorBarsController, PointWithErrorBar} from 'chartjs-chart-error
 import annotationPlugin from 'chartjs-plugin-annotation';
 import zoomPlugin from 'chartjs-plugin-zoom';
 
+// Import rate limit handler for modal display
+import './rate-limit-handler.js';
+
+
 // Register Chart.js plugins
 Chart.register(BarWithErrorBarsController, PointWithErrorBar);
 Chart.register(annotationPlugin);

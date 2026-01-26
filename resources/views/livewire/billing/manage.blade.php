@@ -14,20 +14,6 @@ new class extends Component
         $this->currentTier = auth()->user()->subscriptionTier();
     }
 
-    public function updatePaymentMethod(): void
-    {
-        $user = auth()->user();
-
-        if (! $user->subscribed('default')) {
-            session()->flash('error', 'No active subscription found.');
-
-            return;
-        }
-
-        // Redirect to Stripe Billing Portal
-        $this->redirect($user->redirectToBillingPortal(route('billing.manage')));
-    }
-
     public function openCancelModal(): void
     {
         $this->showCancelModal = true;
@@ -179,7 +165,7 @@ new class extends Component
                                 Manage your payment methods and billing information
                             </p>
                         </div>
-                        <flux:button variant="outline" wire:click="updatePaymentMethod">
+                        <flux:button variant="outline" :href="route('billing.portal')">
                             Update
                         </flux:button>
                     </div>
@@ -214,13 +200,13 @@ new class extends Component
                         <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                             <div>
                                 <p class="font-semibold text-gray-900 dark:text-white">
-                                    ${{ $invoice->total() }} - {{ $invoice->date()->format('F j, Y') }}
+                                    {{ $invoice->total() }} - {{ $invoice->date()->format('F j, Y') }}
                                 </p>
                                 <p class="text-sm text-gray-600 dark:text-gray-400">
                                     {{ ucfirst($currentTier) }} Plan
                                 </p>
                             </div>
-                            <a href="{{ $invoice->downloadUrl() }}" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">
+                            <a href="{{ route('billing.invoice.download', $invoice->id) }}" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">
                                 Download PDF
                             </a>
                         </div>

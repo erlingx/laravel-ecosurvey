@@ -57,6 +57,21 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('billing/cancel', 'billing.cancel')->name('billing.cancel');
     Volt::route('billing/manage', 'billing.manage')->name('billing.manage');
     Volt::route('billing/usage', 'billing.usage-dashboard')->name('billing.usage');
+    Route::get('billing/invoices/{invoiceId}', function (string $invoiceId) {
+        return auth()->user()->downloadInvoice($invoiceId, [
+            'vendor' => config('app.name'),
+            'product' => 'Subscription',
+        ]);
+    })->name('billing.invoice.download');
+    Route::get('billing/portal', function () {
+        $user = auth()->user();
+
+        if (!$user->subscribed('default')) {
+            return redirect()->route('billing.manage')->with('error', 'No active subscription found.');
+        }
+
+        return $user->redirectToBillingPortal(route('billing.manage'));
+    })->name('billing.portal');
 
     // Settings
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit');

@@ -14,9 +14,33 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\RateLimiter;
 
 class CampaignsTable
 {
+    /**
+     * Check if current user is rate limited
+     */
+    protected static function isRateLimited(): bool
+    {
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+
+        $tier = $user->subscriptionTier();
+        $maxAttempts = match ($tier) {
+            'free' => 60,
+            'pro' => 300,
+            'enterprise' => 1000,
+            default => 60,
+        };
+
+        $key = "user:{$user->id}";
+
+        return RateLimiter::remaining($key, $maxAttempts) === 0;
+    }
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -107,23 +131,29 @@ class CampaignsTable
                         ->icon(Heroicon::OutlinedDocumentText)
                         ->url(fn (Campaign $record): string => route('campaigns.export.pdf', $record))
                         ->openUrlInNewTab()
-                        ->color('success'),
+                        ->color('success')
+                        ->disabled(fn (): bool => static::isRateLimited())
+                        ->tooltip(fn (): ?string => static::isRateLimited() ? 'Rate limit exceeded. Please wait before exporting.' : null),
                     Action::make('export_json')
                         ->label('Export as JSON')
                         ->icon(Heroicon::OutlinedCodeBracket)
                         ->url(fn (Campaign $record): string => route('campaigns.export.json', $record))
                         ->openUrlInNewTab()
-                        ->color('info'),
+                        ->color('info')
+                        ->disabled(fn (): bool => static::isRateLimited())
+                        ->tooltip(fn (): ?string => static::isRateLimited() ? 'Rate limit exceeded. Please wait before exporting.' : null),
                     Action::make('export_csv')
                         ->label('Export as CSV')
                         ->icon(Heroicon::OutlinedTableCells)
                         ->url(fn (Campaign $record): string => route('campaigns.export.csv', $record))
                         ->openUrlInNewTab()
-                        ->color('warning'),
+                        ->color('warning')
+                        ->disabled(fn (): bool => static::isRateLimited())
+                        ->tooltip(fn (): ?string => static::isRateLimited() ? 'Rate limit exceeded. Please wait before exporting.' : null),
                 ])
                     ->label('Export')
                     ->icon(Heroicon::OutlinedArrowDownTray)
-                    ->color('primary')
+                    ->color(fn (): string => static::isRateLimited() ? 'gray' : 'primary')
                     ->button(),
             ])
             ->toolbarActions([

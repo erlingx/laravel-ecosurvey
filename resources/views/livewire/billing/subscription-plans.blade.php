@@ -78,8 +78,8 @@ new class extends Component
                             Current Plan
                         </flux:button>
                     @else
-                        <flux:button 
-                            variant="{{ $key === 'pro' ? 'primary' : 'outline' }}" 
+                        <flux:button
+                            variant="{{ $key === 'pro' ? 'primary' : 'outline' }}"
                             class="w-full"
                             wire:click="selectPlan('{{ $key }}')"
                             wire:loading.attr="disabled"
@@ -107,5 +107,12 @@ new class extends Component
         <p class="text-gray-600 dark:text-gray-400 mt-2">
             Need a custom plan? <a href="mailto:support@ecosurvey.com" class="text-blue-500 hover:underline">Contact us</a>
         </p>
+        @if($currentTier !== 'free')
+            <p class="text-gray-600 dark:text-gray-400 mt-4">
+                <a href="{{ route('billing.manage') }}" class="text-blue-500 hover:underline font-medium" wire:navigate>
+                    Manage your subscription →
+                </a>
+            </p>
+        @endif
     </div>
 </div>
