@@ -10,7 +10,7 @@ echo "Checking Noise Pollution Campaign Data...\n\n";
 
 $campaign = App\Models\Campaign::where('name', 'Noise Pollution Study')->first();
 
-if (!$campaign) {
+if (! $campaign) {
     echo "❌ Campaign 'Noise Pollution Study' not found!\n";
     exit(1);
 }
@@ -58,4 +58,3 @@ $samples = $campaign->dataPoints()
 foreach ($samples as $sample) {
     echo "  #{$sample->id}: {$sample->status} | {$sample->value} dB | {$sample->collected_at} | ({$sample->latitude}, {$sample->longitude})\n";
 }
-
