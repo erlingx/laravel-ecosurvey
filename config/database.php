@@ -96,10 +96,6 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
-            // Neon SNI support: Pass endpoint as PDO DSN option
-            'options' => extension_loaded('pdo_pgsql') && env('DB_OPTIONS') ? [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            ] : [],
         ],
 
         'pgsql_testing' => [
