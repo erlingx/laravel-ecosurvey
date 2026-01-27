@@ -85,7 +85,18 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            'url' => env('DB_URL'),
+            // Build connection string with options parameter for Neon SNI support
+            'url' => env('DB_URL') ?: (env('DB_OPTIONS')
+                ? sprintf(
+                    'pgsql:host=%s;port=%s;dbname=%s;sslmode=%s;options=%s',
+                    env('DB_HOST', '127.0.0.1'),
+                    env('DB_PORT', '5432'),
+                    env('DB_DATABASE', 'laravel'),
+                    env('DB_SSLMODE', 'prefer'),
+                    env('DB_OPTIONS')
+                )
+                : null
+            ),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
             'database' => env('DB_DATABASE', 'laravel'),
@@ -96,8 +107,6 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
-            // Neon SNI support: pass endpoint as connection option
-            'options' => env('DB_OPTIONS') ? [\PDO::PGSQL_ATTR_OPTIONS => env('DB_OPTIONS')] : [],
         ],
 
         'pgsql_testing' => [
