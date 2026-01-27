@@ -118,6 +118,7 @@ EcoSurvey is a production-ready SaaS application designed for environmental scie
 |-------|-----------|---------|
 | **Backend** | Laravel 12, PHP 8.3 | Web framework with modern features |
 | **Database** | PostgreSQL 16 + PostGIS | Relational data + spatial queries |
+| **Database (Production)** | Neon PostgreSQL (EU Frankfurt) | Serverless PostgreSQL with PostGIS on Azure |
 | **Frontend** | Livewire 3 + Volt | Real-time reactive components |
 | **Styling** | Tailwind CSS v4 | Utility-first CSS framework |
 | **Maps** | Leaflet.js | Interactive geospatial visualization |
@@ -237,10 +238,32 @@ Enterprise         Unlimited            Unlimited             Unlimited
    cp .env.example .env
    ddev artisan key:generate
    ```
+   
+   **For Production (Neon PostgreSQL):**
+   - Update `.env` with your Neon credentials:
+   ```env
+   DB_CONNECTION=pgsql
+   DB_HOST=your-endpoint.region.aws.neon.tech  # Direct connection (not pooler)
+   DB_PORT=5432
+   DB_DATABASE=neondb
+   DB_USERNAME=neondb_owner
+   DB_PASSWORD=your-password
+   DB_SSLMODE=require
+   ```
+   - **Important**: Use the **direct connection** endpoint (without `-pooler`) for migrations
+   - The pooler endpoint can be used for application queries in production
+   - Neon provides serverless PostgreSQL with automatic scaling and PostGIS support
 
 5. **Set up database**
    ```bash
+   # For DDEV (local development)
    ddev artisan migrate:fresh --seed
+   
+   # For Production (Neon)
+   # First enable PostGIS extension:
+   psql 'your-neon-connection-string' -c 'CREATE EXTENSION IF NOT EXISTS postgis;'
+   # Then run migrations:
+   php artisan migrate:fresh --seed --force
    ```
 
 6. **Configure Stripe** (Optional for testing)
@@ -309,9 +332,96 @@ ddev artisan test --coverage
 
 ---
 
-## 📁 Project Structure
+## 🚀 Deployment
 
+### Production Database: Neon PostgreSQL
+
+EcoSurvey uses **[Neon](https://neon.tech)** as the production database - a serverless PostgreSQL platform with:
+
+- **Location**: EU Frankfurt region (Germany West Central - Azure)
+- **Version**: PostgreSQL 17.7 with PostGIS 3.5
+- **Features**:
+  - ✅ Serverless with automatic scaling
+  - ✅ Built-in connection pooling
+  - ✅ Point-in-time recovery
+  - ✅ Zero-downtime schema changes
+  - ✅ SSL/TLS required connections
+  - ✅ Free tier available (3 GiB storage)
+
+### Database Configuration
+
+**Important**: Neon provides two connection endpoints:
+
+1. **Direct Connection** (for migrations/schema changes):
+   ```
+   ep-your-endpoint.region.azure.neon.tech
+   ```
+
+2. **Pooled Connection** (for application queries):
+   ```
+   ep-your-endpoint-pooler.region.azure.neon.tech
+   ```
+
+**Environment Setup**:
+```env
+# Use direct connection for migrations
+DB_CONNECTION=pgsql
+DB_HOST=ep-orange-breeze-a9xvfbuw.gwc.azure.neon.tech
+DB_PORT=5432
+DB_DATABASE=neondb
+DB_USERNAME=neondb_owner
+DB_PASSWORD=your-secure-password
+DB_SSLMODE=require
 ```
+
+### PostGIS Setup
+
+PostGIS must be enabled before running migrations:
+
+```bash
+# Connect to Neon database
+psql 'postgresql://user:pass@host.neon.tech/neondb?sslmode=require'
+
+# Enable PostGIS extension
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+# Verify installation
+SELECT PostGIS_version();
+```
+
+### Initial Deployment
+
+```bash
+# 1. Clear config cache
+php artisan config:clear
+
+# 2. Run migrations (production)
+php artisan migrate:fresh --force
+
+# 3. Seed initial data (optional)
+php artisan db:seed --force
+
+# 4. Optimize application
+php artisan optimize
+```
+
+### Why Neon?
+
+- **Cost-effective**: Free tier for development, pay-per-use scaling
+- **Developer-friendly**: Branch databases for testing, instant replication
+- **EU compliance**: Data sovereignty with Frankfurt region
+- **PostGIS ready**: Full spatial database support out-of-the-box
+- **Zero maintenance**: No server management, automatic backups
+
+### Alternative: Local PostgreSQL
+
+For local development, DDEV provides PostgreSQL 16 with PostGIS automatically.
+
+---
+
+## 🤝 Contributing
+
+````
 laravel-ecosurvey/
 ├── app/
 │   ├── Models/              # Eloquent models

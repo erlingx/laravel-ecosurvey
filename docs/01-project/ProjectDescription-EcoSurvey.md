@@ -420,7 +420,8 @@ This balances scientific rigor (maintains data provenance, enables multi-tempora
 | **Backend** | Laravel 12 | Latest framework, modern features |
 | **Real-time UI** | Livewire 3 + Volt | Impressive interactivity without JS |
 | **Admin Panel** | Filament 4 | Professional dashboard (minimal code) |
-| **Database** | PostgreSQL + PostGIS | Show geospatial expertise |
+| **Database (Local)** | PostgreSQL 16 + PostGIS | Show geospatial expertise |
+| **Database (Production)** | Neon PostgreSQL (EU Frankfurt) | Serverless, zero-maintenance, PostGIS-ready |
 | **Mapping** | Leaflet.js + OpenStreetMap | Open-source, performant |
 | **Charts** | Chart.js v4 + Plugins | Scientific-grade data visualization |
 | **Chart Plugins** | chartjs-plugin-annotation, chartjs-plugin-zoom | Interactive zoom/pan, reference lines |
@@ -429,7 +430,7 @@ This balances scientific rigor (maintains data provenance, enables multi-tempora
 | **PDF Export** | DomPDF | Professional reports |
 | **Payment** | Stripe | Real SaaS model |
 | **Authentication** | Laravel Fortify | Clean, modern auth |
-| **Deployment** | DDEV + Docker | DevOps credentials |
+| **Deployment** | DDEV + Docker (local), Neon (production) | DevOps credentials with cloud database |
 
 ---
 
@@ -774,8 +775,81 @@ eco-survey/
 
 ---
 
+## **Production Deployment: Neon PostgreSQL**
 
-Perfect! Let’s sketch out a **tech stack blueprint** for your eco survey app that combines GIS with other ecological and biodiversity systems. This will give you a clear roadmap of what to learn and how the pieces fit together.
+### **Database Infrastructure**
+
+EcoSurvey uses **[Neon](https://neon.tech)** for production database hosting - a serverless PostgreSQL platform with native PostGIS support:
+
+**Why Neon?**
+- ✅ **100% Serverless** - No server management, automatic scaling
+- ✅ **EU Frankfurt Region** - Data sovereignty and compliance (GDPR-ready)
+- ✅ **PostGIS Ready** - Spatial capabilities built-in, no custom installation
+- ✅ **Cost-Effective** - Free tier for development, pay-per-use for production
+- ✅ **Zero Downtime** - Instant backups, point-in-time recovery
+- ✅ **Connection Pooling** - Built-in optimizations for web apps
+- ✅ **Developer Friendly** - SQL editor, metrics dashboard, instant branching
+
+### **Connection Configuration**
+
+Neon provides two connection endpoints:
+
+1. **Direct Connection** (for schema changes and migrations)
+   ```
+   ep-endpoint.region.aws.neon.tech
+   ```
+
+2. **Pooled Connection** (for application queries)
+   ```
+   ep-endpoint-pooler.region.aws.neon.tech
+   ```
+
+### **Environment Setup**
+```env
+# Production Database - Neon PostgreSQL (EU Frankfurt)
+DB_CONNECTION=pgsql
+DB_HOST=ep-orange-breeze-a9xvfbuw.gwc.azure.neon.tech  # Direct connection
+DB_PORT=5432
+DB_DATABASE=neondb
+DB_USERNAME=neondb_owner
+DB_PASSWORD=secure-password
+DB_SSLMODE=require
+```
+
+### **Initial Deployment Steps**
+
+1. **Create Neon project** at https://console.neon.tech (select EU Frankfurt region)
+2. **Enable PostGIS extension**:
+   ```bash
+   psql 'your-neon-connection-string' -c 'CREATE EXTENSION IF NOT EXISTS postgis;'
+   ```
+3. **Run migrations**:
+   ```bash
+   php artisan migrate:fresh --force
+   ```
+4. **Seed data** (optional):
+   ```bash
+   php artisan db:seed --force
+   ```
+
+### **Portfolio Impact**
+
+- Demonstrates **cloud database experience** (serverless architecture)
+- Shows **DevOps knowledge** (managing infrastructure, connection pooling)
+- Highlights **data sovereignty** (EU region selection for compliance)
+- Proves **production-ready thinking** (proper secret management, connection security)
+
+### **Alternative Database Options**
+
+For different deployment scenarios:
+- **Local Development**: PostgreSQL 16 with PostGIS (via DDEV)
+- **AWS**: RDS PostgreSQL + PostGIS extension
+- **DigitalOcean**: Managed PostgreSQL database
+- **Heroku**: Heroku Postgres (PostGIS addon available)
+
+---
+
+Perfect! Let's sketch out a **tech stack blueprint** for your eco survey app that combines GIS with other ecological and biodiversity systems. This will give you a clear roadmap of what to learn and how the pieces fit together.
 
 ---
 
