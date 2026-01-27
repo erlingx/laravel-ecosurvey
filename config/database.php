@@ -85,17 +85,7 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            // Neon SNI support: Build PostgreSQL URL with options parameter when DB_OPTIONS is set
-            'url' => env('DB_OPTIONS') ? sprintf(
-                'pgsql://%s:%s@%s:%s/%s?sslmode=%s&options=%s',
-                urlencode(env('DB_USERNAME', 'root')),
-                urlencode(env('DB_PASSWORD', '')),
-                env('DB_HOST', '127.0.0.1'),
-                env('DB_PORT', '5432'),
-                env('DB_DATABASE', 'laravel'),
-                env('DB_SSLMODE', 'prefer'),
-                urlencode(env('DB_OPTIONS'))
-            ) : env('DB_URL'),
+            'url' => env('DB_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
             'database' => env('DB_DATABASE', 'laravel'),
@@ -106,6 +96,10 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Neon SNI support: Pass endpoint as PDO DSN option
+            'options' => extension_loaded('pdo_pgsql') && env('DB_OPTIONS') ? [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ] : [],
         ],
 
         'pgsql_testing' => [
