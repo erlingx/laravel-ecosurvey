@@ -14,6 +14,14 @@ Running `ddev artisan boost:update` will update your Laravel Boost AI guidelines
 
 **Load custom instructions from:** `custom-instructions/project-config.md` (references all active modules)
 
+## Project-Specific Rules (ALWAYS Follow)
+
+### Git Operations
+- ❌ **NEVER automatically run git commit or git push**
+- ✅ **ALWAYS tell the user to commit and push** instead
+- ✅ After making file changes, inform user: "Please commit and push these changes with: git add -A && git commit -m 'message' && git push origin master"
+- ⚠️ Exception: Only commit/push if user explicitly requests it in their message
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
