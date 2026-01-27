@@ -15,32 +15,41 @@ class UserSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'admin',
-            'email' => 'admin@admin.com',
-            'password' => Hash::make(config('seeding.passwords.admin')),
-            'email_verified_at' => now(),
-            'two_factor_confirmed_at' => null,
-            'two_factor_secret' => null,
-            'two_factor_recovery_codes' => null,
-        ]);
-        User::factory()->create([
-            'name' => 'dev',
-            'email' => 'dev@dev.com',
-            'password' => Hash::make(config('seeding.passwords.dev')),
-            'email_verified_at' => now(),
-            'two_factor_confirmed_at' => null,
-            'two_factor_secret' => null,
-            'two_factor_recovery_codes' => null,
-        ]);
-        User::factory()->create([
-            'name' => 'user',
-            'email' => 'user@user.com',
-            'password' => Hash::make(config('seeding.passwords.user')),
-            'email_verified_at' => now(),
-            'two_factor_confirmed_at' => null,
-            'two_factor_secret' => null,
-            'two_factor_recovery_codes' => null,
-        ]);
+        // Use updateOrCreate to prevent duplicate key errors
+        User::updateOrCreate(
+            ['email' => 'admin@admin.com'],
+            [
+                'name' => 'admin',
+                'password' => Hash::make(config('seeding.passwords.admin')),
+                'email_verified_at' => now(),
+                'two_factor_confirmed_at' => null,
+                'two_factor_secret' => null,
+                'two_factor_recovery_codes' => null,
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'dev@dev.com'],
+            [
+                'name' => 'dev',
+                'password' => Hash::make(config('seeding.passwords.dev')),
+                'email_verified_at' => now(),
+                'two_factor_confirmed_at' => null,
+                'two_factor_secret' => null,
+                'two_factor_recovery_codes' => null,
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'user@user.com'],
+            [
+                'name' => 'user',
+                'password' => Hash::make(config('seeding.passwords.user')),
+                'email_verified_at' => now(),
+                'two_factor_confirmed_at' => null,
+                'two_factor_secret' => null,
+                'two_factor_recovery_codes' => null,
+            ]
+        );
     }
 }
