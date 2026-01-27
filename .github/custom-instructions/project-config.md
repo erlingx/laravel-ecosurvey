@@ -4,6 +4,13 @@
 **Last updated:** 2025-12-18
 
 ---
+## Project-Specific Rules (ALWAYS Follow)
+
+### Git Operations
+- ❌ **NEVER automatically run git commit or git push**
+- ✅ **ALWAYS tell the user to commit and push** instead
+- ✅ After making file changes, inform user: "Please commit and push these changes with: git add -A && git commit -m 'message' && git push origin master"
+- ⚠️ Exception: Only commit/push if user explicitly requests it in their message
 
 ## Active Instruction Sets
 
