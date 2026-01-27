@@ -20,9 +20,9 @@ class SurveyZoneFactory extends Factory
     {
         return [
             'campaign_id' => Campaign::factory(),
-            'name' => fake()->words(3, true),
-            'description' => fake()->sentence(),
-            'area_km2' => fake()->randomFloat(2, 0.5, 50),
+            'name' => $this->faker->words(3, true),
+            'description' => $this->faker->sentence(),
+            'area_km2' => $this->faker->randomFloat(2, 0.5, 50),
         ];
     }
 
@@ -34,8 +34,8 @@ class SurveyZoneFactory extends Factory
         return $this->afterCreating(function ($surveyZone) {
             // Generate a simple rectangular polygon around Copenhagen area
             // Center: 55.6761, 12.5683
-            $centerLat = 55.6761 + (fake()->randomFloat(4, -0.05, 0.05));
-            $centerLon = 12.5683 + (fake()->randomFloat(4, -0.05, 0.05));
+            $centerLat = 55.6761 + ($this->faker->randomFloat(4, -0.05, 0.05));
+            $centerLon = 12.5683 + ($this->faker->randomFloat(4, -0.05, 0.05));
             $size = 0.01; // ~1km box
 
             $minLat = $centerLat - $size;

@@ -28,12 +28,12 @@ class EnvironmentalMetricFactory extends Factory
             ['name' => 'Ozone', 'unit' => 'ppb'],
         ];
 
-        $metric = fake()->randomElement($metrics);
+        $metric = $this->faker->randomElement($metrics);
 
         return [
             'name' => $metric['name'],
             'unit' => $metric['unit'],
-            'description' => fake()->sentence(),
+            'description' => $this->faker->sentence(),
             'expected_min' => null,
             'expected_max' => null,
             'is_active' => true,

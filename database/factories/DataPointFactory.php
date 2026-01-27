@@ -20,23 +20,23 @@ class DataPointFactory extends Factory
     public function definition(): array
     {
         // Copenhagen coordinates (default area)
-        $latitude = fake()->latitude(55.6, 55.7);
-        $longitude = fake()->longitude(12.5, 12.6);
+        $latitude = $this->faker->latitude(55.6, 55.7);
+        $longitude = $this->faker->longitude(12.5, 12.6);
 
         return [
             'campaign_id' => Campaign::factory(),
             'environmental_metric_id' => EnvironmentalMetric::factory(),
             'user_id' => User::factory(),
-            'value' => fake()->randomFloat(2, 0, 100),
+            'value' => $this->faker->randomFloat(2, 0, 100),
             'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$longitude}, {$latitude}), 4326)"),
-            'accuracy' => fake()->randomFloat(2, 5, 50),
-            'notes' => fake()->optional()->sentence(),
-            'collected_at' => fake()->dateTimeBetween('-1 month', 'now'),
-            'status' => fake()->randomElement(['draft', 'pending', 'approved', 'rejected']),
-            'review_notes' => fake()->optional()->sentence(),
-            'device_model' => fake()->optional()->randomElement(['iPhone 14', 'Samsung Galaxy S23', 'Pixel 7', 'Manual Entry']),
-            'sensor_type' => fake()->optional()->randomElement(['GPS', 'Mobile Device', 'Survey Equipment', 'Manual']),
-            'calibration_at' => fake()->optional()->dateTimeBetween('-3 months', 'now'),
+            'accuracy' => $this->faker->randomFloat(2, 5, 50),
+            'notes' => $this->faker->optional()->sentence(),
+            'collected_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
+            'status' => $this->faker->randomElement(['draft', 'pending', 'approved', 'rejected']),
+            'review_notes' => $this->faker->optional()->sentence(),
+            'device_model' => $this->faker->optional()->randomElement(['iPhone 14', 'Samsung Galaxy S23', 'Pixel 7', 'Manual Entry']),
+            'sensor_type' => $this->faker->optional()->randomElement(['GPS', 'Mobile Device', 'Survey Equipment', 'Manual']),
+            'calibration_at' => $this->faker->optional()->dateTimeBetween('-3 months', 'now'),
             'protocol_version' => '1.0',
         ];
     }
@@ -59,7 +59,7 @@ class DataPointFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'status' => 'approved',
             'reviewed_by' => User::factory(),
-            'reviewed_at' => fake()->dateTimeBetween('-1 week', 'now'),
+            'reviewed_at' => $this->faker->dateTimeBetween('-1 week', 'now'),
             'review_notes' => 'Data quality verified and approved.',
         ]);
     }
@@ -71,9 +71,9 @@ class DataPointFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'approved',
-            'accuracy' => fake()->randomFloat(2, 5, 20),
+            'accuracy' => $this->faker->randomFloat(2, 5, 20),
             'reviewed_by' => User::factory(),
-            'reviewed_at' => fake()->dateTimeBetween('-1 week', 'now'),
+            'reviewed_at' => $this->faker->dateTimeBetween('-1 week', 'now'),
             'review_notes' => 'High quality data - approved.',
         ]);
     }

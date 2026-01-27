@@ -19,24 +19,24 @@ class SatelliteAnalysisFactory extends Factory
     public function definition(): array
     {
         // Copenhagen area coordinates
-        $latitude = fake()->latitude(55.5, 55.8);
-        $longitude = fake()->longitude(12.3, 12.7);
+        $latitude = $this->faker->latitude(55.5, 55.8);
+        $longitude = $this->faker->longitude(12.3, 12.7);
 
-        $ndviValue = fake()->randomFloat(4, -0.2, 0.9);
+        $ndviValue = $this->faker->randomFloat(4, -0.2, 0.9);
 
         return [
             'data_point_id' => null, // Can be linked to a DataPoint or standalone
             'campaign_id' => Campaign::factory(),
             'location' => \DB::raw("ST_SetSRID(ST_MakePoint({$longitude}, {$latitude}), 4326)"),
-            'image_url' => fake()->optional()->url(),
+            'image_url' => $this->faker->optional()->url(),
             'ndvi_value' => $ndviValue,
             'ndvi_interpretation' => $this->interpretNDVI($ndviValue),
-            'moisture_index' => fake()->randomFloat(4, 0, 1),
-            'temperature_kelvin' => fake()->randomFloat(2, 270, 310),
-            'acquisition_date' => fake()->dateTimeBetween('-3 months', 'now'),
-            'satellite_source' => fake()->randomElement(['Copernicus', 'Sentinel-2', 'Landsat-8']),
-            'processing_level' => fake()->randomElement(['L1C', 'L2A']),
-            'cloud_coverage_percent' => fake()->randomFloat(2, 0, 30),
+            'moisture_index' => $this->faker->randomFloat(4, 0, 1),
+            'temperature_kelvin' => $this->faker->randomFloat(2, 270, 310),
+            'acquisition_date' => $this->faker->dateTimeBetween('-3 months', 'now'),
+            'satellite_source' => $this->faker->randomElement(['Copernicus', 'Sentinel-2', 'Landsat-8']),
+            'processing_level' => $this->faker->randomElement(['L1C', 'L2A']),
+            'cloud_coverage_percent' => $this->faker->randomFloat(2, 0, 30),
             'metadata' => [
                 'platform' => 'Sentinel-2A',
                 'instrument' => 'MSI',
