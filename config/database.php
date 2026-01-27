@@ -83,20 +83,27 @@ return [
             ]) : [],
         ],
 
-        'pgsql' => [
+        'pgsql' => env('DB_OPTIONS') ? [
+            // Neon SNI support: Use URL-based connection when DB_OPTIONS is set
             'driver' => 'pgsql',
-            // Build connection string with options parameter for Neon SNI support
-            'url' => env('DB_URL') ?: (env('DB_OPTIONS')
-                ? sprintf(
-                    'pgsql:host=%s;port=%s;dbname=%s;sslmode=%s;options=%s',
-                    env('DB_HOST', '127.0.0.1'),
-                    env('DB_PORT', '5432'),
-                    env('DB_DATABASE', 'laravel'),
-                    env('DB_SSLMODE', 'prefer'),
-                    env('DB_OPTIONS')
-                )
-                : null
+            'url' => sprintf(
+                'pgsql:host=%s;port=%s;dbname=%s;sslmode=%s;options=%s',
+                env('DB_HOST', '127.0.0.1'),
+                env('DB_PORT', '5432'),
+                env('DB_DATABASE', 'laravel'),
+                env('DB_SSLMODE', 'prefer'),
+                env('DB_OPTIONS')
             ),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+        ] : [
+            // Standard PostgreSQL connection without SNI
+            'driver' => 'pgsql',
+            'url' => env('DB_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
             'database' => env('DB_DATABASE', 'laravel'),
