@@ -27,6 +27,12 @@ class EnrichDataPointWithSatelliteData implements ShouldQueue
      */
     public function handle(CopernicusDataSpaceService $copernicusService, UsageTrackingService $usageService): void
     {
+        Log::info('🛰️ Starting satellite enrichment job', [
+            'data_point_id' => $this->dataPoint->id,
+            'latitude' => $this->dataPoint->latitude ?? 'not set',
+            'longitude' => $this->dataPoint->longitude ?? 'not set',
+        ]);
+
         // Check if user can perform satellite analysis
         $user = $this->dataPoint->user;
         if (! $usageService->canPerformAction($user, 'satellite_analyses')) {

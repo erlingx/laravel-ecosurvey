@@ -28,9 +28,11 @@ $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
 // Log cron execution
+$pendingBefore = DB::table('jobs')->count();
+
 \Log::info('Web cron job started', [
     'time' => now()->toDateTimeString(),
-    'pending_jobs' => DB::table('jobs')->count(),
+    'pending_jobs' => $pendingBefore,
     'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
 ]);
 
@@ -43,13 +45,17 @@ $exitCode = $kernel->call('queue:work', [
     '--quiet' => true,
 ]);
 
+$pendingAfter = DB::table('jobs')->count();
+$jobsProcessed = $pendingBefore - $pendingAfter;
+
 // Log completion
 \Log::info('Web cron job completed', [
     'exit_code' => $exitCode,
-    'remaining_jobs' => DB::table('jobs')->count(),
+    'jobs_processed' => $jobsProcessed,
+    'remaining_jobs' => $pendingAfter,
 ]);
 
 // Return success response
 http_response_code(200);
-echo 'OK - Processed at '.now()->toDateTimeString();
+echo 'OK - Processed '.$jobsProcessed.' job(s) at '.now()->toDateTimeString();
 exit($exitCode);

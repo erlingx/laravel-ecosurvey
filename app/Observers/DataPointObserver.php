@@ -13,7 +13,18 @@ class DataPointObserver
      */
     public function created(DataPoint $dataPoint): void
     {
+        \Log::info('📍 DataPoint created, dispatching satellite enrichment job', [
+            'data_point_id' => $dataPoint->id,
+            'campaign_id' => $dataPoint->campaign_id,
+            'queue_connection' => config('queue.default'),
+        ]);
+
         EnrichDataPointWithSatelliteData::dispatch($dataPoint);
+
+        \Log::info('✅ Satellite enrichment job dispatched to queue', [
+            'data_point_id' => $dataPoint->id,
+        ]);
+
         $this->clearMapCache($dataPoint);
     }
 
