@@ -138,8 +138,13 @@ function initializeMaps() {
         // Satellite Map
         const satelliteElement = document.getElementById('satellite-map');
         if (satelliteElement) {
-            console.log('Initializing satellite map...');
-            initSatelliteMap();
+            // Only initialize if not already initialized
+            if (!window.satelliteMap || !window.satelliteMap.getContainer()) {
+                console.log('Initializing satellite map...');
+                initSatelliteMap();
+            } else {
+                console.log('ℹ️ Satellite map already initialized, skipping...');
+            }
         }
     }, 100); // 100ms debounce
 }

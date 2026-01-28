@@ -272,3 +272,22 @@ test('satellite viewer updates when campaign is selected', function () {
     expect($component->get('selectedLat'))->toBeFloat()
         ->and($component->get('selectedLon'))->toBeFloat();
 });
+
+test('satellite viewer jump to data point updates coordinates and date', function () {
+    Http::fake([
+        'api.nasa.gov/*' => Http::response(['url' => 'test.png'], 200),
+    ]);
+
+    $targetLat = 56.1234;
+    $targetLon = 13.5678;
+    $targetDate = '2025-08-20';
+
+    $component = Livewire::actingAs($this->user)
+        ->test('maps.satellite-viewer')
+        ->call('jumpToDataPoint', $targetLat, $targetLon, $targetDate);
+
+    expect($component->get('selectedLat'))->toBe($targetLat)
+        ->and($component->get('selectedLon'))->toBe($targetLon)
+        ->and($component->get('selectedDate'))->toBe($targetDate)
+        ->and($component->get('updateRevision'))->toBeGreaterThan(0);
+});

@@ -105,6 +105,23 @@ export function initSatelliteMap() {
             return;
         }
 
+        // Prevent double initialization if map is already active
+        if (window.satelliteMap && window.satelliteMap.getContainer()) {
+            console.log('ℹ️ Satellite map already initialized, skipping...');
+            return;
+        }
+
+        // Clean up existing map if container is detached
+        if (window.satelliteMap) {
+            try {
+                window.satelliteMap.remove();
+                console.log('♻️ Cleaned up orphaned satellite map instance');
+            } catch (e) {
+                console.log('ℹ️ Previous map instance already cleaned up');
+            }
+            window.satelliteMap = null;
+        }
+
         console.log('Creating satellite map...');
 
         // Initialize map
@@ -357,7 +374,8 @@ export function updateSatelliteImagery() {
                 dataPoints.features.forEach(function(feature) {
                     const props = feature.properties;
                     const latlng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
-                    const collectionDate = props.collected_at.split(' ')[0]; // Extract date part
+                    // Extract date part - handle both "2025-08-21 14:00:00" and "2025-08-21T14:00:00.000000Z" formats
+                    const collectionDate = props.collected_at.split('T')[0].split(' ')[0];
 
                     // Calculate temporal proximity color
                     const proximity = getTemporalProximityColor(collectionDate, satelliteDate);

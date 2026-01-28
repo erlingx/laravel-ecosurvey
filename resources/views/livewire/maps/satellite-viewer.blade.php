@@ -116,6 +116,7 @@ $jumpToDataPoint = function (float $latitude, float $longitude, string $date): v
         'lat' => $latitude,
         'lon' => $longitude,
         'date' => $date,
+        'current_date' => $this->selectedDate,
     ]);
 
     // Update coordinates
@@ -124,7 +125,6 @@ $jumpToDataPoint = function (float $latitude, float $longitude, string $date): v
 
     // Always update date for temporal correlation (scientific best practice)
     $this->selectedDate = $date;
-    Log::info('📅 Date synced to field data collection date for temporal analysis', ['date' => $date]);
 
     // Force revision update to trigger map refresh
     $this->updateRevision = (int) $this->updateRevision + 1;
@@ -370,8 +370,13 @@ $saveSatelliteAnalysis = function (): void {
 ?>
 
 <div class="min-h-screen"
-     x-data="{ isRateLimited: {{ $this->isRateLimited ? 'true' : 'false' }} }"
-     @jump-to-datapoint.window="$wire.jumpToDataPoint($event.detail.latitude, $event.detail.longitude, $event.detail.date)">
+     x-data="{
+         isRateLimited: {{ $this->isRateLimited ? 'true' : 'false' }}
+     }"
+     @jump-to-datapoint.window="
+         console.log('📍 Jump to datapoint event received, date:', $event.detail.date);
+         $wire.jumpToDataPoint($event.detail.latitude, $event.detail.longitude, $event.detail.date);
+     ">
     <div class="h-[calc(100vh-8rem)]">
         <x-card class="h-full flex flex-col">
 
@@ -475,12 +480,14 @@ $saveSatelliteAnalysis = function (): void {
                             <span class="ml-1 text-zinc-400 cursor-help">ⓘ</span>
                         </flux:tooltip>
                     </label>
-                    <flux:input
+                    <input
                         type="date"
                         id="satellite-date"
                         wire:model.live="selectedDate"
+                        wire:key="date-input-{{ $selectedDate }}"
                         max="{{ now()->format('Y-m-d') }}"
                         x-bind:disabled="isRateLimited"
+                        class="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                 </div>
 
