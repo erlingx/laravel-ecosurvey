@@ -74,4 +74,10 @@ if ($failed > 0) {
 
 echo "========================\n";
 echo "To manually process queue: php artisan queue:work database --stop-when-empty\n";
-echo "To retry failed jobs: php artisan queue:retry all\n";
+echo "To retry failed jobs: php artisan queue:retry all\n\n";
+
+// Check recent job processing from logs
+echo "Recent Job Processing (from logs):\n";
+echo "Run: tail -100 storage/logs/laravel.log | grep -E '(satellite enrichment|jobs_processed:[1-9])'\n";
+echo "\nOr check DataPoint for satellite data:\n";
+echo "Run: php artisan tinker --execute=\"echo 'Recent DataPoint satellite data: '; \\\$dp = \\App\\Models\\DataPoint::latest()->first(); echo \\\$dp->id . ' - NDVI: ' . (\\\$dp->ndvi_value ?? 'null') . ', Image: ' . (\\\$dp->satellite_image_url ? 'yes' : 'no') . PHP_EOL;\"\n";
