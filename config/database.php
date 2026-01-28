@@ -95,22 +95,22 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'sslmode' => env('DB_SSLMODE', 'prefer'), // Use .env to control SSL
         ],
 
         'pgsql_testing' => [
             'driver' => 'pgsql',
             'url' => env('DB_TEST_URL'),
-            'host' => env('DB_TEST_HOST', env('DB_HOST', '127.0.0.1')),
-            'port' => env('DB_TEST_PORT', env('DB_PORT', '5432')),
+            'host' => env('DB_TEST_HOST', 'db'), // Use DDEV local database
+            'port' => env('DB_TEST_PORT', '5432'),
             'database' => env('DB_TEST_DATABASE', 'testing'),
-            'username' => env('DB_TEST_USERNAME', env('DB_USERNAME', 'root')),
-            'password' => env('DB_TEST_PASSWORD', env('DB_PASSWORD', '')),
+            'username' => env('DB_TEST_USERNAME', 'db'), // DDEV default user
+            'password' => env('DB_TEST_PASSWORD', 'db'), // DDEV default password
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => 'prefer',
+            'sslmode' => 'disable', // Local DDEV doesn't need SSL
         ],
 
         'sqlsrv' => [

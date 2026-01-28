@@ -27,9 +27,8 @@ web_extra_daemons:
     directory: /var/www/html
 
 hooks:
-  pre-start:
-    - exec-host: "powershell -Command \"if (Test-Path public\\storage) { Remove-Item -Recurse -Force public\\storage }\""
   post-start:
+    - exec: "rm -rf public/storage"
     - exec: "ln -sf ../storage/app/public public/storage"
     - exec: "psql -h db -U db -d postgres -c \"CREATE DATABASE testing\" || true"
     - exec: "php artisan migrate --env=testing --force"

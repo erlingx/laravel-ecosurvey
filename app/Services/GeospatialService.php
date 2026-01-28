@@ -9,23 +9,45 @@ class GeospatialService
 {
     /**
      * Get all data points with their coordinates as GeoJSON
+     *
+     * Optimized for performance on remote databases (Neon):
+     * - Uses select() to fetch only needed columns
+     * - Joins instead of eager loading to reduce queries
+     * - Returns minimal data for map rendering
      */
-    public function getDataPointsAsGeoJSON(?int $campaignId = null, ?int $metricId = null): array
+    public function getDataPointsAsGeoJSON(?int $campaignId = null, ?int $metricId = null, bool $approvedOnly = false): array
     {
         $query = DataPoint::query()
-            ->with(['campaign', 'environmentalMetric', 'user'])
             ->select([
-                'data_points.*',
-                DB::raw('ST_X(location::geometry) as longitude'),
-                DB::raw('ST_Y(location::geometry) as latitude'),
-            ]);
+                'data_points.id',
+                'data_points.value',
+                'data_points.accuracy',
+                'data_points.notes',
+                'data_points.photo_path',
+                'data_points.collected_at',
+                'data_points.qa_flags',
+                'data_points.status',
+                'campaigns.name as campaign_name',
+                'environmental_metrics.name as metric_name',
+                'environmental_metrics.unit as metric_unit',
+                'users.name as user_name',
+                DB::raw('ST_X(data_points.location::geometry) as lon'),
+                DB::raw('ST_Y(data_points.location::geometry) as lat'),
+            ])
+            ->join('campaigns', 'data_points.campaign_id', '=', 'campaigns.id')
+            ->join('environmental_metrics', 'data_points.environmental_metric_id', '=', 'environmental_metrics.id')
+            ->join('users', 'data_points.user_id', '=', 'users.id');
 
         if ($campaignId) {
-            $query->where('campaign_id', $campaignId);
+            $query->where('data_points.campaign_id', $campaignId);
         }
 
         if ($metricId) {
-            $query->where('environmental_metric_id', $metricId);
+            $query->where('data_points.environmental_metric_id', $metricId);
+        }
+
+        if ($approvedOnly) {
+            $query->where('data_points.status', 'approved');
         }
 
         $dataPoints = $query->get();
@@ -37,21 +59,21 @@ class GeospatialService
                     'type' => 'Feature',
                     'geometry' => [
                         'type' => 'Point',
-                        'coordinates' => [(float) $point->longitude, (float) $point->latitude],
+                        'coordinates' => [(float) $point->lon, (float) $point->lat],
                     ],
                     'properties' => [
                         'id' => $point->id,
                         'value' => $point->value,
-                        'metric' => $point->environmentalMetric->name,
-                        'unit' => $point->environmentalMetric->unit,
-                        'campaign' => $point->campaign->name,
-                        'user' => $point->user->name,
+                        'metric' => $point->metric_name,
+                        'unit' => $point->metric_unit,
+                        'campaign' => $point->campaign_name,
+                        'user' => $point->user_name,
                         'accuracy' => $point->accuracy,
                         'notes' => $point->notes,
-                        'latitude' => (float) $point->latitude,
-                        'longitude' => (float) $point->longitude,
-                        'photo_path' => $point->photo_url,
-                        'collected_at' => $point->collected_at->format('Y-m-d H:i'),
+                        'latitude' => (float) $point->lat,
+                        'longitude' => (float) $point->lon,
+                        'photo_path' => $point->photo_path ? asset('storage/'.$point->photo_path) : null,
+                        'collected_at' => $point->collected_at,
                         'qa_flags' => $point->qa_flags,
                         'status' => $point->status,
                     ],

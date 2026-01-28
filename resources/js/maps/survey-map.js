@@ -246,11 +246,13 @@ export function initSurveyMap() {
                     latitude: coords[1]
                 };
 
-                const marker = L.circleMarker([coords[1], coords[0]], getMarkerStyle(props))
+                const marker = L.marker([coords[1], coords[0]], {
+                    icon: createMarkerIcon(props)
+                })
                     .bindTooltip(`ID: #${props.id}`, {
                         permanent: false,
                         direction: 'top',
-                        offset: [0, -8],
+                        offset: [0, -15],
                         className: 'marker-tooltip'
                     })
                     .on('click', () => showCustomPopup(props));
@@ -265,16 +267,26 @@ export function initSurveyMap() {
             map.addLayer(clusterGroup);
 
             console.log('Markers added to map');
+            console.log('🔍 DEBUG: Cluster group layer count:', clusterGroup.getLayers().length);
+            console.log('🔍 DEBUG: Is cluster group on map?', map.hasLayer(clusterGroup));
 
-            // Fit bounds only if we don't have a saved state (first time loading)
-            if (!savedState && window.mapBounds && window.mapBounds.southwest && window.mapBounds.northeast) {
+            // ALWAYS fit bounds to show all markers (ignore saved state for now)
+            // This ensures markers are visible on every page load
+            if (window.mapBounds && window.mapBounds.southwest && window.mapBounds.northeast) {
+                console.log('Fitting bounds to show all markers:', window.mapBounds);
                 map.fitBounds([
                     window.mapBounds.southwest,
                     window.mapBounds.northeast
                 ], { padding: [80, 80] });
-                console.log('Map bounds fitted');
-            } else if (savedState) {
-                console.log('Skipped fitBounds - using saved state instead');
+                console.log('✅ Map bounds fitted - all markers should be visible now');
+            } else {
+                console.warn('⚠️ No bounding box available - using default view');
+                // If no bounds, at least zoom out to see more area
+                if (savedState) {
+                    map.setView([savedState.lat, savedState.lng], Math.max(savedState.zoom, 10));
+                } else {
+                    map.setView([55.6761, 12.5683], 10);
+                }
             }
         } else {
             console.log('No map data or features');
@@ -373,11 +385,7 @@ export function createPopupContent(props) {
 
 /**
  * Get marker style based on data quality indicators
- * - Red outline for points with QA flags (flagged issues)
- * - Yellow dashed outline for accuracy > 50m (low confidence)
- * - Green for approved data
- * - Gray for rejected data (excluded from analysis)
- * - Blue for pending/draft data
+ * Returns a DivIcon instead of CircleMarker options for better visibility
  */
 export function getMarkerStyle(props) {
     const hasQAFlags = props.qa_flags && props.qa_flags.length > 0;
@@ -385,60 +393,64 @@ export function getMarkerStyle(props) {
     const isApproved = props.status === 'approved';
     const isRejected = props.status === 'rejected';
 
+    let backgroundColor, borderColor, pattern;
+
     if (hasQAFlags) {
-        // Red outline for flagged data
-        return {
-            radius: 8,
-            fillColor: '#ef4444',
-            color: '#dc2626',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.6,
-            dashArray: '5, 5'
-        };
+        backgroundColor = '#ef4444';
+        borderColor = '#dc2626';
+        pattern = 'dashed';
     } else if (isRejected) {
-        // Gray with X pattern for rejected data
-        return {
-            radius: 8,
-            fillColor: '#6b7280',
-            color: '#374151',
-            weight: 2,
-            opacity: 0.8,
-            fillOpacity: 0.5,
-            dashArray: '3, 3'
-        };
+        backgroundColor = '#6b7280';
+        borderColor = '#374151';
+        pattern = 'dotted';
     } else if (lowAccuracy) {
-        // Yellow dashed outline for low confidence
-        return {
-            radius: 8,
-            fillColor: '#fbbf24',
-            color: '#f59e0b',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.5,
-            dashArray: '5, 5'
-        };
+        backgroundColor = '#fbbf24';
+        borderColor = '#f59e0b';
+        pattern = 'dashed';
     } else if (isApproved) {
-        // Green for approved high quality data
-        return {
-            radius: 8,
-            fillColor: '#10b981',
-            color: '#059669',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.7
-        };
+        backgroundColor = '#10b981';
+        borderColor = '#059669';
+        pattern = 'solid';
     } else {
-        // Default blue for pending/draft data
-        return {
-            radius: 8,
-            fillColor: '#3b82f6',
-            color: '#1d4ed8',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.6
-        };
+        backgroundColor = '#3b82f6';
+        borderColor = '#1d4ed8';
+        pattern = 'solid';
     }
+
+    return {
+        backgroundColor,
+        borderColor,
+        pattern
+    };
+}
+
+/**
+ * Create a visible DivIcon marker
+ */
+export function createMarkerIcon(props) {
+    const style = getMarkerStyle(props);
+
+    const html = `
+        <div style="
+            width: 24px;
+            height: 24px;
+            background-color: ${style.backgroundColor};
+            border: 3px ${style.pattern} ${style.borderColor};
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+        "></div>
+    `;
+
+    console.log('✅ Creating marker icon for ID:', props.id, 'Style:', style);
+
+    return L.divIcon({
+        html: html,
+        className: 'custom-marker-icon',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+    });
 }
 
 export function resetMapView() {
@@ -501,11 +513,13 @@ export function updateMapMarkers() {
                     latitude: coords[1]
                 };
 
-                const marker = L.circleMarker([coords[1], coords[0]], getMarkerStyle(props))
+                const marker = L.marker([coords[1], coords[0]], {
+                    icon: createMarkerIcon(props)
+                })
                     .bindTooltip(`ID: #${props.id}`, {
                         permanent: false,
                         direction: 'top',
-                        offset: [0, -8],
+                        offset: [0, -15],
                         className: 'marker-tooltip'
                     })
                     .on('click', () => showCustomPopup(props));

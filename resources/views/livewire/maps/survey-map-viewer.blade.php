@@ -48,7 +48,8 @@ $filterChanged = function () {
     $campaignId = $this->campaignId ? (int) $this->campaignId : null;
     $metricId = $this->metricId ? (int) $this->metricId : null;
 
-    $dataPoints = $service->getDataPointsAsGeoJSON($campaignId, $metricId);
+    // Get fresh data (caching temporarily disabled)
+    $dataPoints = $service->getDataPointsAsGeoJSON($campaignId, $metricId, approvedOnly: false);
     $boundingBox = $service->getBoundingBox($campaignId);
 
     // Dispatch as individual parameters
@@ -78,7 +79,8 @@ $dataPoints = computed(function () {
     $campaignId = $this->campaignId ? (int) $this->campaignId : null;
     $metricId = $this->metricId ? (int) $this->metricId : null;
 
-    $geoJSON = $service->getDataPointsAsGeoJSON($campaignId, $metricId);
+    // TEMPORARILY DISABLED CACHING FOR DEBUGGING
+    $geoJSON = $service->getDataPointsAsGeoJSON($campaignId, $metricId, approvedOnly: false);
 
     \Log::info('🗺️ Survey Map: Loaded data points', [
         'campaignId' => $campaignId,
@@ -94,6 +96,7 @@ $boundingBox = computed(function () {
     // Cast to int or null to avoid type errors with empty strings
     $campaignId = $this->campaignId ? (int) $this->campaignId : null;
 
+    // TEMPORARILY DISABLED CACHING FOR DEBUGGING
     return $service->getBoundingBox($campaignId);
 });
 
