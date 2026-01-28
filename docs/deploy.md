@@ -263,22 +263,93 @@ Not recommended for shared hosting - requires persistent SSH connection.
   - paste indholdet fra lokale .env.produktion 
   - set permissions to 600 on .env file
   
-## Cronjob ##
-Sæt cronjob til at at køre queue der bruges af email/slack notifikationer
-GreenGeeks: 
-c-panel > advanced > cron jobs
-- add new cron job
-- common settings: once per one minute 
--  	cd /home/electr37/public_html/laravel-organizer.electrominds.dk && /usr/local/bin/php artisan queue:work database --stop-when-empty --max-time=50 >/dev/null 2>&1
+## Queue Processing on Shared Hosting
 
-If something breaks: Remove '>/dev/null 2>&1' temporarily to see error messages for debugging.
-- save
-- Tjek terminal om køen kører: `ps aux | grep "queue:work"`
-- test ved at sende en notifikation
+**IMPORTANT**: Shared hosting does NOT support persistent `queue:work` processes. They get killed after 60 seconds.
 
+### Solution: Cron Job with Dedicated PHP File
 
+Simply.com and UnoEuro work best with a dedicated PHP file called by cron every minute.
 
-## Admin Access: ##
+**File**: `cron.php` (already created in project root)
+
+**Simply.com / UnoEuro Setup:**
+
+1. **Log in to cPanel** → **Cron Jobs**
+
+2. **Add New Cron Job** with these settings:
+   - **Minute**: `*`
+   - **Hour**: `*`
+   - **Day**: `*`
+   - **Month**: `*`
+   - **Weekday**: `*`
+   - **Command**:
+     ```bash
+     /usr/bin/php /home/overstimulated.dk/public_html/laravel-ecosurvey/cron.php
+     ```
+
+3. **Save** the cron job
+
+**Alternative for other hosts (GreenGeeks, etc.):**
+```bash
+# If the PHP file approach doesn't work, use direct artisan command:
+* * * * * cd /home/electr37/public_html/laravel-ecosurvey && /usr/local/bin/php artisan queue:work database --stop-when-empty --max-time=50 >/dev/null 2>&1
+```
+
+**How it works:**
+- Cron runs `cron.php` every minute
+- Script processes all pending jobs and exits
+- `--stop-when-empty` - Don't wait for new jobs, just exit
+- `--max-time=50` - Safety timeout (before cron kills it)
+- Jobs get processed within 1 minute of being queued
+
+**Verify it's working:**
+```bash
+# SSH into your server
+ssh overstimulated.dk@linux216.unoeuro.com
+cd ~/public_html/laravel-ecosurvey
+
+# Check pending jobs count
+php -r "require 'vendor/autoload.php'; \$app = require 'bootstrap/app.php'; \$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap(); echo 'Pending: ' . DB::table('jobs')->count() . ', Failed: ' . DB::table('failed_jobs')->count() . PHP_EOL;"
+
+# Create a test job
+php artisan tinker --execute="dispatch(function() { \Log::info('✅ Queue test job executed at ' . now()); });"
+
+# Wait 1 minute, then check logs
+tail -30 storage/logs/laravel.log
+# Should see: "Cron job started" and "✅ Queue test job executed"
+```
+
+**Troubleshooting:**
+
+If jobs aren't processing:
+
+1. **Check cron job exists**:
+   ```bash
+   crontab -l  # List all cron jobs
+   ```
+
+2. **Test manually**:
+   ```bash
+   php cron.php
+   # Should process jobs and exit silently
+   ```
+
+3. **Check logs**:
+   ```bash
+   tail -50 storage/logs/laravel.log
+   # Look for "Cron job started/completed" messages
+   ```
+
+4. **Verify file permissions**:
+   ```bash
+   chmod +x cron.php  # Make executable (optional)
+   ls -l cron.php     # Should show -rwxr-xr-x or similar
+   ```
+
+**Note**: You won't see a continuous `queue:work` process with `ps aux | grep queue:work` - this is CORRECT. The process only runs for 1-50 seconds every minute when there are jobs to process.
+
+---## Admin Access: ##
  Use ProductionSeeder to create admin user
 
 
