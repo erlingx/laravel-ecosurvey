@@ -72,7 +72,7 @@ class GeospatialService
                         'notes' => $point->notes,
                         'latitude' => (float) $point->lat,
                         'longitude' => (float) $point->lon,
-                        'photo_path' => $point->photo_path ? asset('storage/'.$point->photo_path) : null,
+                        'photo_path' => $point->photo_path ? $this->getPhotoUrl($point->photo_path) : null,
                         'collected_at' => $point->collected_at,
                         'qa_flags' => $point->qa_flags,
                         'status' => $point->status,
@@ -414,5 +414,46 @@ class GeospatialService
                 'area_hectares' => (float) $result->area_square_meters / 10000,
             ],
         ];
+    }
+
+    /**
+     * Generate correct photo URL based on storage location
+     */
+    private function getPhotoUrl(string $path): string
+    {
+        $path = trim($path);
+
+        // Already a full URL
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        // New uploads in public/files
+        if (str_starts_with($path, '/files/')) {
+            return url($path);
+        }
+
+        if (str_starts_with($path, 'files/')) {
+            return url('/'.$path);
+        }
+
+        // Try uploads disk first for data-points
+        if (str_starts_with($path, 'data-points/')) {
+            if (\Storage::disk('uploads')->exists($path)) {
+                return \Storage::disk('uploads')->url($path);
+            }
+        }
+
+        // Legacy: storage/app/public paths
+        if (str_starts_with($path, '/storage/')) {
+            $path = ltrim(substr($path, strlen('/storage/')), '/');
+        }
+
+        if (str_starts_with($path, 'storage/')) {
+            $path = ltrim(substr($path, strlen('storage/')), '/');
+        }
+
+        // Fallback to public disk
+        return \Storage::disk('public')->url($path);
     }
 }
