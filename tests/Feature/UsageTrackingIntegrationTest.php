@@ -9,7 +9,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
+
 beforeEach(function () {
+    Queue::fake(); // Prevent automatic satellite enrichment which can hang tests
     $this->user = User::factory()->create();
     $this->actingAs($this->user);
     $this->usageService = app(UsageTrackingService::class);

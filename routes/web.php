@@ -34,11 +34,14 @@ Route::middleware(['auth', 'subscription.rate_limit'])->group(function () {
 
     // Exports - rate limited per tier
     Route::get('campaigns/{campaign}/export/json', [App\Http\Controllers\ExportController::class, 'exportJSON'])
-        ->name('campaigns.export.json');
+        ->name('campaigns.export.json')
+        ->where('campaign', '[0-9]+');
     Route::get('campaigns/{campaign}/export/csv', [App\Http\Controllers\ExportController::class, 'exportCSV'])
-        ->name('campaigns.export.csv');
+        ->name('campaigns.export.csv')
+        ->where('campaign', '[0-9]+');
     Route::get('campaigns/{campaign}/export/pdf', [App\Http\Controllers\ExportController::class, 'exportPDF'])
-        ->name('campaigns.export.pdf');
+        ->name('campaigns.export.pdf')
+        ->where('campaign', '[0-9]+');
 });
 
 Route::middleware(['auth'])->group(function () {

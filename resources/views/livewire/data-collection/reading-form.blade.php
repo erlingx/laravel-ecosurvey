@@ -295,13 +295,16 @@ $save = function () {
 
         $message = 'Reading updated successfully!';
     } else {
-        // Create new data point
+        // Create new data point with usage tracking in transaction
         $data['collected_at'] = now();
         $data['status'] = 'pending';
-        $dataPoint = DataPoint::query()->create($data);
 
-        // Record usage for new data point
-        $usageService->recordDataPointCreation(auth()->user());
+        \DB::transaction(function () use ($data, $usageService, &$dataPoint) {
+            $dataPoint = DataPoint::query()->create($data);
+
+            // Record usage for new data point
+            $usageService->recordDataPointCreation(auth()->user());
+        });
 
         $message = 'Reading submitted successfully!';
     }

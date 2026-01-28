@@ -74,37 +74,40 @@ class EnrichDataPointWithSatelliteData implements ShouldQueue
                 return;
             }
 
-            // Create single SatelliteAnalysis record with all indices
-            SatelliteAnalysis::create([
-                'data_point_id' => $this->dataPoint->id,
-                'campaign_id' => $this->dataPoint->campaign_id,
-                'ndvi_value' => $ndvi['value'] ?? null,
-                'moisture_index' => $ndmi['value'] ?? null,
-                'ndre_value' => $ndre['value'] ?? null,
-                'evi_value' => $evi['value'] ?? null,
-                'msi_value' => $msi['value'] ?? null,
-                'savi_value' => $savi['value'] ?? null,
-                'gndvi_value' => $gndvi['value'] ?? null,
-                'acquisition_date' => $ndvi['date'] ?? $ndmi['date'] ?? $date,
-                'satellite_source' => 'Sentinel-2 L2A',
-                'cloud_coverage_percent' => $ndvi['cloud_coverage'] ?? $ndmi['cloud_coverage'] ?? null,
-                'location' => DB::raw("ST_SetSRID(ST_MakePoint({$longitude}, {$latitude}), 4326)"),
-                'metadata' => [
-                    'indices_fetched' => array_keys(array_filter([
-                        'ndvi' => $ndvi,
-                        'ndmi' => $ndmi,
-                        'ndre' => $ndre,
-                        'evi' => $evi,
-                        'msi' => $msi,
-                        'savi' => $savi,
-                        'gndvi' => $gndvi,
-                    ])),
-                    'fetch_date' => now()->toIso8601String(),
-                ],
-            ]);
+            // Use transaction to ensure atomicity of satellite data creation and usage recording
+            DB::transaction(function () use ($ndvi, $ndmi, $ndre, $evi, $msi, $savi, $gndvi, $latitude, $longitude, $date, $usageService, $user) {
+                // Create single SatelliteAnalysis record with all indices
+                SatelliteAnalysis::create([
+                    'data_point_id' => $this->dataPoint->id,
+                    'campaign_id' => $this->dataPoint->campaign_id,
+                    'ndvi_value' => $ndvi['value'] ?? null,
+                    'moisture_index' => $ndmi['value'] ?? null,
+                    'ndre_value' => $ndre['value'] ?? null,
+                    'evi_value' => $evi['value'] ?? null,
+                    'msi_value' => $msi['value'] ?? null,
+                    'savi_value' => $savi['value'] ?? null,
+                    'gndvi_value' => $gndvi['value'] ?? null,
+                    'acquisition_date' => $ndvi['date'] ?? $ndmi['date'] ?? $date,
+                    'satellite_source' => 'Sentinel-2 L2A',
+                    'cloud_coverage_percent' => $ndvi['cloud_coverage'] ?? $ndmi['cloud_coverage'] ?? null,
+                    'location' => DB::raw("ST_SetSRID(ST_MakePoint({$longitude}, {$latitude}), 4326)"),
+                    'metadata' => [
+                        'indices_fetched' => array_keys(array_filter([
+                            'ndvi' => $ndvi,
+                            'ndmi' => $ndmi,
+                            'ndre' => $ndre,
+                            'evi' => $evi,
+                            'msi' => $msi,
+                            'savi' => $savi,
+                            'gndvi' => $gndvi,
+                        ])),
+                        'fetch_date' => now()->toIso8601String(),
+                    ],
+                ]);
 
-            // Record usage for satellite analysis
-            $usageService->recordSatelliteAnalysis($user, 'all_indices');
+                // Record usage for satellite analysis
+                $usageService->recordSatelliteAnalysis($user, 'all_indices');
+            });
 
             // Log which indices were fetched successfully
             $fetched = collect(compact('ndvi', 'ndmi', 'ndre', 'evi', 'msi', 'savi', 'gndvi'))

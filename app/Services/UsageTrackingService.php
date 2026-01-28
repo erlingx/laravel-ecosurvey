@@ -92,30 +92,35 @@ class UsageTrackingService
     {
         $cycleStart = $this->getBillingCycleStart($user);
         $cycleEnd = $this->getBillingCycleEnd($user);
-        $existing = DB::table('usage_meters')
-            ->where('user_id', $user->id)
-            ->where('resource', $resource)
-            ->where('billing_cycle_start', $cycleStart->toDateString())
-            ->first();
-        if ($existing) {
-            DB::table('usage_meters')
-                ->where('id', $existing->id)
-                ->update([
-                    'count' => DB::raw('count + 1'),
+
+        DB::transaction(function () use ($user, $resource, $cycleStart, $cycleEnd) {
+            $existing = DB::table('usage_meters')
+                ->where('user_id', $user->id)
+                ->where('resource', $resource)
+                ->where('billing_cycle_start', $cycleStart->toDateString())
+                ->first();
+
+            if ($existing) {
+                DB::table('usage_meters')
+                    ->where('id', $existing->id)
+                    ->update([
+                        'count' => DB::raw('count + 1'),
+                        'billing_cycle_end' => $cycleEnd->toDateString(),
+                        'updated_at' => now(),
+                    ]);
+            } else {
+                DB::table('usage_meters')->insert([
+                    'user_id' => $user->id,
+                    'resource' => $resource,
+                    'billing_cycle_start' => $cycleStart->toDateString(),
                     'billing_cycle_end' => $cycleEnd->toDateString(),
+                    'count' => 1,
+                    'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-        } else {
-            DB::table('usage_meters')->insert([
-                'user_id' => $user->id,
-                'resource' => $resource,
-                'billing_cycle_start' => $cycleStart->toDateString(),
-                'billing_cycle_end' => $cycleEnd->toDateString(),
-                'count' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+            }
+        });
+
         $this->clearUsageCache($user, $resource, $cycleStart);
 
         return true;

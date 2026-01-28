@@ -10,6 +10,10 @@ use App\Models\SurveyZone;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
 
+beforeEach(function () {
+    Queue::fake(); // Prevent automatic satellite enrichment which can hang tests
+});
+
 test('data point belongs to campaign', function () {
     $campaign = Campaign::factory()->create();
     $dataPoint = DataPoint::factory()->create(['campaign_id' => $campaign->id]);

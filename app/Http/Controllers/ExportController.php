@@ -8,11 +8,14 @@ use App\Models\Campaign;
 use App\Services\DataExportService;
 use App\Services\ReportGeneratorService;
 use App\Services\UsageTrackingService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
 class ExportController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         private DataExportService $exportService,
         private ReportGeneratorService $reportService,
@@ -20,14 +23,24 @@ class ExportController extends Controller
     ) {}
 
     /**
+     * Check if user has reached export limit
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException
+     */
+    protected function checkExportLimit(): void
+    {
+        if (! $this->usageService->canPerformAction(auth()->user(), 'report_exports')) {
+            abort(403, 'You have reached your monthly export limit. Upgrade to Pro for more exports!');
+        }
+    }
+
+    /**
      * Export campaign data as JSON for publication
      */
     public function exportJSON(Campaign $campaign): JsonResponse
     {
-        // Check usage limit
-        if (! $this->usageService->canPerformAction(auth()->user(), 'report_exports')) {
-            abort(403, 'You have reached your monthly export limit. Upgrade to Pro for more exports!');
-        }
+        $this->authorize('view', $campaign);
+        $this->checkExportLimit();
 
         $data = $this->exportService->exportForPublication($campaign);
 
@@ -50,10 +63,8 @@ class ExportController extends Controller
      */
     public function exportCSV(Campaign $campaign): Response
     {
-        // Check usage limit
-        if (! $this->usageService->canPerformAction(auth()->user(), 'report_exports')) {
-            abort(403, 'You have reached your monthly export limit. Upgrade to Pro for more exports!');
-        }
+        $this->authorize('view', $campaign);
+        $this->checkExportLimit();
 
         $csv = $this->exportService->exportAsCSV($campaign);
 
@@ -76,10 +87,8 @@ class ExportController extends Controller
      */
     public function exportPDF(Campaign $campaign): Response
     {
-        // Check usage limit
-        if (! $this->usageService->canPerformAction(auth()->user(), 'report_exports')) {
-            abort(403, 'You have reached your monthly export limit. Upgrade to Pro for more exports!');
-        }
+        $this->authorize('view', $campaign);
+        $this->checkExportLimit();
 
         $response = $this->reportService->generatePDF($campaign);
 

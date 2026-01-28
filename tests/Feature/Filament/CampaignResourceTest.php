@@ -6,9 +6,14 @@ use App\Filament\Admin\Resources\CampaignResource;
 use App\Models\Campaign;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
+
+beforeEach(function () {
+    Queue::fake(); // Prevent jobs from running during tests
+});
 
 test('campaigns can be listed in filament', function () {
     $user = User::factory()->create();
@@ -46,17 +51,18 @@ test('campaign can be created via filament', function () {
 
 test('campaign can be edited via filament', function () {
     $user = User::factory()->create();
-    $campaign = Campaign::factory()->create(['name' => 'Original Name']);
+    $campaign = Campaign::factory()->create([
+        'name' => 'Original Name',
+        'user_id' => $user->id, // User must own the campaign
+    ]);
 
-    $this->actingAs($user);
-
-    Livewire::test(CampaignResource\Pages\EditCampaign::class, ['record' => $campaign->getRouteKey()])
-        ->fillForm([
-            'name' => 'Updated Name',
-            'status' => 'completed',
-        ])
+    Livewire::actingAs($user)
+        ->test(CampaignResource\Pages\EditCampaign::class, ['record' => $campaign->getRouteKey()])
+        ->assertSuccessful()
+        ->set('data.name', 'Updated Name')
+        ->set('data.status', 'completed')
         ->call('save')
-        ->assertHasNoFormErrors();
+        ->assertHasNoErrors();
 
     expect($campaign->fresh()->name)->toBe('Updated Name')
         ->and($campaign->fresh()->status)->toBe('completed');
@@ -64,12 +70,15 @@ test('campaign can be edited via filament', function () {
 
 test('campaign can be deleted via filament', function () {
     $user = User::factory()->create();
-    $campaign = Campaign::factory()->create();
+    $campaign = Campaign::factory()->create([
+        'user_id' => $user->id, // User must own the campaign
+    ]);
 
-    $this->actingAs($user);
-
-    Livewire::test(CampaignResource\Pages\EditCampaign::class, ['record' => $campaign->getRouteKey()])
-        ->callAction('delete');
+    Livewire::actingAs($user)
+        ->test(CampaignResource\Pages\EditCampaign::class, ['record' => $campaign->getRouteKey()])
+        ->assertSuccessful()
+        ->callAction('delete')
+        ->assertHasNoErrors();
 
     $this->assertModelMissing($campaign);
 });
@@ -102,13 +111,13 @@ test('campaign form shows data collection stats for existing campaigns', functio
     $campaign = Campaign::factory()
         ->hasDataPoints(5, ['status' => 'approved'])
         ->hasSurveyZones(2)
-        ->create();
-
-    $this->actingAs($user);
-
-    Livewire::test(CampaignResource\Pages\EditCampaign::class, ['record' => $campaign->getRouteKey()])
-        ->assertFormSet([
-            'name' => $campaign->name,
-            'status' => $campaign->status,
+        ->create([
+            'user_id' => $user->id, // User must own the campaign
         ]);
+
+    Livewire::actingAs($user)
+        ->test(CampaignResource\Pages\EditCampaign::class, ['record' => $campaign->getRouteKey()])
+        ->assertSuccessful()
+        ->assertSet('data.name', $campaign->name)
+        ->assertSet('data.status', $campaign->status);
 });

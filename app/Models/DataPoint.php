@@ -7,12 +7,35 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class DataPoint extends Model
 {
     /** @use HasFactory<\Database\Factories\DataPointFactory> */
     use HasFactory, SoftDeletes;
+
+    /**
+     * Boot the model and set up event listeners
+     */
+    protected static function booted(): void
+    {
+        // Extract coordinates once when model is retrieved from database
+        static::retrieved(function (DataPoint $dataPoint) {
+            if ($dataPoint->location) {
+                $coords = DB::selectOne(
+                    'SELECT ST_Y(location::geometry) as lat, ST_X(location::geometry) as lon
+                     FROM data_points WHERE id = ?',
+                    [$dataPoint->id]
+                );
+
+                if ($coords) {
+                    $dataPoint->cachedLatitude = (float) $coords->lat;
+                    $dataPoint->cachedLongitude = (float) $coords->lon;
+                }
+            }
+        });
+    }
 
     protected $fillable = [
         'campaign_id',
@@ -41,6 +64,13 @@ class DataPoint extends Model
         'satellite_image_url',
         'ndvi_value',
     ];
+
+    /**
+     * Cached latitude/longitude values to prevent N+1 queries
+     */
+    protected ?float $cachedLatitude = null;
+
+    protected ?float $cachedLongitude = null;
 
     protected function casts(): array
     {
@@ -160,37 +190,55 @@ class DataPoint extends Model
     }
 
     /**
-     * Get latitude from PostGIS location field
+     * Get latitude from PostGIS location field (cached on retrieval)
      */
     public function getLatitudeAttribute(): ?float
     {
+        // Return cached value if available
+        if ($this->cachedLatitude !== null) {
+            return $this->cachedLatitude;
+        }
+
         if (! $this->location) {
             return null;
         }
 
+        // Fallback to query if not cached (shouldn't happen in normal flow)
         $result = \DB::selectOne(
             'SELECT ST_Y(location::geometry) as latitude FROM data_points WHERE id = ?',
             [$this->id]
         );
 
-        return $result ? (float) $result->latitude : null;
+        $latitude = $result ? (float) $result->latitude : null;
+        $this->cachedLatitude = $latitude;
+
+        return $latitude;
     }
 
     /**
-     * Get longitude from PostGIS location field
+     * Get longitude from PostGIS location field (cached on retrieval)
      */
     public function getLongitudeAttribute(): ?float
     {
+        // Return cached value if available
+        if ($this->cachedLongitude !== null) {
+            return $this->cachedLongitude;
+        }
+
         if (! $this->location) {
             return null;
         }
 
+        // Fallback to query if not cached (shouldn't happen in normal flow)
         $result = \DB::selectOne(
             'SELECT ST_X(location::geometry) as longitude FROM data_points WHERE id = ?',
             [$this->id]
         );
 
-        return $result ? (float) $result->longitude : null;
+        $longitude = $result ? (float) $result->longitude : null;
+        $this->cachedLongitude = $longitude;
+
+        return $longitude;
     }
 
     public function getPhotoUrlAttribute(): ?string
