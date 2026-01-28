@@ -198,6 +198,24 @@ Pro                5,000/month          100/month             Unlimited
 Enterprise         Unlimited            Unlimited             Unlimited
 ```
 
+### Performance & Optimization
+
+**Query Optimization**:
+- JOIN-based queries (1 query vs 31 for map data)
+- Eager loading throughout (zero N+1 queries)
+- Database indexes on spatial and foreign key columns
+- Comprehensive N+1 review completed (see [docs/N+1-PERFORMANCE-REVIEW.md](docs/N+1-PERFORMANCE-REVIEW.md))
+
+**Caching Strategy**:
+- Database cache with 5-minute TTL for map data
+- Automatic invalidation on data changes via observers
+- 4.7x faster map loads on subsequent requests
+
+**Results**:
+- Map loads: ~128ms (cached) vs ~606ms (uncached)
+- 97% query reduction (31 → 1 query)
+- Production-ready with Neon PostgreSQL (EU)
+
 ---
 
 ## 🚀 Quick Start

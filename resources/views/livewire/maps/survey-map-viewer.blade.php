@@ -3,6 +3,7 @@
 use App\Models\Campaign;
 use App\Models\EnvironmentalMetric;
 use App\Services\GeospatialService;
+use Illuminate\Support\Facades\Cache;
 
 use function Livewire\Volt\computed;
 use function Livewire\Volt\on;
@@ -79,13 +80,22 @@ $dataPoints = computed(function () {
     $campaignId = $this->campaignId ? (int) $this->campaignId : null;
     $metricId = $this->metricId ? (int) $this->metricId : null;
 
-    // TEMPORARILY DISABLED CACHING FOR DEBUGGING
-    $geoJSON = $service->getDataPointsAsGeoJSON($campaignId, $metricId, approvedOnly: false);
+    // Generate cache key
+    $cacheKey = 'survey_map_data_'
+        .($campaignId ?? 'all').'_'
+        .($metricId ?? 'all');
+
+    // Cache for 5 minutes (300 seconds)
+    $geoJSON = Cache::remember($cacheKey, 300, function () use ($service, $campaignId, $metricId) {
+        return $service->getDataPointsAsGeoJSON($campaignId, $metricId, approvedOnly: false);
+    });
 
     \Log::info('🗺️ Survey Map: Loaded data points', [
         'campaignId' => $campaignId,
         'metricId' => $metricId,
         'totalFeatures' => count($geoJSON['features'] ?? []),
+        'cached' => Cache::has($cacheKey),
+        'cacheKey' => $cacheKey,
     ]);
 
     return $geoJSON;
@@ -96,8 +106,13 @@ $boundingBox = computed(function () {
     // Cast to int or null to avoid type errors with empty strings
     $campaignId = $this->campaignId ? (int) $this->campaignId : null;
 
-    // TEMPORARILY DISABLED CACHING FOR DEBUGGING
-    return $service->getBoundingBox($campaignId);
+    // Generate cache key
+    $cacheKey = 'survey_map_bbox_'.($campaignId ?? 'all');
+
+    // Cache for 10 minutes (600 seconds) - bounding boxes change less frequently
+    return Cache::remember($cacheKey, 600, function () use ($service, $campaignId) {
+        return $service->getBoundingBox($campaignId);
+    });
 });
 
 // Check if rate limited

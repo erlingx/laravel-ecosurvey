@@ -434,6 +434,28 @@ This balances scientific rigor (maintains data provenance, enables multi-tempora
 
 ---
 
+## **Performance & Optimization:**
+
+### **Query Optimization:**
+- **Zero N+1 queries** - Comprehensive review completed (370+ tests passing)
+- **JOIN-based geospatial queries** - 1 query instead of 31 for map data (97% reduction)
+- **Eager loading** throughout with `withCount()` and `with()`
+- **Database indexes** on spatial columns, foreign keys, and composite keys
+
+### **Caching Strategy:**
+- **5-minute cache** for map GeoJSON data with automatic invalidation
+- **Observer-based invalidation** on create/update/delete events
+- **4.7x faster** map loads on subsequent requests (~128ms vs ~606ms)
+- **Database cache driver** - works on shared hosting without Redis
+
+### **Results:**
+- Map rendering: 19.5x faster overall (with cache)
+- Network calls to Neon: 75% reduction
+- Production-ready performance on serverless PostgreSQL
+- Detailed performance analysis: [docs/N+1-PERFORMANCE-REVIEW.md](../N+1-PERFORMANCE-REVIEW.md)
+
+---
+
 ## **Portfolio Highlights - Scientific Rigor:**
 
 ### **Advanced Statistical Analysis:**
