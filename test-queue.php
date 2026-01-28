@@ -18,7 +18,9 @@ $kernel->bootstrap();
 // Check queue connection
 echo "1. Queue Configuration\n";
 echo '   - Connection: '.config('queue.default')."\n";
-echo '   - Driver: '.config('queue.connections.'.config('queue.default').'.driver')."\n\n";
+echo '   - Driver: '.config('queue.connections.'.config('queue.default').'.driver')."\n";
+echo '   - Database Host: '.config('database.connections.'.config('database.default').'.host')."\n";
+echo '   - Database Name: '.config('database.connections.'.config('database.default').'.database')."\n\n";
 
 // Check pending jobs before
 echo "2. Current Queue Status\n";
@@ -59,7 +61,16 @@ $newJobs = $pendingAfter - $pendingBefore;
 echo "5. Queue Status After Dispatch\n";
 echo "   - Pending before: $pendingBefore\n";
 echo "   - Pending after: $pendingAfter\n";
-echo "   - New jobs: $newJobs\n\n";
+echo "   - New jobs: $newJobs\n";
+
+// Show actual job details
+if ($pendingAfter > 0) {
+    $recentJob = DB::table('jobs')->orderBy('id', 'desc')->first();
+    echo "   - Recent job ID: {$recentJob->id}\n";
+    echo "   - Queue: {$recentJob->queue}\n";
+    echo '   - Available at: '.date('Y-m-d H:i:s', $recentJob->available_at)."\n";
+}
+echo "\n";
 
 if ($newJobs > 0) {
     echo "✅ SUCCESS: Job was queued!\n";

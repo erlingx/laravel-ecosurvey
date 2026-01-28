@@ -34,6 +34,8 @@ $pendingBefore = DB::table('jobs')->count();
     'time' => now()->toDateTimeString(),
     'pending_jobs' => $pendingBefore,
     'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+    'db_host' => config('database.connections.'.config('database.default').'.host'),
+    'db_name' => config('database.connections.'.config('database.default').'.database'),
 ]);
 
 // Process queue jobs
