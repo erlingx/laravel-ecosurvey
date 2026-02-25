@@ -1,0 +1,25 @@
+#!/bin/bash
+# Quick fix for Supabase connection - Switch to direct connection
+
+echo "=============================================="
+echo "Supabase Connection Fix - Direct Connection"
+echo "=============================================="
+echo ""
+echo "The pooler connection failed with 'Tenant or user not found'"
+echo "Switching to direct connection instead..."
+echo ""
+echo "Update your .env with these values:"
+echo ""
+echo "# Direct connection (not pooler):"
+echo "DB_HOST=db.uuorwkqmuucqwdexevma.supabase.co"
+echo "DB_PORT=5432"
+echo "DB_DATABASE=postgres"
+echo "DB_USERNAME=postgres.uuorwkqmuucqwdexevma"
+echo "DB_PASSWORD=6NxmVNPdjoNs0fd9"
+echo "DB_SSLMODE=require"
+echo ""
+echo "Then run:"
+echo "php artisan config:clear"
+echo "php artisan migrate:fresh --seed --force"
+echo ""
+

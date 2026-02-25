@@ -49,6 +49,9 @@ EcoSurvey is a production-ready SaaS application designed for environmental scie
 ![Map View](docs/screenshots/02-map.png)
 *Leaflet-based interactive map with GPS-tagged survey points, zone boundaries, and cluster visualization*
 
+![Data Point Detail](docs/screenshots/02b-datapoint.png)
+*Interactive data point popup showing survey details, photo, location, and quality status*
+
 ### Satellite Analysis & Vegetation Indices
 ![Satellite Analysis](docs/screenshots/03-satellite.png)
 *Copernicus Sentinel-2 satellite viewer with 7 automated vegetation indices (NDVI, EVI, GNDVI, NDRE, SAVI, OSAVI, CVI)*
@@ -118,7 +121,7 @@ EcoSurvey is a production-ready SaaS application designed for environmental scie
 |-------|-----------|---------|
 | **Backend** | Laravel 12, PHP 8.3 | Web framework with modern features |
 | **Database** | PostgreSQL 16 + PostGIS | Relational data + spatial queries |
-| **Database (Production)** | Neon PostgreSQL (EU Frankfurt) | Serverless PostgreSQL with PostGIS on Azure |
+| **Database (Production)** | Supabase PostgreSQL (EU Frankfurt) | Serverless PostgreSQL with PostGIS on AWS |
 | **Frontend** | Livewire 3 + Volt | Real-time reactive components |
 | **Styling** | Tailwind CSS v4 | Utility-first CSS framework |
 | **Maps** | Leaflet.js | Interactive geospatial visualization |
@@ -214,7 +217,7 @@ Enterprise         Unlimited            Unlimited             Unlimited
 **Results**:
 - Map loads: ~128ms (cached) vs ~606ms (uncached)
 - 97% query reduction (31 → 1 query)
-- Production-ready with Neon PostgreSQL (EU)
+- Production-ready with Supabase PostgreSQL (EU)
 
 ---
 
@@ -257,29 +260,29 @@ Enterprise         Unlimited            Unlimited             Unlimited
    ddev artisan key:generate
    ```
    
-   **For Production (Neon PostgreSQL):**
-   - Update `.env` with your Neon credentials:
+   **For Production (Supabase PostgreSQL):**
+   - Update `.env` with your Supabase credentials:
    ```env
    DB_CONNECTION=pgsql
-   DB_HOST=your-endpoint.region.aws.neon.tech  # Direct connection (not pooler)
+   DB_HOST=db.yourprojectref.supabase.co  # Direct connection (not pooler)
    DB_PORT=5432
-   DB_DATABASE=neondb
-   DB_USERNAME=neondb_owner
+   DB_DATABASE=postgres
+   DB_USERNAME=postgres
    DB_PASSWORD=your-password
    DB_SSLMODE=require
    ```
-   - **Important**: Use the **direct connection** endpoint (without `-pooler`) for migrations
-   - The pooler endpoint can be used for application queries in production
-   - Neon provides serverless PostgreSQL with automatic scaling and PostGIS support
+   - **Important**: Use the **direct connection** endpoint (port 5432) for migrations
+   - The pooler endpoint (port 6543) can be used for application queries in production
+   - Supabase provides serverless PostgreSQL with automatic scaling and PostGIS support
 
 5. **Set up database**
    ```bash
    # For DDEV (local development)
    ddev artisan migrate:fresh --seed
    
-   # For Production (Neon)
+   # For Production (Supabase)
    # First enable PostGIS extension:
-   psql 'your-neon-connection-string' -c 'CREATE EXTENSION IF NOT EXISTS postgis;'
+   psql 'your-supabase-connection-string' -c 'CREATE EXTENSION IF NOT EXISTS postgis;'
    # Then run migrations:
    php artisan migrate:fresh --seed --force
    ```
@@ -352,42 +355,43 @@ ddev artisan test --coverage
 
 ## 🚀 Deployment
 
-### Production Database: Neon PostgreSQL
+### Production Database: Supabase PostgreSQL
 
-EcoSurvey uses **[Neon](https://neon.tech)** as the production database - a serverless PostgreSQL platform with:
+EcoSurvey uses **[Supabase](https://supabase.com)** as the production database - a serverless PostgreSQL platform with:
 
-- **Location**: EU Frankfurt region (Germany West Central - Azure)
-- **Version**: PostgreSQL 17.7 with PostGIS 3.5
+- **Location**: EU Frankfurt region (Germany - AWS)
+- **Version**: PostgreSQL 15+ with PostGIS 3.3+
 - **Features**:
   - ✅ Serverless with automatic scaling
-  - ✅ Built-in connection pooling
+  - ✅ Built-in connection pooling (PgBouncer)
   - ✅ Point-in-time recovery
-  - ✅ Zero-downtime schema changes
+  - ✅ Real-time database changes (optional)
   - ✅ SSL/TLS required connections
-  - ✅ Free tier available (3 GiB storage)
+  - ✅ Free tier available (500 MB storage, 2 GB transfer)
+  - ✅ Built-in authentication and storage APIs
 
 ### Database Configuration
 
-**Important**: Neon provides two connection endpoints:
+**Important**: Supabase provides two connection modes:
 
 1. **Direct Connection** (for migrations/schema changes):
    ```
-   ep-your-endpoint.region.azure.neon.tech
+   db.projectref.supabase.co:5432
    ```
 
-2. **Pooled Connection** (for application queries):
+2. **Connection Pooling** (for application queries - recommended):
    ```
-   ep-your-endpoint-pooler.region.azure.neon.tech
+   db.projectref.supabase.co:6543 (Transaction mode)
    ```
 
 **Environment Setup**:
 ```env
 # Use direct connection for migrations
 DB_CONNECTION=pgsql
-DB_HOST=ep-orange-breeze-a9xvfbuw.gwc.azure.neon.tech
+DB_HOST=db.yourprojectref.supabase.co
 DB_PORT=5432
-DB_DATABASE=neondb
-DB_USERNAME=neondb_owner
+DB_DATABASE=postgres
+DB_USERNAME=postgres
 DB_PASSWORD=your-secure-password
 DB_SSLMODE=require
 ```
@@ -397,8 +401,8 @@ DB_SSLMODE=require
 PostGIS must be enabled before running migrations:
 
 ```bash
-# Connect to Neon database
-psql 'postgresql://user:pass@host.neon.tech/neondb?sslmode=require'
+# Connect to Supabase database
+psql 'postgresql://postgres:password@db.yourprojectref.supabase.co:5432/postgres'
 
 # Enable PostGIS extension
 CREATE EXTENSION IF NOT EXISTS postgis;
@@ -423,13 +427,14 @@ php artisan db:seed --force
 php artisan optimize
 ```
 
-### Why Neon?
+### Why Supabase?
 
-- **Cost-effective**: Free tier for development, pay-per-use scaling
-- **Developer-friendly**: Branch databases for testing, instant replication
+- **All-in-one platform**: Database, authentication, storage, and real-time APIs
+- **Developer-friendly**: Intuitive dashboard, automatic API generation
 - **EU compliance**: Data sovereignty with Frankfurt region
 - **PostGIS ready**: Full spatial database support out-of-the-box
 - **Zero maintenance**: No server management, automatic backups
+- **Generous free tier**: Perfect for development and small projects
 
 ### Alternative: Local PostgreSQL
 

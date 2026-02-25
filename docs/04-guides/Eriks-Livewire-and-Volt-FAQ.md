@@ -55,6 +55,8 @@ $save = function () {
 
 **Usage:** `wire:click="save"`, `wire:submit="save"`
 
+**Important:** In functional Volt, actions MUST be closures (`$name = fn() => ...`). Regular class methods (`public function name()`) only work in class-based Volt.
+
 ---
 
 ## **Execution Flow**
@@ -124,19 +126,41 @@ let value = @this.get('propertyName');
 
 ## **Volt vs Traditional Livewire**
 
-### **Functional Volt:**
+### **Functional Volt (This Project Uses This):**
 ```php
 <?php
 use function Livewire\Volt\state;
 
 state(['count' => 0]);
 $increment = fn () => $this->count++;
+// ❌ WRONG: public function increment() - doesn't work in functional Volt!
+// Functional Volt requires closures: $increment = fn() => ... or $increment = function() { ... }
 ?>
 <button wire:click="increment">{{ $count }}</button>
 ```
 
-### **Class-based Livewire:**
+### **Class-based Volt:**
 ```php
+<?php
+use Livewire\Volt\Component;
+
+new class extends Component
+{
+    public $count = 0;
+
+    // ✅ CORRECT: Can use regular methods in class-based Volt
+    public function increment()
+    {
+        $this->count++;
+    }
+}
+?>
+<button wire:click="increment">{{ $count }}</button>
+```
+
+### **Traditional Livewire (Separate Files):**
+```php
+// app/Livewire/Counter.php
 class Counter extends Component {
     public $count = 0;
     
@@ -146,7 +170,10 @@ class Counter extends Component {
 }
 ```
 
-Both work the same - Volt is just more concise!
+**Key Difference:** 
+- **Functional Volt** requires closures: `$name = fn() => ...` or `$name = function() { ... }`
+- **Class-based Volt** and **Traditional Livewire** can use `public function` methods
+- Your project uses **functional Volt**, so always use closures for actions!
 
 ---
 
