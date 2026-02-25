@@ -53,7 +53,7 @@ EcoSurvey is a production-ready SaaS application designed for environmental scie
 *Interactive data point popup showing survey details, photo, location, and quality status*
 
 ### Satellite Analysis & Vegetation Indices
-![Satellite Analysis](docs/screenshots/03-satellite.png)
+![Satellite Analysis](docs/screenshots/03-satellite-2.png)
 *Copernicus Sentinel-2 satellite viewer with 7 automated vegetation indices (NDVI, EVI, GNDVI, NDRE, SAVI, OSAVI, CVI)*
 
 ### Subscription Management & Billing
